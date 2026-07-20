@@ -31,6 +31,7 @@ _TOOLS_DIR = _REPO_ROOT / "src" / "litellm_mcp" / "tools"
 
 _VERB = {"GET": "get", "POST": "post", "PUT": "put", "PATCH": "patch", "DELETE": "delete"}
 _BODY_VERBS = {"POST", "PUT", "PATCH"}
+_LIMIT_DESC = "Max rows kept after client-side slimming of the returned page (0 = no cap)."
 
 
 class GenError(Exception):
@@ -191,6 +192,12 @@ def emit_op_source(spec: dict[str, Any], op: Op) -> tuple[str, set[str]]:
 
     params = _collect_params(comps, op, spec_op)
     ann = ANNOTATIONS.get(op.name, {})
+    param_descs = ann.get("params", {})
+    slim = SLIMS.get(op.name)
+    ver = VERIFY.get(op.name)
+    _validate_hook(op.name, slim, ver)
+    slim_active = bool(slim) and "no_slim" not in slim
+    ver_active = bool(ver) and "no_verify" not in ver
     used: set[str] = {"Any", "_op", "_get_client", GROUP_VARS[op.group]}
 
     # signature: required params first, then optional (_UNSET default).
@@ -200,15 +207,36 @@ def emit_op_source(spec: dict[str, Any], op: Op) -> tuple[str, set[str]]:
             used.add("Literal")
         return ts
 
+    def annotate(name: str, ts: str) -> str:
+        """Wrap the type in Annotated[..., Field(description=...)] when the op
+        carries a description for this param; the caller sees it in help and
+        schema, the runtime default stays `_UNSET`."""
+        desc = param_descs.get(name)
+        if not desc:
+            return ts
+        used.update({"Annotated", "Field"})
+        return f"Annotated[{ts}, Field(description={desc!r})]"
+
     ordered = [p for p in params if p.required] + [p for p in params if not p.required]
     sig_lines: list[str] = []
     for p in ordered:
         ts = render(p)
+        ann_ts = annotate(p.name, ts)
         if p.required:
-            sig_lines.append(f"    {p.name}: {ts},")
+            sig_lines.append(f"    {p.name}: {ann_ts},")
         else:
             used.update({"cast", "_UNSET"})
-            sig_lines.append(f"    {p.name}: {ts} = cast({ts}, _UNSET),")
+            sig_lines.append(f"    {p.name}: {ann_ts} = cast({ts}, _UNSET),")
+
+    # Slimmed list ops get a caller-facing `limit` (default 20) that caps the
+    # returned page client-side, on top of any spec pagination params.
+    if slim_active:
+        if any(p.name == "limit" for p in params):
+            raise GenError(f"{op.name}: slimmed op already declares a spec 'limit' param")
+        used.update({"Annotated", "Field"})
+        sig_lines.append(
+            f"    limit: Annotated[int, Field(description={_LIMIT_DESC!r})] = {slim.get('limit', 20)},"
+        )
 
     lines: list[str] = [f"@_op({GROUP_VARS[op.group]})"]
     if sig_lines:
@@ -256,12 +284,6 @@ def emit_op_source(spec: dict[str, Any], op: Op) -> tuple[str, set[str]]:
         call += ", " + ", ".join(call_args)
     call += ")"
 
-    slim = SLIMS.get(op.name)
-    ver = VERIFY.get(op.name)
-    _validate_hook(op.name, slim, ver)
-    slim_active = bool(slim) and "no_slim" not in slim
-    ver_active = bool(ver) and "no_verify" not in ver
-
     lines.extend(body_stmts)
 
     if not slim_active and not ver_active:
@@ -275,18 +297,27 @@ def emit_op_source(spec: dict[str, Any], op: Op) -> tuple[str, set[str]]:
             used.add("_verify_response")
         if slim_active:
             fields = ", ".join(repr(f) for f in slim["fields"])
-            lines.append(
-                f"    result = _truncate([_slim(row, {{{fields}}}) for row in result], {slim['limit']})"
-            )
-            used.update({"_truncate", "_slim"})
-        lines.append("    return result")
+            container = slim.get("container")
+            tail = f", {container!r}" if container else ""
+            lines.append(f"    return _slim_list(result, {{{fields}}}, limit{tail})")
+            used.add("_slim_list")
+        else:
+            lines.append("    return result")
 
     return "\n".join(lines), used
 
 
+_SLIM_KEYS = {"fields", "limit", "container", "no_slim"}
+_ANN_KEYS = {"doc", "body", "params", "types", "bare"}
+
+
 def _validate_hook(name: str, slim: dict[str, Any] | None, ver: dict[str, Any] | None) -> None:
-    if slim is not None and "no_slim" not in slim and "fields" not in slim:
-        raise GenError(f"{name}: malformed slims entry {slim!r}")
+    if slim is not None:
+        unknown = set(slim) - _SLIM_KEYS
+        if unknown:
+            raise GenError(f"{name}: unknown slims key(s) {sorted(unknown)}")
+        if "no_slim" not in slim and "fields" not in slim:
+            raise GenError(f"{name}: malformed slims entry {slim!r}")
     if ver is not None and not ({"no_verify", "skip", "subset"} & set(ver)):
         raise GenError(f"{name}: malformed verify entry {ver!r}")
 
@@ -304,6 +335,10 @@ def _validate_keys() -> None:
         for key in data:
             if key not in known:
                 raise GenError(f"unknown op {key!r} in {label}.py (stale data key)")
+    for op_name, entry in ANNOTATIONS.items():
+        unknown = set(entry) - _ANN_KEYS
+        if unknown:
+            raise GenError(f"{op_name}: unknown annotations key(s) {sorted(unknown)}")
     # bodyless_ok must not name an op that HAS a requestBody (both directions).
     spec = load_spec()
     for name in BODYLESS_OK:
@@ -314,9 +349,9 @@ def _validate_keys() -> None:
 
 
 def _module_header(module: str, ops_used: set[str]) -> str:
-    typing_syms = [s for s in ("Any", "Literal", "cast") if s in ops_used]
+    typing_syms = [s for s in ("Annotated", "Any", "Literal", "cast") if s in ops_used]
     groups = sorted(s for s in ops_used if s.startswith("litellm_"))
-    helpers = [s for s in ("_get_client", "_qp", "_slim", "_truncate", "_verify_response")
+    helpers = [s for s in ("_get_client", "_qp", "_slim_list", "_verify_response")
                if s in ops_used]
     registry = [s for s in ("_UNSET", "_op") if s in ops_used]
 
@@ -328,6 +363,10 @@ def _module_header(module: str, ops_used: set[str]) -> str:
         "",
         f"from typing import {', '.join(typing_syms)}",
         "",
+    ]
+    if "Field" in ops_used:
+        out += ["from pydantic import Field", ""]
+    out += [
         f"from ..registry import {', '.join(registry)}",
         f"from .groups import {', '.join(groups)}",
         f"from .helpers import {', '.join(helpers)}",

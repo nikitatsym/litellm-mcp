@@ -1,7 +1,7 @@
 """Shared helpers for the LiteLLM tool modules.
 
-Client singleton, query-param builder, and the truncation wrapper for
-non-paginated lists. Slims and `_verify_response` land in later steps.
+Client singleton, query-param builder, and the slim/truncation wrappers for
+list results. `_verify_response` lands in Step 6.
 """
 
 from __future__ import annotations
@@ -46,3 +46,39 @@ def _truncate(items: list[Any], limit: int) -> dict[str, Any]:
         "returned": len(returned),
         "truncated": total > len(returned),
     }
+
+
+def _slim(row: Any, fields: set[str]) -> Any:
+    """Project one row down to `fields`, preserving upstream key order.
+
+    A non-dict row (e.g. a bare key-hash string when `return_full_object` is
+    false) passes through untouched.
+    """
+    if not isinstance(row, dict):
+        return row
+    return {k: v for k, v in row.items() if k in fields}
+
+
+def _slim_list(
+    result: Any,
+    fields: set[str],
+    limit: int,
+    container: str | None = None,
+) -> dict[str, Any]:
+    """Slim each row to `fields`, cap the page at `limit`, report what was cut.
+
+    `container` names the envelope key holding the rows (`keys`, `data`, ...);
+    when None, `result` is the row list itself. A wrong container key raises
+    (fail loud) rather than silently returning an empty page. Any other
+    envelope fields (server-side pagination counts) survive under `page_info`,
+    so the caller still sees that more rows exist upstream.
+    """
+    if container is not None:
+        rows = result[container]
+        page_info = {k: v for k, v in result.items() if k != container}
+    else:
+        rows, page_info = result, {}
+    out = _truncate([_slim(row, fields) for row in rows], limit)
+    if page_info:
+        out["page_info"] = page_info
+    return out

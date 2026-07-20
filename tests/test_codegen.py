@@ -8,6 +8,12 @@ data.
 
 from __future__ import annotations
 
+import hashlib
+import os
+import subprocess
+import sys
+from pathlib import Path
+
 import pytest
 
 from codegen import check, generate
@@ -15,6 +21,7 @@ from codegen.inventory import OP_BY_NAME, OPS, Op
 from codegen.overrides import OVERRIDES
 
 SPEC = generate.load_spec()
+_REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
 def test_two_runs_byte_identical():
@@ -33,10 +40,41 @@ def test_two_runs_byte_identical():
     }
 
 
-def test_emitted_op_count_is_192():
+def _emit_digest(seed: int) -> str:
+    """Digest of the full emitted tree from a fresh process at `PYTHONHASHSEED`."""
+    code = (
+        "import hashlib;"
+        "from codegen.generate import emit_tree, load_spec;"
+        "f = emit_tree(load_spec());"
+        "b = ''.join(f'{k}\\n{v}' for k, v in sorted(f.items()));"
+        "print(hashlib.sha256(b.encode()).hexdigest())"
+    )
+    env = {**os.environ, "PYTHONHASHSEED": str(seed)}
+    out = subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=_REPO_ROOT,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return out.stdout.strip()
+
+
+def test_cross_process_determinism():
+    """The emitter is byte-stable across processes with different hash seeds -
+    set iteration must never leak into emitted source (only sorted lists do)."""
+    digests = {_emit_digest(seed) for seed in (0, 1, 42)}
+    assert len(digests) == 1, digests
+    # And it matches the in-process emission (same interpreter build).
+    blob = "".join(f"{k}\n{v}" for k, v in sorted(generate.emit_tree(SPEC).items()))
+    assert hashlib.sha256(blob.encode()).hexdigest() in digests
+
+
+def test_emitted_op_count_is_190():
     emitted = generate.emit_tree(SPEC)
     total = sum(src.count("\n@_op(") for src in emitted.values())
-    assert total == 192  # 198 inventory ops minus the 6 pending overrides
+    assert total == 190  # 198 inventory ops minus 8 override entries
 
 
 # --- (a) hand-mutate a generated file -> sync gate fails --------------------
@@ -111,14 +149,24 @@ def test_committed_tree_is_in_sync():
     assert problems == []
 
 
-# --- data-driven hooks: dormant with empty data, proven via injection -------
+# --- slim emission (active in Step 5) / verify emission (dormant until Step 6) -
 
-def test_slim_hook_emits_truncate(monkeypatch):
-    """A slims.py entry makes the list op wrap its result (Step 5 activates this)."""
+def test_slim_hook_emits_slim_list(monkeypatch):
+    """A bare slims entry wraps the list op in _slim_list and injects `limit`."""
     monkeypatch.setattr(generate, "SLIMS", {"list_keys": {"fields": ["token", "spend"], "limit": 5}})
     src = generate.emit_tree(SPEC)["_generated_read_core.py"]
     assert "result = _get_client().get" in src
-    assert "_truncate([_slim(row, {'token', 'spend'}) for row in result], 5)" in src
+    assert "return _slim_list(result, {'token', 'spend'}, limit)" in src
+    assert "] = 5," in src  # injected limit param default from the entry
+
+
+def test_slim_hook_emits_container(monkeypatch):
+    """An entry with a container passes the envelope key to _slim_list."""
+    monkeypatch.setattr(
+        generate, "SLIMS", {"list_keys": {"fields": ["token"], "limit": 5, "container": "keys"}}
+    )
+    src = generate.emit_tree(SPEC)["_generated_read_core.py"]
+    assert "return _slim_list(result, {'token'}, limit, 'keys')" in src
 
 
 def test_verify_hook_emits_verify_call(monkeypatch):
@@ -128,9 +176,34 @@ def test_verify_hook_emits_verify_call(monkeypatch):
     assert "_verify_response(body, result, frozenset({'team_id'}))" in src
 
 
-def test_step4_tree_has_no_slim_or_verify_calls():
-    """With empty data the emitted tree references no slim/verify helpers."""
-    for src in generate.emit_tree(SPEC).values():
+def test_read_modules_slim_and_no_verify_yet():
+    """Read modules wrap lists with _slim_list; no module emits _verify_response
+    until Step 6 authors verify data."""
+    emitted = generate.emit_tree(SPEC)
+    assert "_slim_list(" in emitted["_generated_read_core.py"]
+    assert "_slim_list(" in emitted["_generated_read_infra.py"]
+    for src in emitted.values():
         assert "_verify_response" not in src
-        assert "_slim(" not in src
-        assert "result =" not in src
+
+
+# --- (g/h) completeness gate bites when a gated op loses its decision --------
+
+def test_g_missing_annotation_decision_fails(monkeypatch):
+    without = {k: v for k, v in check.ANNOTATIONS.items() if k != "list_budgets"}
+    monkeypatch.setattr(check, "ANNOTATIONS", without)
+    problems = check.check_completeness(frozenset({"read_core"}), SPEC)
+    assert any("list_budgets" in p and "annotations" in p for p in problems), problems
+
+
+def test_h_missing_slim_decision_fails(monkeypatch):
+    without = {k: v for k, v in check.SLIMS.items() if k != "list_keys"}
+    monkeypatch.setattr(check, "SLIMS", without)
+    problems = check.check_completeness(frozenset({"read_core"}), SPEC)
+    assert any("list_keys" in p and "slims" in p for p in problems), problems
+
+
+def test_unknown_annotation_inner_key_fails(monkeypatch):
+    monkeypatch.setattr(generate, "ANNOTATIONS", {"list_budgets": {"typo": "x"}})
+    with pytest.raises(generate.GenError) as exc:
+        generate.emit_tree(SPEC)
+    assert "list_budgets" in str(exc.value)
