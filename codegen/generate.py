@@ -411,7 +411,7 @@ def main() -> None:
     for filename in sorted(files):
         count = len(files[filename].split("\n@_op(")) - 1
         print(f"  {filename}: {count} ops")
-    print(f"overrides pending (not emitted): {sorted(OVERRIDES)}")
+    print(f"overrides not emitted (hand-written in tools/overrides.py): {sorted(OVERRIDES)}")
 
 
 if __name__ == "__main__":
