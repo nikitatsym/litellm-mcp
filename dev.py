@@ -9,6 +9,7 @@ CMDS: dict[str, list[list[str]]] = {
     "lint": [
         ["uv", "run", "ruff", "check", "."],
         ["uv", "run", "mypy", "src/"],
+        ["uv", "run", "python", "-m", "codegen.check"],
     ],
     "test": [
         ["uv", "run", "pytest"],

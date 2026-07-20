@@ -16,4 +16,13 @@ from .groups import (  # noqa: F401
 from .helpers import _get_client, _qp, _truncate  # noqa: F401
 
 # Tool modules (importing registers their @_op functions).
-from . import overrides  # noqa: F401
+from . import (  # noqa: F401
+    _generated_admin,
+    _generated_delete,
+    _generated_execute,
+    _generated_platform,
+    _generated_read_core,
+    _generated_read_infra,
+    _generated_write,
+    overrides,
+)
