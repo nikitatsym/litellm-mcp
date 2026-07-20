@@ -260,6 +260,19 @@ def emit_op_source(spec: dict[str, Any], op: Op) -> tuple[str, set[str]]:
     query_params = [p for p in params if p.kind == "query"]
     opaque = next((p for p in params if p.kind == "opaque"), None)
 
+    # A verify entry emits `_verify_response(body, ...)`, so the op must build a
+    # body. A verify decision on a bodyless op is a data error (plan Step 6).
+    if ver is not None and not body_params:
+        raise GenError(
+            f"{op.name}: has a verify.py entry but emits no request body "
+            "(the _verify_response call would reference an absent body local)"
+        )
+    if ver_active and "subset" in ver:
+        body_names = {p.name for p in body_params}
+        unknown = sorted(f for f in ver["subset"] if f not in body_names)
+        if unknown:
+            raise GenError(f"{op.name}: verify subset names non-body field(s) {unknown}")
+
     body_stmts: list[str] = []
     if body_params:
         body_stmts.append("    body: dict[str, Any] = {}")
@@ -291,9 +304,20 @@ def emit_op_source(spec: dict[str, Any], op: Op) -> tuple[str, set[str]]:
     else:
         lines.append(f"    result = {call}")
         if ver_active:
-            skip = sorted(set(ROOT_SKIP) | set(ver.get("skip", [])))
-            skip_lit = "frozenset({" + ", ".join(repr(s) for s in skip) + "})" if skip else "frozenset()"
-            lines.append(f"    _verify_response(body, result, {skip_lit})")
+            if "subset" in ver:
+                # Whitelist form: check only the sent keys that the typed row
+                # echoes. Root skip is irrelevant (the subset already excludes
+                # transport fields).
+                keys = ", ".join(repr(f) for f in ver["subset"])
+                lines.append(
+                    f"    _verify_response({{k: body[k] for k in ({keys},) if k in body}}, result)"
+                )
+            else:
+                skip = sorted(set(ROOT_SKIP) | set(ver.get("skip", [])))
+                skip_lit = (
+                    "frozenset({" + ", ".join(repr(s) for s in skip) + "})" if skip else "frozenset()"
+                )
+                lines.append(f"    _verify_response(body, result, {skip_lit})")
             used.add("_verify_response")
         if slim_active:
             fields = ", ".join(repr(f) for f in slim["fields"])
@@ -318,8 +342,11 @@ def _validate_hook(name: str, slim: dict[str, Any] | None, ver: dict[str, Any] |
             raise GenError(f"{name}: unknown slims key(s) {sorted(unknown)}")
         if "no_slim" not in slim and "fields" not in slim:
             raise GenError(f"{name}: malformed slims entry {slim!r}")
-    if ver is not None and not ({"no_verify", "skip", "subset"} & set(ver)):
-        raise GenError(f"{name}: malformed verify entry {ver!r}")
+    if ver is not None:
+        if not ({"no_verify", "skip", "subset"} & set(ver)):
+            raise GenError(f"{name}: malformed verify entry {ver!r}")
+        if "subset" in ver and not (isinstance(ver["subset"], list) and ver["subset"]):
+            raise GenError(f"{name}: verify subset must be a non-empty list")
 
 
 def _validate_keys() -> None:

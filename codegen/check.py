@@ -23,14 +23,15 @@ from .generate import GenError, emit_tree, load_spec
 from .inventory import OP_BY_NAME, OPS, Op
 from .overrides import OVERRIDES
 from .slims import SLIMS
+from .verify import VERIFY
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 _TOOLS_DIR = _REPO_ROOT / "src" / "litellm_mcp" / "tools"
 
-# Modules whose per-op completeness (annotations + slims coverage, and "an
-# override entry must be implemented in tools/overrides.py") is enforced. Grows
-# as Steps 5-8 land; verify coverage joins from Step 6 (write modules).
-GATED_MODULES: frozenset[str] = frozenset({"read_core", "read_infra"})
+# Modules whose per-op completeness (annotations + slims coverage, verify
+# coverage on write-shaped ops, and "an override entry must be implemented in
+# tools/overrides.py") is enforced. Grows as Steps 5-8 land.
+GATED_MODULES: frozenset[str] = frozenset({"read_core", "read_infra", "write"})
 
 # Ops that return a homogeneous collection but whose 200 schema is `{}` in the
 # snapshot, so shape detection cannot see the array. Curated so the slims gate
@@ -59,9 +60,14 @@ def _is_list_op(op: Op, spec: dict[str, Any]) -> bool:
 
 
 def check_completeness(gated_modules: frozenset[str], spec: dict[str, Any]) -> list[str]:
-    """Every emitted op in a gated module is explicitly decided in annotations,
-    and every emitted list op is explicitly decided in slims. Overrides carry
-    their own docstrings/fields by hand, so they are exempt."""
+    """Every emitted op in a gated module is explicitly decided in annotations;
+    every emitted list op is decided in slims; every emitted write-shaped op is
+    decided in verify. Overrides carry their own docstrings/fields/verify by
+    hand, so they are exempt.
+
+    Write-shaped = risk group is not `read`. POST-but-read ops (budget_info,
+    tag_info, cloudzero_dry_run, ...) stay in the read group, so read modules
+    and platform read ops never need a verify decision."""
     problems: list[str] = []
     for op in OPS:
         if op.module not in gated_modules or op.name in OVERRIDES:
@@ -75,6 +81,11 @@ def check_completeness(gated_modules: frozenset[str], spec: dict[str, Any]) -> l
             problems.append(
                 f"{op.name} (module {op.module}) is a list op with no slims decision "
                 "(add an entry or no_slim in codegen/slims.py)"
+            )
+        if op.group != "read" and op.name not in VERIFY:
+            problems.append(
+                f"{op.name} (module {op.module}) is a write-shaped op with no verify "
+                "decision (add a skip/subset entry or NO_VERIFY in codegen/verify.py)"
             )
     return problems
 

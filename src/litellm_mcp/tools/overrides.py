@@ -16,8 +16,8 @@ from typing import Annotated, Any, cast
 from pydantic import Field
 
 from ..registry import ROOT, _UNSET, _op
-from .groups import litellm_read
-from .helpers import _get_client, _qp
+from .groups import litellm_read, litellm_write
+from .helpers import _get_client, _qp, _verify_response
 
 
 @_op(ROOT)
@@ -99,3 +99,81 @@ def model_cost_map(
         "returned": len(kept),
         "truncated": total > len(kept),
     }
+
+
+@_op(litellm_write)
+def update_organization(
+    organization_id: Annotated[
+        str, Field(description="ID of the organization to update (addressing field).")
+    ],
+    organization_alias: Annotated[
+        str | None, Field(description="Human-readable organization name.")
+    ] = cast(str | None, _UNSET),
+    budget_id: Annotated[
+        str | None, Field(description="ID of the budget object governing this org.")
+    ] = cast(str | None, _UNSET),
+    metadata: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
+    models: Annotated[
+        list[str] | None, Field(description="Model names this org may access.")
+    ] = cast(list[str] | None, _UNSET),
+    max_budget: Annotated[
+        float | None, Field(description="Hard USD budget cap for the org.")
+    ] = cast(float | None, _UNSET),
+    soft_budget: Annotated[
+        float | None, Field(description="USD spend that triggers an alert (no block).")
+    ] = cast(float | None, _UNSET),
+    tpm_limit: Annotated[
+        int | None, Field(description="Org-wide tokens-per-minute cap.")
+    ] = cast(int | None, _UNSET),
+    rpm_limit: Annotated[
+        int | None, Field(description="Org-wide requests-per-minute cap.")
+    ] = cast(int | None, _UNSET),
+    max_parallel_requests: int | None = cast(int | None, _UNSET),
+    budget_duration: Annotated[
+        str | None, Field(description="Budget reset window, e.g. '30d', '1mo'.")
+    ] = cast(str | None, _UNSET),
+    model_max_budget: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
+    updated_by: str | None = cast(str | None, _UNSET),
+) -> Any:
+    """Update an existing organization's settings.
+
+    Spec-gap override: PATCH /organization/update carries no requestBody in the
+    snapshot, so the fields here follow the LiteLLM organization-update model.
+    Only the fields you pass are changed; `organization_id` addresses the org
+    and is required. Field names verified live in Step 9.
+    """
+    body: dict[str, Any] = {}
+    if organization_id is not _UNSET:
+        body["organization_id"] = organization_id
+    if organization_alias is not _UNSET:
+        body["organization_alias"] = organization_alias
+    if budget_id is not _UNSET:
+        body["budget_id"] = budget_id
+    if metadata is not _UNSET:
+        body["metadata"] = metadata
+    if models is not _UNSET:
+        body["models"] = models
+    if max_budget is not _UNSET:
+        body["max_budget"] = max_budget
+    if soft_budget is not _UNSET:
+        body["soft_budget"] = soft_budget
+    if tpm_limit is not _UNSET:
+        body["tpm_limit"] = tpm_limit
+    if rpm_limit is not _UNSET:
+        body["rpm_limit"] = rpm_limit
+    if max_parallel_requests is not _UNSET:
+        body["max_parallel_requests"] = max_parallel_requests
+    if budget_duration is not _UNSET:
+        body["budget_duration"] = budget_duration
+    if model_max_budget is not _UNSET:
+        body["model_max_budget"] = model_max_budget
+    if updated_by is not _UNSET:
+        body["updated_by"] = updated_by
+    result = _get_client().patch("/organization/update", json=body)
+    # LiteLLM_OrganizationTableWithMembers echoes these row fields; budget/limit
+    # knobs land in the budget table, so verify only the org-row scalars/list.
+    _verify_response(
+        {k: body[k] for k in ("organization_id", "organization_alias", "models") if k in body},
+        result,
+    )
+    return result

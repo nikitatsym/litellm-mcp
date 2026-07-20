@@ -170,20 +170,63 @@ def test_slim_hook_emits_container(monkeypatch):
 
 
 def test_verify_hook_emits_verify_call(monkeypatch):
-    """A verify.py entry makes the write op verify the echoed row (Step 6 activates this)."""
+    """A skip-form verify.py entry makes the write op check the echoed row."""
+    monkeypatch.setattr(generate, "ROOT_SKIP", frozenset())
     monkeypatch.setattr(generate, "VERIFY", {"new_team": {"skip": ["team_id"]}})
     src = generate.emit_tree(SPEC)["_generated_write.py"]
     assert "_verify_response(body, result, frozenset({'team_id'}))" in src
 
 
-def test_read_modules_slim_and_no_verify_yet():
-    """Read modules wrap lists with _slim_list; no module emits _verify_response
-    until Step 6 authors verify data."""
+def test_verify_hook_emits_subset_call(monkeypatch):
+    """A subset entry filters the sent body to the whitelisted keys."""
+    monkeypatch.setattr(generate, "VERIFY", {"new_team": {"subset": ["team_id", "tpm_limit"]}})
+    src = generate.emit_tree(SPEC)["_generated_write.py"]
+    assert (
+        "_verify_response({k: body[k] for k in ('team_id', 'tpm_limit',) if k in body}, result)"
+        in src
+    )
+
+
+def test_verify_no_verify_emits_nothing(monkeypatch):
+    """A no_verify entry emits no _verify_response call for that op."""
+    monkeypatch.setattr(generate, "VERIFY", {"add_model": {"no_verify": "envelope"}})
+    src = generate.emit_tree(SPEC)["_generated_write.py"]
+    # add_model is the only VERIFY entry here, so nothing verifies.
+    assert "_verify_response" not in src
+
+
+def test_verify_entry_on_bodyless_op_fails(monkeypatch):
+    """A verify entry on a body-mutating op with no requestBody is a GenError."""
+    monkeypatch.setattr(generate, "VERIFY", {"global_spend_reset": {"skip": []}})
+    with pytest.raises(generate.GenError) as exc:
+        generate.emit_tree(SPEC)
+    assert "global_spend_reset" in str(exc.value)
+
+
+def test_verify_subset_non_body_field_fails(monkeypatch):
+    """A subset naming a field that isn't a body param is a GenError."""
+    monkeypatch.setattr(generate, "VERIFY", {"new_team": {"subset": ["not_a_field"]}})
+    with pytest.raises(generate.GenError) as exc:
+        generate.emit_tree(SPEC)
+    assert "not_a_field" in str(exc.value)
+
+
+def test_write_module_verifies_reads_do_not():
+    """The write module emits _verify_response; read modules never do."""
     emitted = generate.emit_tree(SPEC)
     assert "_slim_list(" in emitted["_generated_read_core.py"]
     assert "_slim_list(" in emitted["_generated_read_infra.py"]
-    for src in emitted.values():
-        assert "_verify_response" not in src
+    assert "_verify_response(" in emitted["_generated_write.py"]
+    assert "_verify_response" not in emitted["_generated_read_core.py"]
+    assert "_verify_response" not in emitted["_generated_read_infra.py"]
+
+
+def test_missing_verify_decision_fails(monkeypatch):
+    """The write completeness gate demands a verify decision per write-shaped op."""
+    without = {k: v for k, v in check.VERIFY.items() if k != "new_team"}
+    monkeypatch.setattr(check, "VERIFY", without)
+    problems = check.check_completeness(frozenset({"write"}), SPEC)
+    assert any("new_team" in p and "verify" in p for p in problems), problems
 
 
 # --- (g/h) completeness gate bites when a gated op loses its decision --------

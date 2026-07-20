@@ -1,7 +1,7 @@
 """Shared helpers for the LiteLLM tool modules.
 
-Client singleton, query-param builder, and the slim/truncation wrappers for
-list results. `_verify_response` lands in Step 6.
+Client singleton, query-param builder, the slim/truncation wrappers for list
+results, and `_verify_response` (the write-echo drop check).
 """
 
 from __future__ import annotations
@@ -12,6 +12,37 @@ from ..client import LiteLLMClient
 from ..registry import _UNSET
 
 _client: LiteLLMClient | None = None
+
+
+def _verify_response(
+    sent: dict[str, Any],
+    received: Any,
+    skip_root: frozenset[str] = frozenset(),
+    _path: str = "",
+) -> None:
+    """Raise if the write echo silently dropped a key we sent (recursive).
+
+    Presence check only: every key in `sent` must appear in `received`,
+    recursing into non-empty nested dicts so a dropped nested leaf
+    (`metadata.budget_note`) is named with its full path. `skip_root` lists
+    request-only or transformed transport fields and is consulted at the ROOT
+    level ONLY - a nested drop always raises. Values are never compared
+    (LiteLLM normalizes them on the wire); presence is the whole contract. A
+    non-dict `received` (no row to check against) is a no-op.
+    """
+    if not isinstance(received, dict):
+        return
+    for key, value in sent.items():
+        if _path == "" and key in skip_root:
+            continue
+        full = f"{_path}.{key}" if _path else key
+        if key not in received:
+            raise ValueError(
+                f"LiteLLM silently dropped {full!r} from the write echo; the "
+                "field may have been ignored (check the value or field name)."
+            )
+        if isinstance(value, dict) and value:
+            _verify_response(value, received[key], skip_root, full)
 
 
 def _get_client() -> LiteLLMClient:

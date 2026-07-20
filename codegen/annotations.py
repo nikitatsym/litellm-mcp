@@ -28,6 +28,22 @@ _PAGE_SIZE = "Rows per page."
 _SORT_ORDER = "Sort direction: 'asc' or 'desc'."
 _BARE = "self-explanatory summary; no non-obvious params"
 
+# Write-path reused fragments.
+_TPM = "Tokens-per-minute cap."
+_RPM = "Requests-per-minute cap."
+_MAX_BUDGET = "Hard USD budget cap; use blocks once exceeded."
+_SOFT_BUDGET = "USD spend that raises an alert; does not block."
+_BUDGET_DURATION = "Budget reset window, e.g. '30d', '1mo'."
+_MODELS = "Model names this resource may access; empty means all."
+_METADATA = "Free-form JSON metadata stored on the row."
+_BLOCKED = "true blocks all use immediately."
+_DURATION = "Key lifetime, e.g. '30d', '24h'; stored as an expiry timestamp."
+_LITELLM_PARAMS = (
+    "Provider call config as a dict, e.g. {'model': 'openai/gpt-4o', "
+    "'api_key': 'os.environ/OPENAI_API_KEY'}. Keys are provider-specific "
+    "(genuinely dynamic), so this stays an opaque dict - see LiteLLM docs."
+)
+
 ANNOTATIONS: dict[str, dict[str, Any]] = {
     # ===================== read_core =====================================
     "list_keys": {
@@ -374,4 +390,347 @@ ANNOTATIONS: dict[str, dict[str, Any]] = {
         "params": {"model": "Model name to inspect."},
     },
     "list_providers": {"doc": "List supported LLM providers.", "bare": "no params"},
+    # ===================== write =========================================
+    "generate_key": {
+        "doc": "Mint a new virtual API key.",
+        "body": "The generated secret is returned ONCE, in this response's `key` "
+        "field - it is never retrievable again (list_keys/key_info show only the "
+        "hashed token). Store it now.",
+        "params": {
+            "key_alias": "Human-readable label for the key.",
+            "duration": _DURATION,
+            "models": _MODELS,
+            "max_budget": _MAX_BUDGET,
+            "soft_budget": _SOFT_BUDGET,
+            "tpm_limit": _TPM,
+            "rpm_limit": _RPM,
+            "budget_duration": _BUDGET_DURATION,
+            "user_id": "Owning user; omit to leave unassigned.",
+            "team_id": "Owning team; scopes the key's model access and budget.",
+            "key": "Provide a custom key string instead of a generated one.",
+            "metadata": _METADATA,
+            "blocked": _BLOCKED,
+        },
+    },
+    "update_key": {
+        "doc": "Update an existing virtual key's settings.",
+        "body": "Addresses the key by its `key` token; only the fields you pass "
+        "are changed.",
+        "params": {
+            "key": "Token of the key to update (hashed token accepted).",
+            "models": _MODELS,
+            "max_budget": _MAX_BUDGET,
+            "tpm_limit": _TPM,
+            "rpm_limit": _RPM,
+            "budget_duration": _BUDGET_DURATION,
+            "blocked": _BLOCKED,
+            "metadata": _METADATA,
+        },
+    },
+    "new_team": {
+        "doc": "Create a team.",
+        "params": {
+            "team_alias": "Human-readable team name.",
+            "team_id": "Provide a custom ID; omit to auto-generate.",
+            "organization_id": "Parent organization, if any.",
+            "models": _MODELS,
+            "max_budget": _MAX_BUDGET,
+            "tpm_limit": _TPM,
+            "rpm_limit": _RPM,
+            "budget_duration": _BUDGET_DURATION,
+            "members_with_roles": "Initial members as {'user_id'|'user_email', 'role'} dicts.",
+            "blocked": _BLOCKED,
+        },
+    },
+    "update_team": {
+        "doc": "Update a team's settings.",
+        "params": {
+            "team_id": "ID of the team to update.",
+            "models": _MODELS,
+            "max_budget": _MAX_BUDGET,
+            "tpm_limit": _TPM,
+            "rpm_limit": _RPM,
+            "budget_duration": _BUDGET_DURATION,
+            "blocked": _BLOCKED,
+        },
+    },
+    "team_member_add": {
+        "doc": "Add one or more members to a team.",
+        "params": {
+            "team_id": "Team to add members to.",
+            "member": "A member or list of members: {'user_id'|'user_email', 'role'}.",
+            "max_budget_in_team": "Per-member USD budget scoped to this team.",
+        },
+    },
+    "team_member_update": {
+        "doc": "Update a team member's role or limits.",
+        "params": {
+            "team_id": "Team the member belongs to.",
+            "role": "Member role within the team.",
+            "max_budget_in_team": "Per-member USD budget scoped to this team.",
+            "tpm_limit": _TPM,
+            "rpm_limit": _RPM,
+        },
+    },
+    "team_model_add": {
+        "doc": "Grant a team access to additional models.",
+        "params": {
+            "team_id": "Team to grant access to.",
+            "models": "Model names to add to the team's allow-list.",
+        },
+    },
+    "team_permissions_update": {
+        "doc": "Replace a team's member-permission list.",
+        "params": {
+            "team_id": "Team whose permissions to set.",
+            "team_member_permissions": "Full permission list (replaces, not merges).",
+        },
+    },
+    "add_team_callback": {
+        "doc": "Register a logging/alerting callback on a team.",
+        "params": {
+            "team_id": "Team to attach the callback to.",
+            "callback_name": "Callback integration name, e.g. 'langfuse', 'slack'.",
+            "callback_type": "When the callback fires.",
+            "callback_vars": "Callback config as a dict (endpoints, keys, ...).",
+        },
+    },
+    "new_user": {
+        "doc": "Create an internal user.",
+        "body": "If auto_create_key is left on, a default key is minted and its "
+        "secret is returned ONCE in this response.",
+        "params": {
+            "user_email": "User email (login identity).",
+            "user_role": "Proxy-level role.",
+            "user_id": "Provide a custom ID; omit to auto-generate.",
+            "teams": "Team IDs to add the user to.",
+            "models": _MODELS,
+            "max_budget": _MAX_BUDGET,
+            "tpm_limit": _TPM,
+            "rpm_limit": _RPM,
+            "duration": _DURATION,
+        },
+    },
+    "update_user": {
+        "doc": "Update an internal user's settings.",
+        "params": {
+            "user_id": "ID of the user to update.",
+            "user_role": "Proxy-level role.",
+            "models": _MODELS,
+            "max_budget": _MAX_BUDGET,
+            "tpm_limit": _TPM,
+            "rpm_limit": _RPM,
+            "password": "New UI login password.",
+        },
+    },
+    "new_organization": {
+        "doc": "Create an organization.",
+        "params": {
+            "organization_alias": "Human-readable organization name.",
+            "organization_id": "Provide a custom ID; omit to auto-generate.",
+            "models": _MODELS,
+            "max_budget": _MAX_BUDGET,
+            "tpm_limit": _TPM,
+            "rpm_limit": _RPM,
+            "budget_duration": _BUDGET_DURATION,
+        },
+    },
+    "organization_member_add": {
+        "doc": "Add one or more members to an organization.",
+        "params": {
+            "organization_id": "Organization to add members to.",
+            "member": "A member or list of members: {'user_id'|'user_email', 'role'}.",
+            "max_budget_in_organization": "Per-member USD budget scoped to this org.",
+        },
+    },
+    "organization_member_update": {
+        "doc": "Update an organization member's role or budget.",
+        "params": {
+            "organization_id": "Organization the member belongs to.",
+            "role": "Member role within the organization.",
+            "max_budget_in_organization": "Per-member USD budget scoped to this org.",
+        },
+    },
+    "new_customer": {
+        "doc": "Create an end-customer (end user) budget profile.",
+        "body": "Customers are end users tracked for spend/budget, distinct from "
+        "internal users; user_id is the customer identifier you report spend for.",
+        "params": {
+            "user_id": "Customer identifier (your end-user ID).",
+            "alias": "Human-readable customer name.",
+            "max_budget": _MAX_BUDGET,
+            "budget_id": "Attach an existing budget object instead of inline limits.",
+            "allowed_model_region": "Restrict routing to a data region.",
+            "default_model": "Fallback model when the request names none.",
+            "blocked": _BLOCKED,
+        },
+    },
+    "update_customer": {
+        "doc": "Update an end-customer's budget profile.",
+        "params": {
+            "user_id": "Customer identifier to update.",
+            "alias": "Human-readable customer name.",
+            "max_budget": _MAX_BUDGET,
+            "allowed_model_region": "Restrict routing to a data region.",
+            "default_model": "Fallback model when the request names none.",
+            "blocked": _BLOCKED,
+        },
+    },
+    "new_budget": {
+        "doc": "Create a reusable budget object.",
+        "params": {
+            "budget_id": "Provide a custom ID; omit to auto-generate.",
+            "max_budget": _MAX_BUDGET,
+            "soft_budget": _SOFT_BUDGET,
+            "tpm_limit": _TPM,
+            "rpm_limit": _RPM,
+            "budget_duration": _BUDGET_DURATION,
+        },
+    },
+    "update_budget": {
+        "doc": "Update a budget object.",
+        "params": {
+            "budget_id": "ID of the budget to update.",
+            "max_budget": _MAX_BUDGET,
+            "soft_budget": _SOFT_BUDGET,
+            "budget_duration": _BUDGET_DURATION,
+        },
+    },
+    "add_model": {
+        "doc": "Register a new model deployment on the proxy.",
+        "params": {
+            "model_name": "Public model name callers request (e.g. 'gpt-4o').",
+            "litellm_params": _LITELLM_PARAMS,
+            "model_info": "Optional metadata dict (id, mode, base_model, ...).",
+        },
+    },
+    "update_model": {
+        "doc": "Replace a model deployment's config (full update).",
+        "params": {
+            "model_name": "Public model name for the deployment.",
+            "litellm_params": _LITELLM_PARAMS,
+            "model_info": "Metadata dict; must carry the target model_info.id.",
+            "blocked": _BLOCKED,
+        },
+    },
+    "patch_model": {
+        "doc": "Partially update a model deployment.",
+        "params": {
+            "model_id": "Deployment ID to patch (in the path).",
+            "litellm_params": _LITELLM_PARAMS,
+            "blocked": _BLOCKED,
+        },
+    },
+    "create_access_group": {
+        "doc": "Create a unified access group (gates models and MCP servers).",
+        "params": {
+            "access_group_name": "Unique name for the access group.",
+            "access_model_names": "Model names the group grants.",
+            "access_mcp_server_ids": "MCP server IDs the group grants.",
+            "assigned_team_ids": "Teams the group is assigned to.",
+        },
+    },
+    "update_access_group": {
+        "doc": "Update a unified access group.",
+        "params": {
+            "access_group_id": "ID of the access group to update (in the path).",
+            "access_group_name": "New name for the access group.",
+            "access_model_names": "Model names the group grants (replaces).",
+        },
+    },
+    "create_mcp_server": {
+        "doc": "Register a backend MCP server in the gateway.",
+        "body": "Credential fields (credentials, static_headers, env_vars) are "
+        "write-only: they are stored but never returned by the read ops. Supply "
+        "them here; they cannot be read back afterwards.",
+        "params": {
+            "url": "Server URL (for http/sse transports).",
+            "transport": "Transport protocol the server speaks.",
+            "auth_type": "Authentication scheme for reaching the server.",
+            "credentials": "Write-only auth material as a dict.",
+            "mcp_access_groups": "Access-group names that may reach this server.",
+            "command": "Executable to launch (stdio transport).",
+        },
+    },
+    "update_mcp_server": {
+        "doc": "Update a registered MCP server (id in the body).",
+        "body": "Credential fields are write-only, as for create_mcp_server.",
+        "params": {
+            "server_id": "ID of the MCP server to update.",
+            "url": "Server URL (for http/sse transports).",
+            "transport": "Transport protocol the server speaks.",
+            "credentials": "Write-only auth material as a dict.",
+        },
+    },
+    "create_toolset": {
+        "doc": "Create an MCP toolset (a named bundle of tools).",
+        "params": {
+            "toolset_name": "Unique name for the toolset.",
+            "tools": "Tool descriptors as a list of dicts.",
+        },
+    },
+    "update_toolset": {
+        "doc": "Update an MCP toolset (id in the body).",
+        "params": {
+            "toolset_id": "ID of the toolset to update.",
+            "tools": "Tool descriptors as a list of dicts (replaces).",
+        },
+    },
+    "create_credential": {
+        "doc": "Store a named provider credential.",
+        "params": {
+            "credential_name": "Unique name to reference the credential by.",
+            "credential_values": "Secret key/value pairs (write-only) as a dict.",
+            "credential_info": "Non-secret descriptive metadata as a dict.",
+            "model_id": "Bind the credential to a specific model deployment.",
+        },
+    },
+    "update_credential": {
+        "doc": "Update a stored credential.",
+        "params": {
+            "credential_name": "Name of the credential to update (in the path).",
+            "credential_values": "Secret key/value pairs (write-only) as a dict.",
+            "credential_info": "Non-secret descriptive metadata as a dict.",
+        },
+    },
+    "new_tag": {
+        "doc": "Create a spend-tracking tag.",
+        "params": {
+            "name": "Unique tag name.",
+            "models": "Model names the tag scopes spend to.",
+            "max_budget": _MAX_BUDGET,
+            "budget_duration": _BUDGET_DURATION,
+        },
+    },
+    "update_tag": {
+        "doc": "Update a spend-tracking tag.",
+        "params": {
+            "name": "Name of the tag to update.",
+            "models": "Model names the tag scopes spend to (replaces).",
+            "max_budget": _MAX_BUDGET,
+        },
+    },
+    "create_guardrail": {
+        "doc": "Create a guardrail.",
+        "params": {
+            "guardrail": "Guardrail spec as a dict: {'guardrail_name', "
+            "'litellm_params': {'guardrail': <provider>, 'mode': <when>, ...}}. "
+            "Shape is provider-specific - see LiteLLM guardrail docs.",
+        },
+    },
+    "update_guardrail": {
+        "doc": "Update a guardrail.",
+        "params": {
+            "guardrail_id": "ID of the guardrail to update (in the path).",
+            "guardrail": "Full guardrail spec as a dict (replaces).",
+        },
+    },
+    "create_fallback": {
+        "doc": "Define a fallback chain for a model.",
+        "params": {
+            "model": "Primary model the fallback applies to.",
+            "fallback_models": "Ordered models tried when the primary fails.",
+            "fallback_type": "Which failure class triggers this chain.",
+        },
+    },
 }
