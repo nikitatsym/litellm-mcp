@@ -9,6 +9,7 @@ from __future__ import annotations
 import pytest
 import respx
 
+import litellm_mcp.tools.helpers as helpers
 from litellm_mcp.config import _reset_settings
 
 TEST_BASE_URL = "https://litellm.test"
@@ -16,11 +17,14 @@ TEST_BASE_URL = "https://litellm.test"
 
 @pytest.fixture(autouse=True)
 def _reset_state():
-    """Drop the cached settings singleton before and after every test so env
-    changes in one case never leak into the next."""
+    """Drop the cached settings + client singletons before and after every
+    test so env changes / a mocked client in one case never leak into the
+    next."""
     _reset_settings()
+    helpers._client = None
     yield
     _reset_settings()
+    helpers._client = None
 
 
 @pytest.fixture
