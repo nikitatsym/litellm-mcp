@@ -1,0 +1,3 @@
+src/litellm_mcp/client.py#LiteLLMClient: dup-ok: typed per-verb wrapper; logic lives in _request, the repeated signature is the API contract
+src/litellm_mcp/client.py#LiteLLMClient: dup-ok: typed per-verb wrapper; logic lives in _request, the repeated signature is the API contract
+src/litellm_mcp/client.py#LiteLLMClient: dup-ok: typed per-verb wrapper; logic lives in _request, the repeated signature is the API contract

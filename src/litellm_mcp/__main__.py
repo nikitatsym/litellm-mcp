@@ -1,3 +1,3 @@
-from litellm_mcp import main
+from litellm_mcp.server import main
 
 main()

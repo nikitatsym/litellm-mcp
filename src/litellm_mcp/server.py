@@ -375,4 +375,9 @@ def _register_tools() -> None:
         mcp.tool()(_make_tool(group_name, group.doc))
 
 
+def main() -> None:
+    """Console-script entry point for the litellm-mcp server."""
+    mcp.run(transport="stdio")
+
+
 _register_tools()

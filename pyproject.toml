@@ -18,7 +18,7 @@ dependencies = [
 keywords = ["mcp", "litellm", "llm", "proxy", "model-context-protocol", "claude", "ai"]
 
 [project.scripts]
-litellm-mcp = "litellm_mcp:main"
+litellm-mcp = "litellm_mcp.server:main"
 
 [dependency-groups]
 dev = [
