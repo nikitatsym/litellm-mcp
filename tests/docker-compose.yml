@@ -1,6 +1,8 @@
 # Ephemeral LiteLLM proxy for integration smokes (tests/test_integration.py).
 # Pinned to the prod tag; STORE_MODEL_IN_DB + a DATABASE_URL trigger the
 # known-good Prisma-migration-on-start. No real provider keys anywhere.
+# Explicit project name avoids collisions with other repos' tests/ compose files.
+name: litellm-mcp
 services:
   postgres:
     image: postgres:16-alpine

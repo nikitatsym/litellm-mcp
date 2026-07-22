@@ -24,8 +24,10 @@ from .helpers import _get_client, _qp, _verify_response
 def litellm_version() -> dict[str, Any]:
     """Get the MCP server version and the LiteLLM service readiness.
 
-    `mcp` is this package's version. `service` is GET /health/readiness,
-    which carries the running LiteLLM version and database status.
+    `mcp` is this package's version (importlib metadata). `service` is
+    GET /health/readiness, reporting the proxy's status and database
+    connectivity - on LiteLLM v1.93.0 that payload is {status, db}, with no
+    LiteLLM version field.
     """
     return {
         "mcp": importlib.metadata.version("litellm-mcp"),
