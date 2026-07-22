@@ -308,9 +308,8 @@ WAIVED_UNCOVERED: frozenset[tuple[str, str]] = frozenset({
     ('/project/list', 'GET'),
     ('/project/new', 'POST'),
     ('/project/update', 'POST'),
-    # /prompts (CRUD wrapped by the prompts module; test_prompt lands in Step 3;
+    # /prompts (CRUD + test_prompt wrapped by the prompts module;
     #  /info stays waived as the dedup of get_prompt)
-    ('/prompts/test', 'POST'),
     ('/prompts/{prompt_id}/info', 'GET'),
     # /provider
     ('/provider/budgets', 'GET'),
@@ -432,9 +431,9 @@ WAIVED_UNCOVERED: frozenset[tuple[str, str]] = frozenset({
     ('/utils/dotprompt_json_converter', 'POST'),
     ('/utils/test_policies_and_guardrails', 'POST'),
     ('/utils/transform_request', 'POST'),
-    # /v1
+    # /v1 (invoke_agent wraps the canonical /v1/a2a/{agent_id}/message/send POST;
+    #  the /a2a alias routes stay waived, Decision 3)
     ('/v1/a2a/discover', 'GET'),
-    ('/v1/a2a/{agent_id}/message/send', 'POST'),
     ('/v1/agents/make_public', 'POST'),
     ('/v1/agents/{agent_id}/make_public', 'POST'),
     ('/v1/assistants', 'GET'),

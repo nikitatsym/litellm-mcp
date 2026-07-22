@@ -66,4 +66,16 @@ OVERRIDES: dict[str, dict[str, Any]] = {
         "body wire-side (Decision 11)",
         "step": 2,
     },
+    "test_prompt": {
+        "reason": "upstream forces stream=True and always answers an OpenAI-style SSE "
+        "stream; the op collects it client-side into a bounded fixed-shape result "
+        "(Decision 2), which the plain r.json() emitter cannot express",
+        "step": 3,
+    },
+    "invoke_agent": {
+        "reason": "JSON-RPC body read via request.json(), so the snapshot shows no "
+        "requestBody; the op owns the message/send envelope and bounds the A2A result "
+        "(Decision 4)",
+        "step": 3,
+    },
 }

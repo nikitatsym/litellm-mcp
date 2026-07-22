@@ -96,3 +96,101 @@ def test_per_call_auth_override_scoped_to_one_call(respx_mock):
     assert probe.calls.last.request.headers["Authorization"] == "Bearer sk-probed"
     c.get("/key/list")
     assert listing.calls.last.request.headers["Authorization"] == "Bearer sk-test"
+
+
+# --- post_sse: the Decision 12 streaming contract ---------------------------
+
+_SSE_CT = {"content-type": "text/event-stream"}
+
+
+def _sse_body(*events: str) -> str:
+    """Render SSE `data:` blocks (each event is the raw payload after 'data: ')."""
+    return "".join(f"data: {e}\n\n" for e in events)
+
+
+class _RecordingStream(httpx.SyncByteStream):
+    """A byte stream that records how many chunks were pulled and whether it
+    was closed - so a test can prove the client released it early."""
+
+    def __init__(self, chunks: list[bytes]) -> None:
+        self._chunks = chunks
+        self.pulled = 0
+        self.closed = False
+
+    def __iter__(self):
+        for chunk in self._chunks:
+            self.pulled += 1
+            yield chunk
+
+    def close(self) -> None:
+        self.closed = True
+
+
+def test_post_sse_clean_done_yields_each_data_dict(respx_mock):
+    body = _sse_body('{"i": 0}', '{"i": 1}', "[DONE]")
+    respx_mock.post("/prompts/test").respond(200, headers=_SSE_CT, content=body)
+    with _client().post_sse("/prompts/test", json={}) as events:
+        got = list(events)
+    assert got == [{"i": 0}, {"i": 1}]
+
+
+def test_post_sse_non_2xx_raises_apierror_with_body(respx_mock):
+    respx_mock.post("/prompts/test").respond(400, json={"error": "no model in frontmatter"})
+    with pytest.raises(APIError) as ei:
+        with _client().post_sse("/prompts/test", json={}):
+            pass
+    assert ei.value.status == 400
+    assert ei.value.body == {"error": "no model in frontmatter"}
+
+
+def test_post_sse_2xx_non_stream_raises_with_payload_preview(respx_mock):
+    """Upstream documents 'always streamed'; a plain-JSON 200 is a contract
+    change to surface, carrying the payload preview (Decision 2)."""
+    respx_mock.post("/prompts/test").respond(
+        200, headers={"content-type": "application/json"}, content='{"unexpected": "json"}'
+    )
+    with pytest.raises(APIError) as ei:
+        with _client().post_sse("/prompts/test", json={}):
+            pass
+    assert ei.value.status == 200
+    assert "unexpected" in ei.value.body
+
+
+def test_post_sse_bad_json_chunk_raises(respx_mock):
+    body = _sse_body('{"ok": 1}', "not-json-at-all", "[DONE]")
+    respx_mock.post("/prompts/test").respond(200, headers=_SSE_CT, content=body)
+    with pytest.raises(APIError):
+        with _client().post_sse("/prompts/test", json={}) as events:
+            list(events)
+
+
+def test_post_sse_premature_eof_raises(respx_mock):
+    """No [DONE] terminus: an incomplete stream is a failed call, not a short
+    answer."""
+    body = _sse_body('{"i": 0}', '{"i": 1}')  # no [DONE]
+    respx_mock.post("/prompts/test").respond(200, headers=_SSE_CT, content=body)
+    with pytest.raises(APIError) as ei:
+        with _client().post_sse("/prompts/test", json={}) as events:
+            list(events)
+    assert "[DONE]" in str(ei.value)
+
+
+def test_post_sse_cap_break_releases_stream_without_reading_to_done():
+    """Adversarial: a consumer that breaks mid-stream (test_prompt's cap-stop)
+    must release the HTTP response WITHOUT reading through to [DONE]."""
+    chunks = [f"data: {{\"i\": {i}}}\n\n".encode() for i in range(4)] + [b"data: [DONE]\n\n"]
+    stream = _RecordingStream(chunks)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, headers=_SSE_CT, stream=stream)
+
+    c = LiteLLMClient(base_url=BASE, api_key="sk-test", transport=httpx.MockTransport(handler))
+    seen: list[dict] = []
+    with c.post_sse("/prompts/test", json={}) as events:
+        for event in events:
+            seen.append(event)
+            break  # cap-stop after the first event
+
+    assert seen == [{"i": 0}]
+    assert stream.closed is True  # the with-block closed the response
+    assert stream.pulled < len(chunks)  # we never read through to [DONE]

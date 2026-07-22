@@ -3,7 +3,7 @@
 `OPS` is the machine-readable contract - one row per operation, fixed by the
 v2.5-build plan and the prompts-and-agent-activity follow-on (op name, risk
 group, generated-module, HTTP method, path). `litellm_version` is hand-written
-(ROOT) and lives outside the inventory, so `len(OPS) == 207`. Transcribe
+(ROOT) and lives outside the inventory, so `len(OPS) == 209`. Transcribe
 EXACTLY: names/endpoints come from the plan's
 tables, methods from the snapshot. A row that does not resolve against the
 snapshot is a generation-time error naming the op.
@@ -199,7 +199,7 @@ OPS: tuple[Op, ...] = (
     Op("delete_allowed_ip", "admin", "admin", "POST", "/delete/allowed_ip"),
     Op("global_spend_reset", "admin", "admin", "POST", "/global/spend/reset"),
     Op("bulk_update_users", "admin", "admin", "POST", "/user/bulk_update"),
-    # --- platform (51): policies / evals / a2a / workflows / cloudzero ---
+    # --- platform (53): policies / evals / a2a / workflows / cloudzero ---
     Op("list_policies", "read", "platform", "GET", "/policies/list"),
     Op("policy_info", "read", "platform", "GET", "/policies/{policy_id}"),
     Op("list_policy_versions", "read", "platform", "GET", "/policies/name/{policy_name}/versions"),
@@ -243,6 +243,8 @@ OPS: tuple[Op, ...] = (
     Op("patch_agent", "write", "platform", "PATCH", "/v1/agents/{agent_id}"),
     Op("delete_agent", "delete", "platform", "DELETE", "/v1/agents/{agent_id}"),
     Op("agent_daily_activity", "read", "platform", "GET", "/agent/daily/activity"),
+    # invoke_agent is an override (JSON-RPC body invisible to the snapshot, Decision 4).
+    Op("invoke_agent", "execute", "platform", "POST", "/v1/a2a/{agent_id}/message/send"),
     Op("list_workflow_runs", "read", "platform", "GET", "/v1/workflows/runs"),
     Op("get_workflow_run", "read", "platform", "GET", "/v1/workflows/runs/{run_id}"),
     Op("list_workflow_events", "read", "platform", "GET", "/v1/workflows/runs/{run_id}/events"),
@@ -259,8 +261,8 @@ OPS: tuple[Op, ...] = (
     Op("cloudzero_export", "execute", "platform", "POST", "/cloudzero/export"),
     Op("delete_cloudzero_settings", "delete", "platform", "DELETE", "/cloudzero/delete"),
     # --- prompts (8): Prompt Management CRUD (prompts-and-agent-activity plan) ---
-    # update_prompt is an override (path/body id collision, Decision 11); test_prompt
-    # and invoke_agent (execute) land in Step 3, not here.
+    # update_prompt and test_prompt are overrides (Decisions 11 and 2); test_prompt
+    # is execute (a provider call spends money), skipped by the emitter.
     Op("list_prompts", "read", "prompts", "GET", "/prompts/list"),
     Op("get_prompt", "read", "prompts", "GET", "/prompts/{prompt_id}"),
     Op("list_prompt_versions", "read", "prompts", "GET", "/prompts/{prompt_id}/versions"),
@@ -268,9 +270,10 @@ OPS: tuple[Op, ...] = (
     Op("update_prompt", "write", "prompts", "PUT", "/prompts/{prompt_id}"),
     Op("patch_prompt", "write", "prompts", "PATCH", "/prompts/{prompt_id}"),
     Op("delete_prompt", "delete", "prompts", "DELETE", "/prompts/{prompt_id}"),
+    Op("test_prompt", "execute", "prompts", "POST", "/prompts/test"),
 )
 
-assert len(OPS) == 207, f"expected 207 ops, got {len(OPS)}"
+assert len(OPS) == 209, f"expected 209 ops, got {len(OPS)}"
 
 _names = [op.name for op in OPS]
 assert len(_names) == len(set(_names)), "duplicate op names in OPS"

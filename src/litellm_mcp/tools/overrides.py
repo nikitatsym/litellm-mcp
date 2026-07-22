@@ -11,6 +11,8 @@ apply. The write/execute/eval overrides land in Steps 6-8.
 from __future__ import annotations
 
 import importlib.metadata
+import json
+import uuid
 from typing import Annotated, Any, cast
 
 from pydantic import Field
@@ -18,6 +20,13 @@ from pydantic import Field
 from ..registry import ROOT, _UNSET, _op
 from .groups import litellm_execute, litellm_read, litellm_write
 from .helpers import _get_client, _qp, _verify_response
+
+# Shared execute-output caps: accumulated SSE text (test_prompt) / any single
+# string in a bounded A2A result (invoke_agent); kept A2A Task history entries;
+# and the whole-result serialization backstop.
+_EXEC_TEXT_CAP = 20_000
+_EXEC_HISTORY_KEEP = 5
+_EXEC_RESULT_CAP = 100_000
 
 
 @_op(ROOT)
@@ -346,3 +355,258 @@ def update_prompt(
     if prompt_info is not _UNSET:
         body["prompt_info"] = prompt_info
     return _get_client().put(f"/prompts/{prompt_id}", json=body)
+
+
+@_op(litellm_execute)
+def test_prompt(
+    dotprompt_content: Annotated[
+        str,
+        Field(
+            description="Dotprompt template WITH frontmatter. The frontmatter's "
+            "'model:' selects which model runs (a 400 if it names none); the body is "
+            "the prompt template, rendered with prompt_variables."
+        ),
+    ],
+    prompt_variables: Annotated[
+        dict[str, Any] | None,
+        Field(description="Values substituted into the dotprompt template placeholders."),
+    ] = cast(dict[str, Any] | None, _UNSET),
+    conversation_history: Annotated[
+        list[dict[str, str]] | None,
+        Field(description="Prior chat turns (each a {role, content} dict) prepended before the rendered prompt."),
+    ] = cast(list[dict[str, str]] | None, _UNSET),
+) -> dict[str, Any]:
+    """Render a dotprompt and RUN it through the model - THIS SPENDS INFERENCE.
+
+    Upstream parses the dotprompt frontmatter (the 'model:' there picks the
+    model - there is no model argument here), renders the template, then always
+    streams an OpenAI-style chat completion (stream=True is forced upstream).
+    This op collects that stream client-side into a fixed shape: {model, text,
+    finish_reason, usage, truncated}. Accumulated text is capped at 20000 chars
+    (truncated=true past the cap); a mid-stream error event raises, and a 2xx
+    non-SSE response raises (both surface a broken upstream contract rather than
+    a silent empty answer).
+    """
+    body: dict[str, Any] = {"dotprompt_content": dotprompt_content}
+    if prompt_variables is not _UNSET:
+        body["prompt_variables"] = prompt_variables
+    if conversation_history is not _UNSET:
+        body["conversation_history"] = conversation_history
+
+    model: str | None = None
+    text_parts: list[str] = []
+    text_len = 0
+    finish_reason: str | None = None
+    usage: dict[str, Any] | None = None
+    truncated = False
+
+    with _get_client().post_sse("/prompts/test", json=body) as events:
+        for event in events:
+            if "error" in event:
+                raise ValueError(
+                    f"test_prompt: upstream returned a streaming error event: {event['error']!r}"
+                )
+            if event.get("model"):
+                model = event["model"]
+            if event.get("usage"):
+                usage = event["usage"]
+            for choice in event.get("choices", []):
+                piece = (choice.get("delta") or {}).get("content")
+                if piece:
+                    text_parts.append(piece)
+                    text_len += len(piece)
+                if choice.get("finish_reason"):
+                    finish_reason = choice["finish_reason"]
+            if text_len >= _EXEC_TEXT_CAP:
+                truncated = True
+                break  # cap-stop; the with-block closes the stream
+
+    return {
+        "model": model,
+        "text": "".join(text_parts)[:_EXEC_TEXT_CAP],
+        "finish_reason": finish_reason,
+        "usage": usage,
+        "truncated": truncated,
+    }
+
+
+def _bound_a2a(value: Any) -> tuple[Any, bool]:
+    """Recursively bound an A2A result: (bounded_value, anything_cut).
+
+    Generic walk over every dict/list/string (not a known-field allowlist): a
+    dict's `bytes` (a FilePart/DataPart payload) is dropped for `bytes_omitted`
+    (its byte count), other file fields kept; any string over _EXEC_TEXT_CAP is
+    truncated; a `history` list is capped to the last _EXEC_HISTORY_KEEP entries
+    with `history_omitted` recording the drop count.
+    """
+    if isinstance(value, dict):
+        cut = False
+        out: dict[str, Any] = {}
+        if "bytes" in value:
+            raw = value["bytes"]
+            out["bytes_omitted"] = (
+                len(raw) if isinstance(raw, (str, bytes, bytearray)) else len(json.dumps(raw))
+            )
+            cut = True
+        for key, item in value.items():
+            if key == "bytes":
+                continue
+            if key == "history" and isinstance(item, list):
+                kept = item[-_EXEC_HISTORY_KEEP:]
+                bounded_kept: list[Any] = []
+                for entry in kept:
+                    be, ecut = _bound_a2a(entry)
+                    bounded_kept.append(be)
+                    cut = cut or ecut
+                out["history"] = bounded_kept
+                dropped = len(item) - len(kept)
+                if dropped > 0:
+                    out["history_omitted"] = dropped
+                    cut = True
+                continue
+            bi, icut = _bound_a2a(item)
+            out[key] = bi
+            cut = cut or icut
+        return out, cut
+    if isinstance(value, list):
+        cut = False
+        bounded_list: list[Any] = []
+        for item in value:
+            bi, icut = _bound_a2a(item)
+            bounded_list.append(bi)
+            cut = cut or icut
+        return bounded_list, cut
+    if isinstance(value, str) and len(value) > _EXEC_TEXT_CAP:
+        return value[:_EXEC_TEXT_CAP], True
+    return value, False
+
+
+def _a2a_result_stub(result: Any) -> dict[str, Any]:
+    """Structural summary for a result too big for the bounding rules to shrink."""
+    kinds: set[str] = set()
+    counts = {"parts": 0, "artifacts": 0, "history": 0}
+
+    def walk(value: Any) -> None:
+        if isinstance(value, dict):
+            kind = value.get("kind")
+            if isinstance(kind, str):
+                kinds.add(kind)
+            for field_name in counts:
+                seq = value.get(field_name)
+                if isinstance(seq, list):
+                    counts[field_name] += len(seq)
+            for item in value.values():
+                walk(item)
+        elif isinstance(value, list):
+            for item in value:
+                walk(item)
+
+    walk(result)
+    return {
+        "kinds": sorted(kinds),
+        "parts_total": counts["parts"],
+        "artifacts_total": counts["artifacts"],
+        "history_len": counts["history"],
+        "serialized_chars": len(json.dumps(result)),
+    }
+
+
+@_op(litellm_execute)
+def invoke_agent(
+    agent_id: Annotated[str, Field(description="Registered agent id to send the message to.")],
+    text: Annotated[
+        str | None,
+        Field(description="Convenience: a plain user-text turn. Mutually exclusive with 'message'."),
+    ] = cast(str | None, _UNSET),
+    message: Annotated[
+        dict[str, Any] | None,
+        Field(
+            description="Full A2A Message dict, forwarded verbatim (multi-part "
+            "text/file/data, contextId/taskId for session continuity). Mutually "
+            "exclusive with 'text'."
+        ),
+    ] = cast(dict[str, Any] | None, _UNSET),
+    configuration: Annotated[
+        dict[str, Any] | None,
+        Field(description="A2A MessageSendConfiguration dict; blocking is forced true (see below)."),
+    ] = cast(dict[str, Any] | None, _UNSET),
+    metadata: Annotated[
+        dict[str, Any] | None, Field(description="Arbitrary JSON-RPC params metadata, forwarded verbatim.")
+    ] = cast(dict[str, Any] | None, _UNSET),
+    message_id: Annotated[
+        str | None,
+        Field(description="messageId for the convenience 'text' form only (autofilled with a uuid4 if omitted)."),
+    ] = cast(str | None, _UNSET),
+    timeout: Annotated[
+        float,
+        Field(description="Per-call HTTP timeout in seconds; the agent behind the proxy may run its own LLM chain."),
+    ] = 120.0,
+) -> dict[str, Any]:
+    """Invoke a registered A2A agent one-shot (message/send) - MAY SPEND INFERENCE.
+
+    Spec-gap override: the endpoint's JSON-RPC body is invisible to the snapshot.
+    The op owns the pinned JSON-RPC 2.0 envelope (method 'message/send', fresh
+    uuid4 id) so the bounded non-streaming contract holds; a caller-supplied
+    method could switch to message/stream or tasks/*. Pass exactly one of 'text'
+    (convenience) or 'message' (full A2A Message). blocking is always forced true:
+    a pending Task would strand this loop (tasks/* polling is out of scope). An
+    upstream JSON-RPC error object raises even on HTTP 200. On success the agent
+    may answer with a Message or a Task (its choice); the result is returned
+    bounded ({result, truncated}): oversized file bytes, long strings, and long
+    Task history are cut, with a structural stub as the backstop.
+    """
+    has_text = text is not _UNSET
+    has_message = message is not _UNSET
+    if has_text == has_message:
+        raise ValueError("invoke_agent requires exactly one of 'text' or 'message'")
+
+    config: dict[str, Any] = {}
+    if configuration is not _UNSET and configuration is not None:
+        config = dict(configuration)
+    if config.get("blocking") is False:
+        raise ValueError(
+            "invoke_agent forces blocking=true (a pending Task with tasks/* polling out "
+            "of scope would strand the loop); configuration.blocking=false is rejected"
+        )
+    config["blocking"] = True
+
+    if has_text:
+        mid = message_id if message_id is not _UNSET else str(uuid.uuid4())
+        message_value: Any = {
+            "role": "user",
+            "parts": [{"kind": "text", "text": text}],
+            "messageId": mid,
+        }
+    else:
+        message_value = message
+
+    params: dict[str, Any] = {"message": message_value, "configuration": config}
+    if metadata is not _UNSET:
+        params["metadata"] = metadata
+
+    envelope = {
+        "jsonrpc": "2.0",
+        "id": str(uuid.uuid4()),
+        "method": "message/send",
+        "params": params,
+    }
+    response = _get_client().post(
+        f"/v1/a2a/{agent_id}/message/send", json=envelope, timeout=timeout
+    )
+
+    if isinstance(response, dict) and "error" in response:
+        err = response["error"]
+        code = err.get("code") if isinstance(err, dict) else None
+        msg_text = err.get("message") if isinstance(err, dict) else err
+        raise ValueError(f"invoke_agent: agent returned JSON-RPC error {code}: {msg_text}")
+    if not isinstance(response, dict) or "result" not in response:
+        raise ValueError(
+            f"invoke_agent: JSON-RPC response has neither 'result' nor 'error': {response!r}"
+        )
+
+    result = response["result"]
+    bounded, truncated = _bound_a2a(result)
+    if len(json.dumps(bounded)) > _EXEC_RESULT_CAP:
+        bounded = _a2a_result_stub(result)
+        truncated = True
+    return {"result": bounded, "truncated": truncated}

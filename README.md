@@ -1,18 +1,22 @@
 # litellm-mcp
 
-MCP server for the [LiteLLM](https://github.com/BerriAI/litellm) proxy
-management API. It wraps the proxy **administration** surface - virtual
-keys, teams, users, orgs, customers, budgets, models, credentials, tags,
+MCP server for the [LiteLLM](https://github.com/BerriAI/litellm) proxy. It
+is a **development-and-operations** surface for LiteLLM resources - creating,
+configuring, testing, invoking, observing, and cleaning up virtual keys,
+teams, users, orgs, customers, budgets, models, credentials, tags,
 guardrails, spend/usage, cache, health, proxy settings, the MCP gateway
-registry (backend servers, toolsets, access groups), and the platform
-areas (policies, evals, A2A agent registry, workflow runs, CloudZero
-export) - as risk-graded meta-tools an agent can drive.
+registry (backend servers, toolsets, access groups), prompts, and the
+platform areas (policies, evals, A2A agent registry, workflow runs,
+CloudZero export) - as risk-graded meta-tools an agent can drive.
 
-Inference and the OpenAI-compatible surface (chat/completions, embeddings,
-files, batches, assistants, vector stores, provider pass-throughs) are out
-of scope: agents already have model access through their LLM client, so
-this MCP exposes only the management CRUD an operator would otherwise click
-through the LiteLLM Admin UI.
+Bulk inference and the OpenAI-compatible surface (chat/completions,
+embeddings, files, batches, assistants, vector stores, provider
+pass-throughs) stay out of scope: agents already have model access through
+their LLM client. What comes in is one-shot, dev-loop invocation that
+closes a loop through the MCP alone - `test_prompt` renders and runs a
+dotprompt, `invoke_agent` sends an A2A `message/send`. Both are graded as
+`litellm_execute` (they spend inference) and return bounded output, never a
+raw stream.
 
 Built on the v2.5 MCP server family: five meta-tools dispatched by
 `operation` + `params`, strict Pydantic validation, per-op `help` and JSON
@@ -21,16 +25,16 @@ write-response verification.
 
 ## Operations
 
-**208 operations total**: 207 grouped across the five meta-tools, plus one
+**210 operations total**: 209 grouped across the five meta-tools, plus one
 root `litellm_version` op. The count is machine-checked - it equals
-`len(OPS)` in `codegen/inventory.py` (207) plus the hand-written root op,
-and equals the summed `grep -c "^@_op" src/litellm_mcp/tools/*.py` (208).
+`len(OPS)` in `codegen/inventory.py` (209) plus the hand-written root op,
+and equals the summed `grep -c "^@_op" src/litellm_mcp/tools/*.py` (210).
 
 | Meta-tool | Risk | Ops |
 | --- | --- | ---: |
 | `litellm_read` | safe | 94 |
 | `litellm_write` | medium | 55 |
-| `litellm_execute` | medium | 20 |
+| `litellm_execute` | medium | 22 |
 | `litellm_delete` | high | 26 |
 | `litellm_admin` | high | 12 |
 
@@ -42,7 +46,8 @@ and equals the summed `grep -c "^@_op" src/litellm_mcp/tools/*.py` (208).
   fallbacks, MCP servers/toolsets, access groups, policies, evals, agents,
   workflows, and prompts (create/update/patch).
 - **`litellm_execute`** (medium): block/unblock toggles, key
-  regenerate/reset, connection tests, targeted cache delete.
+  regenerate/reset, connection tests, targeted cache delete, and one-shot
+  dev-loop invocation (test a prompt, invoke an agent) with bounded output.
 - **`litellm_delete`** (high): irreversible deletes and cache flushall.
 - **`litellm_admin`** (high): proxy-global settings, allowed IPs, global
   spend reset, bulk user update.
