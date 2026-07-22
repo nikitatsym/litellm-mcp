@@ -44,6 +44,54 @@ _LITELLM_PARAMS = (
     "(genuinely dynamic), so this stays an opaque dict - see LiteLLM docs."
 )
 
+# --- platform (Step 8) reused fragments -----------------------------------
+_POLICY_ID = "Policy ID (one specific version row of a policy)."
+_POLICY_NAME_ADDR = "Policy name (addresses the policy across all its versions)."
+_ATTACHMENT_ID = "Policy attachment ID."
+_CUSTOM_LLM_PROVIDER = "Provider override for the eval backend; omit to use the configured default."
+# create/update policy share these body fields.
+_POLICY_INHERIT = "Name of a parent policy to inherit guardrails from."
+_POLICY_DESCRIPTION = "Human-readable description of the policy."
+_POLICY_GADD = "Guardrail names to add."
+_POLICY_GREMOVE = "Guardrail names to remove (from the inherited set)."
+_POLICY_CONDITION = "Condition object controlling when this policy applies."
+_POLICY_PIPELINE = "Guardrail pipeline for ordered execution; contains 'mode' and 'steps'."
+# create_policy_attachment / estimate_attachment_impact share the scope selectors.
+_ATTACH_SCOPE = "Attachment scope; use '*' for global (applies to all requests)."
+_ATTACH_TEAMS = "Team aliases or patterns this attachment applies to."
+_ATTACH_KEYS = "Key aliases or patterns this attachment applies to."
+_ATTACH_MODELS = "Model names or patterns this attachment applies to."
+_ATTACH_TAGS = "Tag patterns this attachment applies to; supports wildcards (e.g. 'health-*')."
+_ATTACH_PARAMS = {
+    "policy_name": "Name of the policy to attach.",
+    "scope": _ATTACH_SCOPE,
+    "teams": _ATTACH_TEAMS,
+    "keys": _ATTACH_KEYS,
+    "models": _ATTACH_MODELS,
+    "tags": _ATTACH_TAGS,
+}
+# a2a agents share the same write body across create/update/patch.
+_AGENT_PARAMS = {
+    "agent_name": "Human-readable agent name.",
+    "agent_card_params": "A2A agent-card fields (name, description, skills, ...) as a dict.",
+    "litellm_params": "Provider call config for the agent's backend model, as a dict.",
+    "object_permission": "Object-level permission config (models/routes this agent may use).",
+    "tpm_limit": _TPM,
+    "rpm_limit": _RPM,
+    "session_tpm_limit": "Per-session tokens-per-minute cap.",
+    "session_rpm_limit": "Per-session requests-per-minute cap.",
+    "static_headers": "Fixed headers sent to the agent backend; may carry secrets (write-only).",
+    "extra_headers": "Additional header names to forward to the agent backend.",
+}
+# cloudzero export/dry-run share the window selectors.
+_CZ_PARAMS = {
+    "limit": "Max spend records to export; omit for no cap.",
+    "operation": "CloudZero write mode: 'replace_hourly' overwrites the hour, 'sum' adds.",
+    "start_time_utc": "Window start (UTC ISO-8601); omit for the default range.",
+    "end_time_utc": "Window end (UTC ISO-8601); omit for the default range.",
+}
+_CZ_OPERATION = "Literal['replace_hourly', 'sum']"
+
 ANNOTATIONS: dict[str, dict[str, Any]] = {
     # ===================== read_core =====================================
     "list_keys": {
@@ -981,5 +1029,317 @@ ANNOTATIONS: dict[str, dict[str, Any]] = {
             "all_users": "true applies user_updates to every user (mass edit).",
             "user_updates": "Shared field patch applied when all_users is true.",
         },
+    },
+    # ===================== platform: policies ============================
+    "list_policies": {
+        "doc": "List policies (rows slimmed to identity and version status).",
+        "params": {
+            "version_status": "Filter by version status: draft, published, or production.",
+        },
+    },
+    "policy_info": {
+        "doc": "Get one policy version's full definition.",
+        "params": {"policy_id": _POLICY_ID},
+    },
+    "list_policy_versions": {
+        "doc": "List every version of one policy (slimmed).",
+        "params": {"policy_name": _POLICY_NAME_ADDR},
+    },
+    "compare_policy_versions": {
+        "doc": "Diff two policy versions field by field.",
+        "params": {
+            "version_a": "Policy version ID on the left of the diff.",
+            "version_b": "Policy version ID on the right of the diff.",
+        },
+    },
+    "policy_resolved_guardrails": {
+        "doc": "Show the guardrails a policy resolves to after inheritance.",
+        "params": {"policy_id": _POLICY_ID},
+    },
+    "list_policy_attachments": {
+        "doc": "List policy attachments (which policies bind to which key/team/model/tag).",
+    },
+    "policy_attachment_info": {
+        "doc": "Get one policy attachment's scope.",
+        "params": {"attachment_id": _ATTACHMENT_ID},
+    },
+    "policies_usage_overview": {
+        "doc": "Aggregate policy pass/block counts over a date window.",
+        "params": {"start_date": _START, "end_date": _END},
+    },
+    "resolve_policies": {
+        "doc": "Resolve which policies and guardrails apply to a given context.",
+        "body": "Read-only: returns the effective guardrails for the described "
+        "request context (key/model/team/tags); it changes nothing.",
+        "params": {
+            "key_alias": "Key alias to resolve for.",
+            "model": "Model name to resolve for.",
+            "tags": "Tags to resolve for.",
+            "team_alias": "Team alias to resolve for.",
+            "force_sync": "Force a DB sync before resolving; default uses the in-memory cache.",
+        },
+    },
+    "estimate_attachment_impact": {
+        "doc": "Preview how many keys/teams a would-be attachment would affect.",
+        "body": "Read-only: estimates the blast radius of the described attachment "
+        "without creating it.",
+        "params": _ATTACH_PARAMS,
+    },
+    "create_policy": {
+        "doc": "Create a policy (DB-backed policy engine).",
+        "params": {
+            "policy_name": "Unique name for the policy.",
+            "inherit": _POLICY_INHERIT,
+            "description": _POLICY_DESCRIPTION,
+            "guardrails_add": _POLICY_GADD,
+            "guardrails_remove": _POLICY_GREMOVE,
+            "condition": _POLICY_CONDITION,
+            "pipeline": _POLICY_PIPELINE,
+        },
+    },
+    "update_policy": {
+        "doc": "Update a policy version's fields.",
+        "params": {
+            "policy_id": _POLICY_ID,
+            "policy_name": "New name for the policy.",
+            "inherit": _POLICY_INHERIT,
+            "description": _POLICY_DESCRIPTION,
+            "guardrails_add": _POLICY_GADD,
+            "guardrails_remove": _POLICY_GREMOVE,
+            "condition": _POLICY_CONDITION,
+            "pipeline": _POLICY_PIPELINE,
+        },
+    },
+    "create_policy_version": {
+        "doc": "Create a new draft version of a policy by cloning an existing one.",
+        "params": {
+            "policy_name": _POLICY_NAME_ADDR,
+            "source_policy_id": "Policy version ID to clone from; omit to clone the "
+            "current production version.",
+        },
+    },
+    "update_policy_version_status": {
+        "doc": "Activate a policy version (publish or promote to production).",
+        "body": "Moves the addressed version to the given status. 'published' stages "
+        "it; 'production' makes it the live version. A version starts as a draft and "
+        "is promoted through this endpoint.",
+        "params": {
+            "policy_id": _POLICY_ID,
+            "version_status": "Target status: 'published' (staged) or 'production' (live).",
+        },
+        # Snapshot types this as a bare string; narrow to the documented settable
+        # values so a bad status is rejected by Pydantic before any HTTP call.
+        "types": {"version_status": "Literal['published', 'production']"},
+    },
+    "create_policy_attachment": {
+        "doc": "Attach a policy to keys, teams, models, or tags.",
+        "body": "Binds the named policy to the given scope so its guardrails apply "
+        "to matching requests. Use estimate_attachment_impact first to preview reach.",
+        "params": _ATTACH_PARAMS,
+    },
+    "test_policy_pipeline": {
+        "doc": "Run test messages through a guardrail pipeline and report the outcome.",
+        "body": "Evaluation only: nothing is stored; the response is the pipeline's "
+        "pass/block result for the given messages.",
+        "params": {
+            "pipeline": "Pipeline definition with 'mode' and 'steps'.",
+            "test_messages": "Messages to run through the pipeline, e.g. "
+            "[{'role': 'user', 'content': '...'}].",
+        },
+    },
+    "delete_policy": {
+        "doc": "Delete one policy version (irreversible).",
+        "params": {"policy_id": _POLICY_ID},
+    },
+    "delete_policy_all_versions": {
+        "doc": "Delete a policy and every one of its versions (irreversible).",
+        "params": {"policy_name": _POLICY_NAME_ADDR},
+    },
+    "delete_policy_attachment": {
+        "doc": "Remove a policy attachment (irreversible).",
+        "params": {"attachment_id": _ATTACHMENT_ID},
+    },
+    # ===================== platform: evals ==============================
+    "list_evals": {
+        "doc": "List evals (OpenAI-Evals-compatible; cursor-paginated).",
+        "params": {
+            "limit": "Page size (cursor pagination).",
+            "after": "Return items after this eval ID (forward paging).",
+            "before": "Return items before this eval ID (backward paging).",
+            "order": "Sort direction by created_at: 'asc' or 'desc'.",
+            "order_by": "Field to sort by, e.g. 'created_at'.",
+            "custom_llm_provider": _CUSTOM_LLM_PROVIDER,
+        },
+    },
+    "get_eval": {
+        "doc": "Get one eval's definition.",
+        "params": {"eval_id": "Eval ID.", "custom_llm_provider": _CUSTOM_LLM_PROVIDER},
+    },
+    "list_eval_runs": {
+        "doc": "List an eval's runs (cursor-paginated).",
+        "params": {
+            "eval_id": "Eval ID.",
+            "limit": "Page size (cursor pagination).",
+            "after": "Return runs after this run ID.",
+            "before": "Return runs before this run ID.",
+            "order": "Sort direction by created_at: 'asc' or 'desc'.",
+            "custom_llm_provider": _CUSTOM_LLM_PROVIDER,
+        },
+    },
+    "get_eval_run": {
+        "doc": "Get one eval run's status and results.",
+        "params": {
+            "eval_id": "Eval ID.",
+            "run_id": "Eval run ID.",
+            "custom_llm_provider": _CUSTOM_LLM_PROVIDER,
+        },
+    },
+    "cancel_eval": {
+        "doc": "Cancel an eval and stop its in-flight runs.",
+        "params": {"eval_id": "Eval ID.", "custom_llm_provider": _CUSTOM_LLM_PROVIDER},
+    },
+    "cancel_eval_run": {
+        "doc": "Cancel a single eval run.",
+        "params": {
+            "eval_id": "Eval ID.",
+            "run_id": "Eval run ID.",
+            "custom_llm_provider": _CUSTOM_LLM_PROVIDER,
+        },
+    },
+    "delete_eval": {
+        "doc": "Delete an eval and all its runs (irreversible).",
+        "params": {"eval_id": "Eval ID.", "custom_llm_provider": _CUSTOM_LLM_PROVIDER},
+    },
+    "delete_eval_run": {
+        "doc": "Delete a single eval run (irreversible).",
+        "params": {
+            "eval_id": "Eval ID.",
+            "run_id": "Eval run ID.",
+            "custom_llm_provider": _CUSTOM_LLM_PROVIDER,
+        },
+    },
+    # ===================== platform: a2a agents =========================
+    "list_agents": {
+        "doc": "List registered A2A agents (rows slimmed; secrets omitted).",
+        "params": {
+            "health_check": "true probes each agent's URL and drops unreachable ones "
+            "(HTTP >= 500); agents without a URL are kept.",
+        },
+    },
+    "get_agent": {
+        "doc": "Get one registered A2A agent's full config.",
+        "params": {"agent_id": "Agent ID."},
+    },
+    "get_agent_card": {
+        "doc": "Get an agent's public A2A card, as A2A clients discover it.",
+        "params": {"agent_id": "Agent ID."},
+    },
+    "create_agent": {
+        "doc": "Register an A2A agent.",
+        "body": "static_headers may carry backend credentials; they are write-only "
+        "and never returned in list output.",
+        "params": _AGENT_PARAMS,
+    },
+    "update_agent": {
+        "doc": "Replace an A2A agent's config (full update).",
+        "params": {"agent_id": "Agent ID.", **_AGENT_PARAMS},
+    },
+    "patch_agent": {
+        "doc": "Update some of an A2A agent's fields (partial update).",
+        "params": {"agent_id": "Agent ID.", **_AGENT_PARAMS},
+    },
+    # ===================== platform: workflow runs ======================
+    "list_workflow_runs": {
+        "doc": "List workflow runs (filter by type/status).",
+        "params": {
+            "workflow_type": "Filter by workflow type.",
+            "status": "Filter by run status.",
+            "limit": "Max runs to return.",
+        },
+    },
+    "get_workflow_run": {
+        "doc": "Get one workflow run's details.",
+        "params": {"run_id": "Workflow run ID."},
+    },
+    "list_workflow_events": {
+        "doc": "List a workflow run's events.",
+        "params": {"run_id": "Workflow run ID.", "limit": "Max events to return."},
+    },
+    "list_workflow_messages": {
+        "doc": "List a workflow run's messages.",
+        "params": {"run_id": "Workflow run ID.", "limit": "Max messages to return."},
+    },
+    "create_workflow_run": {
+        "doc": "Start a new workflow run.",
+        "params": {
+            "workflow_type": "Type of workflow to run.",
+            "input": "Initial input payload for the run.",
+            "metadata": _METADATA,
+        },
+    },
+    "update_workflow_run": {
+        "doc": "Update a workflow run's status or output.",
+        "params": {
+            "run_id": "Workflow run ID.",
+            "status": "New run status.",
+            "output": "Run output payload.",
+            "metadata": _METADATA,
+        },
+    },
+    "append_workflow_event": {
+        "doc": "Append an event to a workflow run.",
+        "params": {
+            "run_id": "Workflow run ID.",
+            "event_type": "Event type label.",
+            "step_name": "Name of the workflow step the event belongs to.",
+            "data": "Event payload.",
+        },
+    },
+    "append_workflow_message": {
+        "doc": "Append a message to a workflow run.",
+        "params": {
+            "run_id": "Workflow run ID.",
+            "role": "Message role, e.g. 'user' or 'assistant'.",
+            "content": "Message content.",
+            "session_id": "Session this message belongs to.",
+        },
+    },
+    # ===================== platform: cloudzero ==========================
+    "cloudzero_settings": {
+        "doc": "Get the CloudZero export settings (API key masked).",
+    },
+    "cloudzero_dry_run": {
+        "doc": "Preview a CloudZero spend export without sending anything.",
+        "body": "Read-only: returns exactly what a real export would push, so you can "
+        "review the payload before running cloudzero_export.",
+        "params": _CZ_PARAMS,
+        "types": {"operation": _CZ_OPERATION},
+    },
+    "init_cloudzero": {
+        "doc": "Configure CloudZero export credentials.",
+        "params": {
+            "api_key": "CloudZero API key (write-only; stored, never returned).",
+            "connection_id": "CloudZero connection ID for data submission.",
+            "timezone": "Timezone for date handling (default: UTC).",
+        },
+    },
+    "update_cloudzero_settings": {
+        "doc": "Update the CloudZero export credentials.",
+        "params": {
+            "api_key": "New CloudZero API key (write-only).",
+            "connection_id": "New CloudZero connection ID.",
+            "timezone": "New timezone for date handling.",
+        },
+    },
+    "cloudzero_export": {
+        "doc": "Export spend data to CloudZero.",
+        "body": "This PUSHES aggregated spend data to CloudZero, an external SaaS "
+        "billing platform - the data leaves your infrastructure. Run cloudzero_dry_run "
+        "first to review exactly what would be sent.",
+        "params": _CZ_PARAMS,
+        "types": {"operation": _CZ_OPERATION},
+    },
+    "delete_cloudzero_settings": {
+        "doc": "Delete the CloudZero export settings (irreversible).",
     },
 }

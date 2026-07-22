@@ -77,6 +77,24 @@ _RESET_SPEND = (
     "fields); the sent reset_to becomes the row's spend (transformed), not echoed."
 )
 
+# Platform (Step 8) non-promotable reasons.
+_COPY_FROM = (
+    "the sole sent field (source_policy_id) is a copy-from pointer consumed "
+    "server-side (the row uses parent_version_id); nothing sent is echoed."
+)
+_TEST_RESULT = (
+    "pipeline test: nothing is stored; the response is a pass/block result "
+    "envelope, not an echoed write row."
+)
+_CZ_ENVELOPE = (
+    "CloudZeroInitResponse is a {message, status} envelope; the sent settings "
+    "are not echoed (api_key is a write-only secret)."
+)
+_CZ_EXPORT = (
+    "CloudZeroExportResponse is an export-result summary (records_exported, "
+    "summary); the sent window params are not echoed as a row."
+)
+
 VERIFY: dict[str, dict[str, Any]] = {
     # --- subset: partial row echo, verify the scalar fields the schema proves --
     "generate_key": {
@@ -214,4 +232,48 @@ VERIFY: dict[str, dict[str, Any]] = {
         "no_verify": "BulkUpdateUserResponse is a {results, total_requested, ...} "
         "run summary; the sent users are not echoed as a row.",
     },
+    # ===================== platform: policies ============================
+    # PolicyDBResponse echoes the scalar policy fields; verify the ones sent.
+    "create_policy": {"subset": ["policy_name", "inherit", "description"]},
+    "update_policy": {"subset": ["policy_name", "inherit", "description"]},
+    # PolicyDBResponse.version_status reflects the status we set (echoed).
+    "update_policy_version_status": {"subset": ["version_status"]},
+    # PolicyAttachmentDBResponse echoes the scope; `scope` presence is the
+    # mandatory adversarial (a) - a dropped scope must raise.
+    "create_policy_attachment": {"subset": ["policy_name", "scope"]},
+    "create_policy_version": {"no_verify": _COPY_FROM},
+    "test_policy_pipeline": {"no_verify": _TEST_RESULT},
+    "delete_policy": {"no_verify": _BODYLESS},
+    "delete_policy_all_versions": {"no_verify": _BODYLESS},
+    "delete_policy_attachment": {"no_verify": _BODYLESS},
+    # ===================== platform: evals ==============================
+    # cancel/delete are bodyless (only a query param); nothing sent to echo.
+    "cancel_eval": {"no_verify": _BODYLESS},
+    "cancel_eval_run": {"no_verify": _BODYLESS},
+    "delete_eval": {"no_verify": _BODYLESS},
+    "delete_eval_run": {"no_verify": _BODYLESS},
+    # ===================== platform: a2a agents =========================
+    # AgentResponse echoes the scalar knobs; verify the ones sent (name is
+    # required in the response, the limits are optional so a drop is catchable).
+    "create_agent": {
+        "subset": ["agent_name", "tpm_limit", "rpm_limit", "session_tpm_limit", "session_rpm_limit"],
+    },
+    "update_agent": {
+        "subset": ["agent_name", "tpm_limit", "rpm_limit", "session_tpm_limit", "session_rpm_limit"],
+    },
+    "patch_agent": {
+        "subset": ["agent_name", "tpm_limit", "rpm_limit", "session_tpm_limit", "session_rpm_limit"],
+    },
+    # ===================== platform: workflow runs ======================
+    # 200 is untyped {} in the snapshot but these are real create/update writes
+    # that should echo the run row live - _UNTYPED so Step 9 promotes them.
+    "create_workflow_run": {"no_verify": _UNTYPED},
+    "update_workflow_run": {"no_verify": _UNTYPED},
+    "append_workflow_event": {"no_verify": _UNTYPED},
+    "append_workflow_message": {"no_verify": _UNTYPED},
+    # ===================== platform: cloudzero ==========================
+    "init_cloudzero": {"no_verify": _CZ_ENVELOPE},
+    "update_cloudzero_settings": {"no_verify": _CZ_ENVELOPE},
+    "cloudzero_export": {"no_verify": _CZ_EXPORT},
+    "delete_cloudzero_settings": {"no_verify": _BODYLESS},
 }

@@ -200,3 +200,103 @@ def cache_delete(
     if not keys:
         raise ValueError("cache_delete requires a non-empty 'keys' list")
     return _get_client().post("/cache/delete", json={"keys": keys})
+
+
+# --- eval writes (spec-gap: endpoints carry no requestBody in the snapshot) ---
+# Bodies follow the OpenAI Evals API that LiteLLM implements. The response echoes
+# the eval/run object; `name` is the one scalar we reliably send-and-echo, so it
+# is the verify anchor. data_source_config / testing_criteria / data_source are
+# normalized server-side, so they are not deep-checked. Field sets confirmed live
+# in Step 9 (same as update_organization). The shared POST+verify tail lives in
+# `_post_eval` (extracting it keeps the three bodies DUP-free).
+
+def _post_eval(path: str, body: dict[str, Any]) -> Any:
+    result = _get_client().post(path, json=body)
+    _verify_response({k: body[k] for k in ("name",) if k in body}, result)
+    return result
+
+
+@_op(litellm_write)
+def create_eval(
+    data_source_config: Annotated[
+        dict[str, Any],
+        Field(description="Schema of the data the eval runs against (OpenAI data_source_config)."),
+    ],
+    testing_criteria: Annotated[
+        list[dict[str, Any]],
+        Field(description="Graders that score each sample (OpenAI testing_criteria)."),
+    ],
+    name: Annotated[str | None, Field(description="Human-readable eval name.")] = cast(
+        str | None, _UNSET
+    ),
+    metadata: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
+) -> Any:
+    """Create an eval (OpenAI-Evals-compatible).
+
+    Spec-gap override: POST /v1/evals carries no requestBody in the snapshot, so
+    the body here follows the OpenAI Evals create shape LiteLLM implements:
+    `data_source_config` (what data to score) and `testing_criteria` (how to
+    grade) are required; `name` and `metadata` are optional. Creating an eval is
+    just a definition - it consumes no inference until you start a run.
+    """
+    body: dict[str, Any] = {}
+    if data_source_config is not _UNSET:
+        body["data_source_config"] = data_source_config
+    if testing_criteria is not _UNSET:
+        body["testing_criteria"] = testing_criteria
+    if name is not _UNSET:
+        body["name"] = name
+    if metadata is not _UNSET:
+        body["metadata"] = metadata
+    return _post_eval("/v1/evals", body)
+
+
+@_op(litellm_write)
+def update_eval(
+    eval_id: Annotated[str, Field(description="ID of the eval to update.")],
+    name: Annotated[str | None, Field(description="New eval name.")] = cast(str | None, _UNSET),
+    metadata: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
+) -> Any:
+    """Update an eval's name or metadata (partial update).
+
+    Spec-gap override: POST /v1/evals/{eval_id} carries no requestBody in the
+    snapshot. The OpenAI Evals update path only changes `name` and `metadata`;
+    the data source and grading criteria are fixed at creation. Only the fields
+    you pass are changed.
+    """
+    body: dict[str, Any] = {}
+    if name is not _UNSET:
+        body["name"] = name
+    if metadata is not _UNSET:
+        body["metadata"] = metadata
+    return _post_eval(f"/v1/evals/{eval_id}", body)
+
+
+@_op(litellm_write)
+def create_eval_run(
+    eval_id: Annotated[str, Field(description="ID of the eval to run.")],
+    data_source: Annotated[
+        dict[str, Any],
+        Field(description="Where the run pulls samples from (OpenAI data_source)."),
+    ],
+    name: Annotated[str | None, Field(description="Human-readable run name.")] = cast(
+        str | None, _UNSET
+    ),
+    metadata: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
+) -> Any:
+    """Start an eval run - THIS CONSUMES MODEL INFERENCE (real cost).
+
+    Spec-gap override: POST /v1/evals/{eval_id}/runs carries no requestBody in the
+    snapshot, so the body follows the OpenAI Evals create-run shape: `data_source`
+    is required; `name` and `metadata` are optional. A run executes the eval's
+    testing criteria over the data source, calling the configured model for every
+    sample - it bills real tokens and can be slow. Use get_eval_run to poll status.
+    """
+    body: dict[str, Any] = {}
+    if data_source is not _UNSET:
+        body["data_source"] = data_source
+    if name is not _UNSET:
+        body["name"] = name
+    if metadata is not _UNSET:
+        body["metadata"] = metadata
+    return _post_eval(f"/v1/evals/{eval_id}/runs", body)

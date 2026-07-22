@@ -54,6 +54,19 @@ _SLIM_MCP_SERVER = [
     "server_id", "server_name", "alias", "url", "transport",
     "auth_type", "mcp_access_groups", "status",
 ]
+# Platform (Step 8). Policy rows carry condition/pipeline dicts; the list view
+# keeps only identity + version status (full row via policy_info).
+_SLIM_POLICY = [
+    "policy_id", "policy_name", "version_number", "version_status",
+    "is_latest", "description", "updated_at",
+]
+# Never litellm_params / static_headers / extra_headers / agent_card_params:
+# credential-bearing or heavy fields stay out of list output (get_agent returns
+# the full row).
+_SLIM_AGENT = [
+    "agent_id", "agent_name", "spend", "tpm_limit", "rpm_limit",
+    "session_tpm_limit", "session_rpm_limit", "created_at",
+]
 # Not a plan baseline set: list_customers is marked slim with no set given, so
 # this projection is authored here (gap-decision) from CustomerResponse.
 _SLIM_CUSTOMER = [
@@ -92,4 +105,24 @@ SLIMS: dict[str, dict[str, Any]] = {
     # returned whole - slimming it would hide what was removed.
     "delete_organizations": {"no_slim": "delete confirmation returning the deleted "
                              "org rows; not a browse list, returned whole"},
+    # --- platform (Step 8) -------------------------------------------------
+    # Slimmed: heavy per-row payloads worth projecting for the list view.
+    "list_policies": {"fields": _SLIM_POLICY, "limit": 20, "container": "policies"},
+    "list_policy_versions": {"fields": _SLIM_POLICY, "limit": 20, "container": "versions"},
+    "list_agents": {"fields": _SLIM_AGENT, "limit": 20},  # bare array; secrets dropped
+    # no_slim: cursor/limit-paginated upstream (the emitter forbids a client
+    # `limit` alongside a spec `limit`), or lightweight rows.
+    "list_policy_attachments": {"no_slim": "bounded list; attachment rows are the "
+                                "scope definition (id + selector lists), returned whole"},
+    "list_evals": {"no_slim": "OpenAI-Evals cursor pagination via the spec limit/after/"
+                   "before params; a client slim would collide with the spec `limit`"},
+    "list_eval_runs": {"no_slim": "OpenAI-Evals cursor pagination via the spec limit/"
+                       "after/before params; a client slim would collide with `limit`"},
+    "list_workflow_runs": {"no_slim": "upstream-limited via the spec `limit` param; the "
+                           "200 shape is untyped {} in the snapshot, so no client slim "
+                           "is authored (returned whole)"},
+    "list_workflow_events": {"no_slim": "upstream-limited via the spec `limit` param; "
+                             "untyped {} response in the snapshot, returned whole"},
+    "list_workflow_messages": {"no_slim": "upstream-limited via the spec `limit` param; "
+                               "untyped {} response in the snapshot, returned whole"},
 }
