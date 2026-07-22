@@ -3,51 +3,59 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal, cast
+from typing import Annotated, Any, Literal, cast
+
+from pydantic import Field
 
 from ..registry import _UNSET, _op
 from .groups import litellm_execute
-from .helpers import _get_client
+from .helpers import _get_client, _verify_response
 
 
 @_op(litellm_execute)
 def block_customer(
-    user_ids: list[str],
+    user_ids: Annotated[list[str], Field(description='Customer IDs to block; every listed ID in one call.')],
 ) -> Any:
-    """Block User"""
+    """Block one or more customers (end users)."""
     body: dict[str, Any] = {}
     if user_ids is not _UNSET:
         body["user_ids"] = user_ids
-    return _get_client().post("/customer/block", json=body)
+    result = _get_client().post("/customer/block", json=body)
+    _verify_response({k: None for k in ('blocked_users',)}, result)
+    return result
 
 
 @_op(litellm_execute)
 def block_key(
-    key: str,
+    key: Annotated[str, Field(description='Virtual key to block; hashed token from list_keys accepted.')],
 ) -> Any:
-    """Block Key"""
+    """Block a virtual key (reversible via unblock_key)."""
     body: dict[str, Any] = {}
     if key is not _UNSET:
         body["key"] = key
-    return _get_client().post("/key/block", json=body)
+    result = _get_client().post("/key/block", json=body)
+    _verify_response({k: None for k in ('blocked',)}, result)
+    return result
 
 
 @_op(litellm_execute)
 def block_model(
-    model_id: str,
+    model_id: Annotated[str, Field(description='Model deployment ID to block.')],
 ) -> Any:
-    """Block Model"""
+    """Block a model deployment (reversible via unblock_model)."""
     body: dict[str, Any] = {}
     if model_id is not _UNSET:
         body["model_id"] = model_id
-    return _get_client().post("/model/block", json=body)
+    result = _get_client().post("/model/block", json=body)
+    _verify_response({k: body[k] for k in ('model_id',) if k in body}, result)
+    return result
 
 
 @_op(litellm_execute)
 def block_team(
-    team_id: str,
+    team_id: Annotated[str, Field(description='Team ID to block.')],
 ) -> Any:
-    """Block Team"""
+    """Block a team (reversible via unblock_team)."""
     body: dict[str, Any] = {}
     if team_id is not _UNSET:
         body["team_id"] = team_id
@@ -56,16 +64,16 @@ def block_team(
 
 @_op(litellm_execute)
 def disable_team_logging(
-    team_id: str,
+    team_id: Annotated[str, Field(description='Team whose logging to disable.')],
 ) -> Any:
-    """Disable Team Logging"""
+    """Turn off a team's configured logging callbacks."""
     return _get_client().post(f"/team/{team_id}/disable_logging")
 
 
 @_op(litellm_execute)
 def regenerate_key(
     key_alias: str | None = cast(str | None, _UNSET),
-    duration: str | None = cast(str | None, _UNSET),
+    duration: Annotated[str | None, Field(description="Key lifetime, e.g. '30d', '24h'; stored as an expiry timestamp.")] = cast(str | None, _UNSET),
     models: list[Any] | None = cast(list[Any] | None, _UNSET),
     spend: float | None = cast(float | None, _UNSET),
     max_budget: float | None = cast(float | None, _UNSET),
@@ -93,7 +101,7 @@ def regenerate_key(
     blocked: bool | None = cast(bool | None, _UNSET),
     aliases: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
     object_permission: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    key: str | None = cast(str | None, _UNSET),
+    key: Annotated[str | None, Field(description='Existing key to rotate; addressed in the body (never the URL).')] = cast(str | None, _UNSET),
     budget_id: str | None = cast(str | None, _UNSET),
     tags: list[str] | None = cast(list[str] | None, _UNSET),
     disable_global_guardrails: bool | None = cast(bool | None, _UNSET),
@@ -114,10 +122,13 @@ def regenerate_key(
     organization_id: str | None = cast(str | None, _UNSET),
     project_id: str | None = cast(str | None, _UNSET),
     new_key: str | None = cast(str | None, _UNSET),
-    new_master_key: str | None = cast(str | None, _UNSET),
+    new_master_key: Annotated[str | None, Field(description='New master-key value (master-key rotation only).')] = cast(str | None, _UNSET),
     grace_period: str | None = cast(str | None, _UNSET),
 ) -> Any:
-    """Regenerate Key Fn"""
+    """Rotate a virtual key: invalidate the old secret and mint a new one.
+
+    The key is addressed in the request BODY, never the URL path, so the secret never lands in proxy access logs (Decision 9). The NEW secret is returned ONCE in this response's `key` field - store it now; the old secret stops working immediately.
+    """
     body: dict[str, Any] = {}
     if key_alias is not _UNSET:
         body["key_alias"] = key_alias
@@ -223,15 +234,20 @@ def regenerate_key(
         body["new_master_key"] = new_master_key
     if grace_period is not _UNSET:
         body["grace_period"] = grace_period
-    return _get_client().post("/key/regenerate", json=body)
+    result = _get_client().post("/key/regenerate", json=body)
+    _verify_response({k: body[k] for k in ('key_alias', 'user_id', 'team_id', 'max_budget', 'tpm_limit', 'rpm_limit',) if k in body}, result)
+    return result
 
 
 @_op(litellm_execute)
 def reset_key_spend(
-    key: str,
-    reset_to: float,
+    key: Annotated[str, Field(description='Key whose spend to reset (in the URL path).')],
+    reset_to: Annotated[float, Field(description='New spend value in USD (e.g. 0 to zero it).')],
 ) -> Any:
-    """Reset Key Spend Fn"""
+    """Reset a virtual key's accumulated spend counter.
+
+    Upstream offers only the path variant here, so the key rides in the URL path (Decision 9 exception); prefer the hashed token. `reset_to` sets the new spend value.
+    """
     body: dict[str, Any] = {}
     if reset_to is not _UNSET:
         body["reset_to"] = reset_to
@@ -240,9 +256,9 @@ def reset_key_spend(
 
 @_op(litellm_execute)
 def test_cache_connection(
-    cache_settings: dict[str, Any],
+    cache_settings: Annotated[dict[str, Any], Field(description='Cache config to test as a dict (host, port, type, ...).')],
 ) -> Any:
-    """Test Cache Connection"""
+    """Probe the given cache settings for connectivity (mutates nothing)."""
     body: dict[str, Any] = {}
     if cache_settings is not _UNSET:
         body["cache_settings"] = cache_settings
@@ -255,10 +271,10 @@ def test_mcp_connection(
     server_name: str | None = cast(str | None, _UNSET),
     alias: str | None = cast(str | None, _UNSET),
     description: str | None = cast(str | None, _UNSET),
-    transport: Literal['sse', 'http', 'stdio'] = cast(Literal['sse', 'http', 'stdio'], _UNSET),
+    transport: Annotated[Literal['sse', 'http', 'stdio'], Field(description='Transport protocol the server speaks.')] = cast(Literal['sse', 'http', 'stdio'], _UNSET),
     auth_type: Literal['none', 'api_key', 'bearer_token', 'basic', 'authorization', 'oauth2', 'aws_sigv4', 'token', 'oauth2_token_exchange', 'true_passthrough', 'oauth_delegate'] | None = cast(Literal['none', 'api_key', 'bearer_token', 'basic', 'authorization', 'oauth2', 'aws_sigv4', 'token', 'oauth2_token_exchange', 'true_passthrough', 'oauth_delegate'] | None, _UNSET),
     credentials: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    url: str | None = cast(str | None, _UNSET),
+    url: Annotated[str | None, Field(description='Server URL to probe (http/sse transports).')] = cast(str | None, _UNSET),
     spec_path: str | None = cast(str | None, _UNSET),
     mcp_info: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
     mcp_access_groups: list[str] = cast(list[str], _UNSET),
@@ -269,7 +285,7 @@ def test_mcp_connection(
     static_headers: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
     env_vars: list[dict[str, Any]] | None = cast(list[dict[str, Any]] | None, _UNSET),
     instructions: str | None = cast(str | None, _UNSET),
-    command: str | None = cast(str | None, _UNSET),
+    command: Annotated[str | None, Field(description='Executable to launch (stdio transport).')] = cast(str | None, _UNSET),
     args: list[str] = cast(list[str], _UNSET),
     env: dict[str, Any] = cast(dict[str, Any], _UNSET),
     authorization_url: str | None = cast(str | None, _UNSET),
@@ -295,7 +311,7 @@ def test_mcp_connection(
     submitted_by: str | None = cast(str | None, _UNSET),
     submitted_at: str | None = cast(str | None, _UNSET),
 ) -> Any:
-    """Test Connection"""
+    """Probe an MCP server config before registering it (mutates nothing)."""
     body: dict[str, Any] = {}
     if server_id is not _UNSET:
         body["server_id"] = server_id
@@ -392,10 +408,10 @@ def test_mcp_tools_list(
     server_name: str | None = cast(str | None, _UNSET),
     alias: str | None = cast(str | None, _UNSET),
     description: str | None = cast(str | None, _UNSET),
-    transport: Literal['sse', 'http', 'stdio'] = cast(Literal['sse', 'http', 'stdio'], _UNSET),
+    transport: Annotated[Literal['sse', 'http', 'stdio'], Field(description='Transport protocol the server speaks.')] = cast(Literal['sse', 'http', 'stdio'], _UNSET),
     auth_type: Literal['none', 'api_key', 'bearer_token', 'basic', 'authorization', 'oauth2', 'aws_sigv4', 'token', 'oauth2_token_exchange', 'true_passthrough', 'oauth_delegate'] | None = cast(Literal['none', 'api_key', 'bearer_token', 'basic', 'authorization', 'oauth2', 'aws_sigv4', 'token', 'oauth2_token_exchange', 'true_passthrough', 'oauth_delegate'] | None, _UNSET),
     credentials: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    url: str | None = cast(str | None, _UNSET),
+    url: Annotated[str | None, Field(description='Server URL to probe (http/sse transports).')] = cast(str | None, _UNSET),
     spec_path: str | None = cast(str | None, _UNSET),
     mcp_info: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
     mcp_access_groups: list[str] = cast(list[str], _UNSET),
@@ -432,7 +448,7 @@ def test_mcp_tools_list(
     submitted_by: str | None = cast(str | None, _UNSET),
     submitted_at: str | None = cast(str | None, _UNSET),
 ) -> Any:
-    """Test Tools List"""
+    """List the tools an unregistered MCP server config exposes (mutates nothing)."""
     body: dict[str, Any] = {}
     if server_id is not _UNSET:
         body["server_id"] = server_id
@@ -525,11 +541,11 @@ def test_mcp_tools_list(
 
 @_op(litellm_execute)
 def test_model_connection(
-    mode: Literal['chat', 'completion', 'embedding', 'audio_speech', 'audio_transcription', 'image_generation', 'video_generation', 'batch', 'rerank', 'realtime', 'responses', 'ocr'] | None = cast(Literal['chat', 'completion', 'embedding', 'audio_speech', 'audio_transcription', 'image_generation', 'video_generation', 'batch', 'rerank', 'realtime', 'responses', 'ocr'] | None, _UNSET),
-    litellm_params: dict[str, Any] = cast(dict[str, Any], _UNSET),
-    model_info: dict[str, Any] = cast(dict[str, Any], _UNSET),
+    mode: Annotated[Literal['chat', 'completion', 'embedding', 'audio_speech', 'audio_transcription', 'image_generation', 'video_generation', 'batch', 'rerank', 'realtime', 'responses', 'ocr'] | None, Field(description="Operation to test the model for, e.g. 'chat' or 'embedding'.")] = cast(Literal['chat', 'completion', 'embedding', 'audio_speech', 'audio_transcription', 'image_generation', 'video_generation', 'batch', 'rerank', 'realtime', 'responses', 'ocr'] | None, _UNSET),
+    litellm_params: Annotated[dict[str, Any], Field(description="Provider call config as a dict, e.g. {'model': 'openai/gpt-4o', 'api_key': 'os.environ/OPENAI_API_KEY'}. Keys are provider-specific (genuinely dynamic), so this stays an opaque dict - see LiteLLM docs.")] = cast(dict[str, Any], _UNSET),
+    model_info: Annotated[dict[str, Any], Field(description='Optional metadata dict for the candidate deployment.')] = cast(dict[str, Any], _UNSET),
 ) -> Any:
-    """Test Model Connection"""
+    """Probe a model deployment config before adding it (mutates nothing)."""
     body: dict[str, Any] = {}
     if mode is not _UNSET:
         body["mode"] = mode
@@ -542,20 +558,22 @@ def test_model_connection(
 
 @_op(litellm_execute)
 def unblock_customer(
-    user_ids: list[str],
+    user_ids: Annotated[list[str], Field(description='Customer IDs to unblock; every listed ID in one call.')],
 ) -> Any:
-    """Unblock User"""
+    """Unblock one or more customers (end users)."""
     body: dict[str, Any] = {}
     if user_ids is not _UNSET:
         body["user_ids"] = user_ids
-    return _get_client().post("/customer/unblock", json=body)
+    result = _get_client().post("/customer/unblock", json=body)
+    _verify_response({k: None for k in ('blocked_users',)}, result)
+    return result
 
 
 @_op(litellm_execute)
 def unblock_key(
-    key: str,
+    key: Annotated[str, Field(description='Virtual key to unblock; hashed token from list_keys accepted.')],
 ) -> Any:
-    """Unblock Key"""
+    """Unblock a previously blocked virtual key."""
     body: dict[str, Any] = {}
     if key is not _UNSET:
         body["key"] = key
@@ -564,20 +582,22 @@ def unblock_key(
 
 @_op(litellm_execute)
 def unblock_model(
-    model_id: str,
+    model_id: Annotated[str, Field(description='Model deployment ID to unblock.')],
 ) -> Any:
-    """Unblock Model"""
+    """Unblock a previously blocked model deployment."""
     body: dict[str, Any] = {}
     if model_id is not _UNSET:
         body["model_id"] = model_id
-    return _get_client().post("/model/unblock", json=body)
+    result = _get_client().post("/model/unblock", json=body)
+    _verify_response({k: body[k] for k in ('model_id',) if k in body}, result)
+    return result
 
 
 @_op(litellm_execute)
 def unblock_team(
-    team_id: str,
+    team_id: Annotated[str, Field(description='Team ID to unblock.')],
 ) -> Any:
-    """Unblock Team"""
+    """Unblock a previously blocked team."""
     body: dict[str, Any] = {}
     if team_id is not _UNSET:
         body["team_id"] = team_id

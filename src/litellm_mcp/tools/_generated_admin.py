@@ -3,7 +3,9 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal, cast
+from typing import Annotated, Any, Literal, cast
+
+from pydantic import Field
 
 from ..registry import _UNSET, _op
 from .groups import litellm_admin
@@ -12,9 +14,9 @@ from .helpers import _get_client
 
 @_op(litellm_admin)
 def add_allowed_ip(
-    ip: str,
+    ip: Annotated[str, Field(description='IPv4/IPv6 address or CIDR to allow.')],
 ) -> Any:
-    """Add Allowed Ip"""
+    """Add an IP to the proxy allow-list."""
     body: dict[str, Any] = {}
     if ip is not _UNSET:
         body["ip"] = ip
@@ -23,11 +25,14 @@ def add_allowed_ip(
 
 @_op(litellm_admin)
 def bulk_update_users(
-    users: list[dict[str, Any]] | None = cast(list[dict[str, Any]] | None, _UNSET),
-    all_users: bool | None = cast(bool | None, _UNSET),
-    user_updates: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
+    users: Annotated[list[dict[str, Any]] | None, Field(description='Per-user update dicts to apply.')] = cast(list[dict[str, Any]] | None, _UNSET),
+    all_users: Annotated[bool | None, Field(description='true applies user_updates to every user (mass edit).')] = cast(bool | None, _UNSET),
+    user_updates: Annotated[dict[str, Any] | None, Field(description='Shared field patch applied when all_users is true.')] = cast(dict[str, Any] | None, _UNSET),
 ) -> Any:
-    """Bulk User Update"""
+    """Update many users in one sanctioned bulk call.
+
+    Either target specific `users` or set all_users=true with a shared `user_updates` patch. Applies to every matched user at once.
+    """
     body: dict[str, Any] = {}
     if users is not _UNSET:
         body["users"] = users
@@ -40,9 +45,9 @@ def bulk_update_users(
 
 @_op(litellm_admin)
 def delete_allowed_ip(
-    ip: str,
+    ip: Annotated[str, Field(description='IPv4/IPv6 address or CIDR to remove.')],
 ) -> Any:
-    """Delete Allowed Ip"""
+    """Remove an IP from the proxy allow-list."""
     body: dict[str, Any] = {}
     if ip is not _UNSET:
         body["ip"] = ip
@@ -51,21 +56,24 @@ def delete_allowed_ip(
 
 @_op(litellm_admin)
 def global_spend_reset() -> Any:
-    """Global Spend Reset"""
+    """Reset ALL global spend counters to zero.
+
+    Irreversible and proxy-wide: zeroes the aggregated spend for every key, team, user, and model at once. Historical spend logs are not deleted, but the running totals cannot be restored.
+    """
     return _get_client().post("/global/spend/reset")
 
 
 @_op(litellm_admin)
 def reset_email_event_settings() -> Any:
-    """Reset Event Settings"""
+    """Reset email-event settings to defaults."""
     return _get_client().post("/email/event_settings/reset")
 
 
 @_op(litellm_admin)
 def update_cache_settings(
-    cache_settings: dict[str, Any],
+    cache_settings: Annotated[dict[str, Any], Field(description='Cache config as a dict (type, host, ttl, ...).')],
 ) -> Any:
-    """Update Cache Settings"""
+    """Update the proxy cache configuration."""
     body: dict[str, Any] = {}
     if cache_settings is not _UNSET:
         body["cache_settings"] = cache_settings
@@ -74,30 +82,30 @@ def update_cache_settings(
 
 @_op(litellm_admin)
 def update_cost_discount_config(
-    body: dict[str, Any],
+    body: Annotated[dict[str, Any], Field(description='Cost-discount config as a dict; shape per LiteLLM docs.')],
 ) -> Any:
-    """Update Cost Discount Config"""
+    """Set the global cost-discount config (discount applied to model costs)."""
     return _get_client().patch("/config/cost_discount_config", json=body)
 
 
 @_op(litellm_admin)
 def update_cost_margin_config(
-    body: dict[str, Any],
+    body: Annotated[dict[str, Any], Field(description='Cost-margin config as a dict; shape per LiteLLM docs.')],
 ) -> Any:
-    """Update Cost Margin Config"""
+    """Set the global cost-margin config (markup applied to model costs)."""
     return _get_client().patch("/config/cost_margin_config", json=body)
 
 
 @_op(litellm_admin)
 def update_default_team_settings(
-    models: list[str] = cast(list[str], _UNSET),
-    max_budget: float | None = cast(float | None, _UNSET),
-    budget_duration: str | None = cast(str | None, _UNSET),
+    models: Annotated[list[str], Field(description='Default models new teams may access.')] = cast(list[str], _UNSET),
+    max_budget: Annotated[float | None, Field(description='Hard USD budget cap; use blocks once exceeded.')] = cast(float | None, _UNSET),
+    budget_duration: Annotated[str | None, Field(description="Budget reset window, e.g. '30d', '1mo'.")] = cast(str | None, _UNSET),
     tpm_limit: int | None = cast(int | None, _UNSET),
     rpm_limit: int | None = cast(int | None, _UNSET),
     team_member_permissions: list[dict[str, Any]] | None = cast(list[dict[str, Any]] | None, _UNSET),
 ) -> Any:
-    """Update Default Team Settings"""
+    """Update the defaults applied to newly SSO-provisioned teams."""
     body: dict[str, Any] = {}
     if models is not _UNSET:
         body["models"] = models
@@ -116,9 +124,9 @@ def update_default_team_settings(
 
 @_op(litellm_admin)
 def update_email_event_settings(
-    settings: list[dict[str, Any]],
+    settings: Annotated[list[dict[str, Any]], Field(description='Per-event on/off settings as a list of dicts.')],
 ) -> Any:
-    """Update Event Settings"""
+    """Configure which events trigger notification emails."""
     body: dict[str, Any] = {}
     if settings is not _UNSET:
         body["settings"] = settings
@@ -127,13 +135,13 @@ def update_email_event_settings(
 
 @_op(litellm_admin)
 def update_internal_user_settings(
-    user_role: Literal['internal_user', 'internal_user_viewer', 'proxy_admin', 'proxy_admin_viewer'] | None = cast(Literal['internal_user', 'internal_user_viewer', 'proxy_admin', 'proxy_admin_viewer'] | None, _UNSET),
-    max_budget: float | None = cast(float | None, _UNSET),
+    user_role: Annotated[Literal['internal_user', 'internal_user_viewer', 'proxy_admin', 'proxy_admin_viewer'] | None, Field(description='Default proxy role for new users.')] = cast(Literal['internal_user', 'internal_user_viewer', 'proxy_admin', 'proxy_admin_viewer'] | None, _UNSET),
+    max_budget: Annotated[float | None, Field(description='Hard USD budget cap; use blocks once exceeded.')] = cast(float | None, _UNSET),
     budget_duration: str | None = cast(str | None, _UNSET),
-    models: list[str] | None = cast(list[str] | None, _UNSET),
+    models: Annotated[list[str] | None, Field(description='Default models new users may access.')] = cast(list[str] | None, _UNSET),
     teams: list[str] | list[dict[str, Any]] | None = cast(list[str] | list[dict[str, Any]] | None, _UNSET),
 ) -> Any:
-    """Update Internal User Settings"""
+    """Update the defaults applied to newly provisioned internal users."""
     body: dict[str, Any] = {}
     if user_role is not _UNSET:
         body["user_role"] = user_role
@@ -162,11 +170,11 @@ def update_sso_settings(
     generic_userinfo_endpoint: str | None = cast(str | None, _UNSET),
     proxy_base_url: str | None = cast(str | None, _UNSET),
     user_email: str | None = cast(str | None, _UNSET),
-    ui_access_mode: dict[str, Any] | str | None = cast(dict[str, Any] | str | None, _UNSET),
-    role_mappings: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
+    ui_access_mode: Annotated[dict[str, Any] | str | None, Field(description='Who may reach the admin UI (mode name or a rule dict).')] = cast(dict[str, Any] | str | None, _UNSET),
+    role_mappings: Annotated[dict[str, Any] | None, Field(description='Map IdP groups/roles to proxy roles as a dict.')] = cast(dict[str, Any] | None, _UNSET),
     team_mappings: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
 ) -> Any:
-    """Update Sso Settings"""
+    """Update proxy-wide SSO configuration."""
     body: dict[str, Any] = {}
     if google_client_id is not _UNSET:
         body["google_client_id"] = google_client_id

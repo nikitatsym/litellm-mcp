@@ -86,4 +86,10 @@ SLIMS: dict[str, dict[str, Any]] = {
     "list_mcp_tools": {"no_slim": "tool descriptors are the payload; bounded by registered tools"},
     "list_toolsets": {"no_slim": "bounded config list; toolsets are few"},
     "list_providers": {"no_slim": "bare list of provider-name strings; already minimal"},
+    # --- delete (Step 7) ---------------------------------------------------
+    # Not a browse list: the 200 is an array of the org rows just deleted, so
+    # the completeness gate flags it as a list op. A delete confirmation is
+    # returned whole - slimming it would hide what was removed.
+    "delete_organizations": {"no_slim": "delete confirmation returning the deleted "
+                             "org rows; not a browse list, returned whole"},
 }

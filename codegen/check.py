@@ -31,7 +31,9 @@ _TOOLS_DIR = _REPO_ROOT / "src" / "litellm_mcp" / "tools"
 # Modules whose per-op completeness (annotations + slims coverage, verify
 # coverage on write-shaped ops, and "an override entry must be implemented in
 # tools/overrides.py") is enforced. Grows as Steps 5-8 land.
-GATED_MODULES: frozenset[str] = frozenset({"read_core", "read_infra", "write"})
+GATED_MODULES: frozenset[str] = frozenset(
+    {"read_core", "read_infra", "write", "execute", "delete", "admin"}
+)
 
 # Ops that return a homogeneous collection but whose 200 schema is `{}` in the
 # snapshot, so shape detection cannot see the array. Curated so the slims gate

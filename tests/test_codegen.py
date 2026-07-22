@@ -196,11 +196,41 @@ def test_verify_no_verify_emits_nothing(monkeypatch):
 
 
 def test_verify_entry_on_bodyless_op_fails(monkeypatch):
-    """A verify entry on a body-mutating op with no requestBody is a GenError."""
+    """A body-referencing verify entry (skip/subset) on a bodyless op is a GenError."""
     monkeypatch.setattr(generate, "VERIFY", {"global_spend_reset": {"skip": []}})
     with pytest.raises(generate.GenError) as exc:
         generate.emit_tree(SPEC)
     assert "global_spend_reset" in str(exc.value)
+
+
+def test_verify_present_emits_response_key_check(monkeypatch):
+    """A present entry checks response keys regardless of what was sent (Step 7)."""
+    monkeypatch.setattr(generate, "VERIFY", {"block_key": {"present": ["blocked"]}})
+    src = generate.emit_tree(SPEC)["_generated_execute.py"]
+    assert "_verify_response({k: None for k in ('blocked',)}, result)" in src
+
+
+def test_verify_no_verify_allowed_on_bodyless(monkeypatch):
+    """no_verify on a bodyless op is allowed - it emits nothing, no GenError."""
+    monkeypatch.setattr(generate, "VERIFY", {"global_spend_reset": {"no_verify": "envelope"}})
+    src = generate.emit_tree(SPEC)["_generated_admin.py"]
+    assert "def global_spend_reset() -> Any:" in src
+    assert "_verify_response" not in src  # the only VERIFY entry, and it verifies nothing
+
+
+def test_verify_present_allowed_on_bodyless(monkeypatch):
+    """present references response keys only, so it is legal even with no body."""
+    monkeypatch.setattr(generate, "VERIFY", {"global_spend_reset": {"present": ["status"]}})
+    src = generate.emit_tree(SPEC)["_generated_admin.py"]
+    assert "_verify_response({k: None for k in ('status',)}, result)" in src
+
+
+def test_verify_present_non_list_fails(monkeypatch):
+    """present must be a non-empty list."""
+    monkeypatch.setattr(generate, "VERIFY", {"block_key": {"present": []}})
+    with pytest.raises(generate.GenError) as exc:
+        generate.emit_tree(SPEC)
+    assert "block_key" in str(exc.value)
 
 
 def test_verify_subset_non_body_field_fails(monkeypatch):

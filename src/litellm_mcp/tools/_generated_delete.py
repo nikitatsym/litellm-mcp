@@ -3,7 +3,9 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal, cast
+from typing import Annotated, Any, Literal, cast
+
+from pydantic import Field
 
 from ..registry import _UNSET, _op
 from .groups import litellm_delete
@@ -12,23 +14,26 @@ from .helpers import _get_client, _qp
 
 @_op(litellm_delete)
 def cache_flushall() -> Any:
-    """Cache Flushall"""
+    """Flush the ENTIRE proxy cache.
+
+    Irreversible and unscoped: wipes every cached entry for all keys, teams, and models at once. Use cache_delete to remove specific keys instead.
+    """
     return _get_client().post("/cache/flushall")
 
 
 @_op(litellm_delete)
 def delete_access_group(
-    access_group_id: str,
+    access_group_id: Annotated[str, Field(description='Access group ID to delete.')],
 ) -> Any:
-    """Delete Access Group"""
+    """Delete a unified access group."""
     return _get_client().delete(f"/v1/access_group/{access_group_id}")
 
 
 @_op(litellm_delete)
 def delete_budget(
-    id: str,
+    id: Annotated[str, Field(description='Budget ID to delete.')],
 ) -> Any:
-    """Delete Budget"""
+    """Delete a budget object."""
     body: dict[str, Any] = {}
     if id is not _UNSET:
         body["id"] = id
@@ -37,17 +42,20 @@ def delete_budget(
 
 @_op(litellm_delete)
 def delete_credential(
-    credential_name: str,
+    credential_name: Annotated[str, Field(description='Credential name to delete.')],
 ) -> Any:
-    """Delete Credential"""
+    """Delete a stored provider credential."""
     return _get_client().delete(f"/credentials/{credential_name}")
 
 
 @_op(litellm_delete)
 def delete_customers(
-    user_ids: list[str],
+    user_ids: Annotated[list[str], Field(description='Customer IDs to delete; every listed ID in one call.')],
 ) -> Any:
-    """Delete End User"""
+    """Delete customers (end users).
+
+    Irreversible. Every listed customer is deleted in one call.
+    """
     body: dict[str, Any] = {}
     if user_ids is not _UNSET:
         body["user_ids"] = user_ids
@@ -56,27 +64,30 @@ def delete_customers(
 
 @_op(litellm_delete)
 def delete_fallback(
-    model: str,
-    fallback_type: Literal['general', 'context_window', 'content_policy'] = cast(Literal['general', 'context_window', 'content_policy'], _UNSET),
+    model: Annotated[str, Field(description='Model whose fallback chain to remove.')],
+    fallback_type: Annotated[Literal['general', 'context_window', 'content_policy'], Field(description='Which fallback list to remove.')] = cast(Literal['general', 'context_window', 'content_policy'], _UNSET),
 ) -> Any:
-    """Delete Fallback"""
+    """Remove a model's fallback chain."""
     return _get_client().delete(f"/fallback/{model}", params=_qp(fallback_type=fallback_type))
 
 
 @_op(litellm_delete)
 def delete_guardrail(
-    guardrail_id: str,
+    guardrail_id: Annotated[str, Field(description='Guardrail ID to delete.')],
 ) -> Any:
-    """Delete Guardrail"""
+    """Delete a guardrail."""
     return _get_client().delete(f"/guardrails/{guardrail_id}")
 
 
 @_op(litellm_delete)
 def delete_keys(
-    keys: list[str] | None = cast(list[str] | None, _UNSET),
-    key_aliases: list[str] | None = cast(list[str] | None, _UNSET),
+    keys: Annotated[list[str] | None, Field(description='Key tokens to delete; every listed key is removed in one call.')] = cast(list[str] | None, _UNSET),
+    key_aliases: Annotated[list[str] | None, Field(description='Key aliases to delete instead of tokens; batch semantics.')] = cast(list[str] | None, _UNSET),
 ) -> Any:
-    """Delete Key Fn"""
+    """Delete virtual keys.
+
+    Irreversible: the keys stop working immediately and cannot be recovered. Pass either `keys` (tokens) or `key_aliases`.
+    """
     body: dict[str, Any] = {}
     if keys is not _UNSET:
         body["keys"] = keys
@@ -87,17 +98,17 @@ def delete_keys(
 
 @_op(litellm_delete)
 def delete_mcp_server(
-    server_id: str,
+    server_id: Annotated[str, Field(description='MCP server ID to delete.')],
 ) -> Any:
-    """Remove Mcp Server"""
+    """Remove a registered MCP server from the gateway."""
     return _get_client().delete(f"/v1/mcp/server/{server_id}")
 
 
 @_op(litellm_delete)
 def delete_model(
-    id: str,
+    id: Annotated[str, Field(description='Model deployment ID to delete.')],
 ) -> Any:
-    """Delete Model"""
+    """Delete a model deployment."""
     body: dict[str, Any] = {}
     if id is not _UNSET:
         body["id"] = id
@@ -106,9 +117,12 @@ def delete_model(
 
 @_op(litellm_delete)
 def delete_organizations(
-    organization_ids: list[str],
+    organization_ids: Annotated[list[str], Field(description='Organization IDs to delete; every listed ID in one call.')],
 ) -> Any:
-    """Delete Organization"""
+    """Delete organizations.
+
+    Irreversible; returns the deleted org rows. Every listed org is removed in one call.
+    """
     body: dict[str, Any] = {}
     if organization_ids is not _UNSET:
         body["organization_ids"] = organization_ids
@@ -117,9 +131,9 @@ def delete_organizations(
 
 @_op(litellm_delete)
 def delete_tag(
-    name: str,
+    name: Annotated[str, Field(description='Tag name to delete.')],
 ) -> Any:
-    """Delete Tag"""
+    """Delete a spend-tracking tag."""
     body: dict[str, Any] = {}
     if name is not _UNSET:
         body["name"] = name
@@ -128,9 +142,12 @@ def delete_tag(
 
 @_op(litellm_delete)
 def delete_teams(
-    team_ids: list[str],
+    team_ids: Annotated[list[str], Field(description='Team IDs to delete; every listed ID in one call.')],
 ) -> Any:
-    """Delete Team"""
+    """Delete teams.
+
+    Irreversible. Every listed team is deleted in one call.
+    """
     body: dict[str, Any] = {}
     if team_ids is not _UNSET:
         body["team_ids"] = team_ids
@@ -139,17 +156,20 @@ def delete_teams(
 
 @_op(litellm_delete)
 def delete_toolset(
-    toolset_id: str,
+    toolset_id: Annotated[str, Field(description='Toolset ID to delete.')],
 ) -> Any:
-    """Remove Mcp Toolset"""
+    """Delete an MCP toolset."""
     return _get_client().delete(f"/v1/mcp/toolset/{toolset_id}")
 
 
 @_op(litellm_delete)
 def delete_users(
-    user_ids: list[str],
+    user_ids: Annotated[list[str], Field(description='User IDs to delete; every listed ID in one call.')],
 ) -> Any:
-    """Delete User"""
+    """Delete internal users.
+
+    Irreversible. Every listed user is deleted in one call.
+    """
     body: dict[str, Any] = {}
     if user_ids is not _UNSET:
         body["user_ids"] = user_ids
@@ -158,11 +178,11 @@ def delete_users(
 
 @_op(litellm_delete)
 def organization_member_delete(
-    organization_id: str,
-    user_id: str | None = cast(str | None, _UNSET),
-    user_email: str | None = cast(str | None, _UNSET),
+    organization_id: Annotated[str, Field(description='Organization to remove the member from.')],
+    user_id: Annotated[str | None, Field(description='Member user ID to remove (or use user_email).')] = cast(str | None, _UNSET),
+    user_email: Annotated[str | None, Field(description='Member email to remove (or use user_id).')] = cast(str | None, _UNSET),
 ) -> Any:
-    """Organization Member Delete"""
+    """Remove a member from an organization."""
     body: dict[str, Any] = {}
     if user_id is not _UNSET:
         body["user_id"] = user_id
@@ -175,11 +195,11 @@ def organization_member_delete(
 
 @_op(litellm_delete)
 def team_member_delete(
-    team_id: str,
-    user_id: str | None = cast(str | None, _UNSET),
-    user_email: str | None = cast(str | None, _UNSET),
+    team_id: Annotated[str, Field(description='Team to remove the member from.')],
+    user_id: Annotated[str | None, Field(description='Member user ID to remove (or use user_email).')] = cast(str | None, _UNSET),
+    user_email: Annotated[str | None, Field(description='Member email to remove (or use user_id).')] = cast(str | None, _UNSET),
 ) -> Any:
-    """Team Member Delete"""
+    """Remove a member from a team."""
     body: dict[str, Any] = {}
     if user_id is not _UNSET:
         body["user_id"] = user_id
@@ -192,10 +212,10 @@ def team_member_delete(
 
 @_op(litellm_delete)
 def team_model_delete(
-    team_id: str,
-    models: list[str],
+    team_id: Annotated[str, Field(description='Team whose model access to revoke.')],
+    models: Annotated[list[str], Field(description='Model names to remove from the team; every listed name in one call.')],
 ) -> Any:
-    """Team Model Delete"""
+    """Revoke a team's access to models."""
     body: dict[str, Any] = {}
     if team_id is not _UNSET:
         body["team_id"] = team_id

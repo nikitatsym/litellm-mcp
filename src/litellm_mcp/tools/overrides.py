@@ -16,7 +16,7 @@ from typing import Annotated, Any, cast
 from pydantic import Field
 
 from ..registry import ROOT, _UNSET, _op
-from .groups import litellm_read, litellm_write
+from .groups import litellm_execute, litellm_read, litellm_write
 from .helpers import _get_client, _qp, _verify_response
 
 
@@ -177,3 +177,26 @@ def update_organization(
         result,
     )
     return result
+
+
+@_op(litellm_execute)
+def cache_delete(
+    keys: Annotated[
+        list[str],
+        Field(
+            description="Cache keys to delete; must be non-empty. Removes only "
+            "these keys - cache_flushall (delete group) wipes the whole cache."
+        ),
+    ],
+) -> Any:
+    """Delete specific keys from the proxy cache.
+
+    Spec-gap override: POST /cache/delete carries no requestBody in the snapshot,
+    so `keys` is defined here. It is required and must be non-empty; the empty-list
+    rejection fires BEFORE any HTTP call. This deletes only the named keys -
+    cache_flushall (delete group) is the separate wipe-everything op. The 200 is a
+    status envelope, so there is no write echo to verify.
+    """
+    if not keys:
+        raise ValueError("cache_delete requires a non-empty 'keys' list")
+    return _get_client().post("/cache/delete", json={"keys": keys})

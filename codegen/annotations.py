@@ -733,4 +733,253 @@ ANNOTATIONS: dict[str, dict[str, Any]] = {
             "fallback_type": "Which failure class triggers this chain.",
         },
     },
+    # ===================== execute ========================================
+    "block_key": {
+        "doc": "Block a virtual key (reversible via unblock_key).",
+        "params": {"key": "Virtual key to block; hashed token from list_keys accepted."},
+    },
+    "unblock_key": {
+        "doc": "Unblock a previously blocked virtual key.",
+        "params": {"key": "Virtual key to unblock; hashed token from list_keys accepted."},
+    },
+    "regenerate_key": {
+        "doc": "Rotate a virtual key: invalidate the old secret and mint a new one.",
+        "body": "The key is addressed in the request BODY, never the URL path, so "
+        "the secret never lands in proxy access logs (Decision 9). The NEW secret "
+        "is returned ONCE in this response's `key` field - store it now; the old "
+        "secret stops working immediately.",
+        "params": {
+            "key": "Existing key to rotate; addressed in the body (never the URL).",
+            "duration": _DURATION,
+            "new_master_key": "New master-key value (master-key rotation only).",
+        },
+    },
+    "reset_key_spend": {
+        "doc": "Reset a virtual key's accumulated spend counter.",
+        "body": "Upstream offers only the path variant here, so the key rides in "
+        "the URL path (Decision 9 exception); prefer the hashed token. `reset_to` "
+        "sets the new spend value.",
+        "params": {
+            "key": "Key whose spend to reset (in the URL path).",
+            "reset_to": "New spend value in USD (e.g. 0 to zero it).",
+        },
+    },
+    "block_team": {
+        "doc": "Block a team (reversible via unblock_team).",
+        "params": {"team_id": "Team ID to block."},
+    },
+    "unblock_team": {
+        "doc": "Unblock a previously blocked team.",
+        "params": {"team_id": "Team ID to unblock."},
+    },
+    "disable_team_logging": {
+        "doc": "Turn off a team's configured logging callbacks.",
+        "params": {"team_id": "Team whose logging to disable."},
+    },
+    "block_model": {
+        "doc": "Block a model deployment (reversible via unblock_model).",
+        "params": {"model_id": "Model deployment ID to block."},
+    },
+    "unblock_model": {
+        "doc": "Unblock a previously blocked model deployment.",
+        "params": {"model_id": "Model deployment ID to unblock."},
+    },
+    "block_customer": {
+        "doc": "Block one or more customers (end users).",
+        "params": {"user_ids": "Customer IDs to block; every listed ID in one call."},
+    },
+    "unblock_customer": {
+        "doc": "Unblock one or more customers (end users).",
+        "params": {"user_ids": "Customer IDs to unblock; every listed ID in one call."},
+    },
+    "test_model_connection": {
+        "doc": "Probe a model deployment config before adding it (mutates nothing).",
+        "params": {
+            "mode": "Operation to test the model for, e.g. 'chat' or 'embedding'.",
+            "litellm_params": _LITELLM_PARAMS,
+            "model_info": "Optional metadata dict for the candidate deployment.",
+        },
+    },
+    "test_cache_connection": {
+        "doc": "Probe the given cache settings for connectivity (mutates nothing).",
+        "params": {"cache_settings": "Cache config to test as a dict (host, port, type, ...)."},
+    },
+    "test_mcp_connection": {
+        "doc": "Probe an MCP server config before registering it (mutates nothing).",
+        "params": {
+            "url": "Server URL to probe (http/sse transports).",
+            "transport": "Transport protocol the server speaks.",
+            "command": "Executable to launch (stdio transport).",
+        },
+    },
+    "test_mcp_tools_list": {
+        "doc": "List the tools an unregistered MCP server config exposes (mutates nothing).",
+        "params": {
+            "url": "Server URL to probe (http/sse transports).",
+            "transport": "Transport protocol the server speaks.",
+        },
+    },
+    # ===================== delete =========================================
+    "delete_keys": {
+        "doc": "Delete virtual keys.",
+        "body": "Irreversible: the keys stop working immediately and cannot be "
+        "recovered. Pass either `keys` (tokens) or `key_aliases`.",
+        "params": {
+            "keys": "Key tokens to delete; every listed key is removed in one call.",
+            "key_aliases": "Key aliases to delete instead of tokens; batch semantics.",
+        },
+    },
+    "delete_teams": {
+        "doc": "Delete teams.",
+        "body": "Irreversible. Every listed team is deleted in one call.",
+        "params": {"team_ids": "Team IDs to delete; every listed ID in one call."},
+    },
+    "team_member_delete": {
+        "doc": "Remove a member from a team.",
+        "params": {
+            "team_id": "Team to remove the member from.",
+            "user_id": "Member user ID to remove (or use user_email).",
+            "user_email": "Member email to remove (or use user_id).",
+        },
+    },
+    "team_model_delete": {
+        "doc": "Revoke a team's access to models.",
+        "params": {
+            "team_id": "Team whose model access to revoke.",
+            "models": "Model names to remove from the team; every listed name in one call.",
+        },
+    },
+    "delete_users": {
+        "doc": "Delete internal users.",
+        "body": "Irreversible. Every listed user is deleted in one call.",
+        "params": {"user_ids": "User IDs to delete; every listed ID in one call."},
+    },
+    "delete_organizations": {
+        "doc": "Delete organizations.",
+        "body": "Irreversible; returns the deleted org rows. Every listed org is "
+        "removed in one call.",
+        "params": {"organization_ids": "Organization IDs to delete; every listed ID in one call."},
+    },
+    "organization_member_delete": {
+        "doc": "Remove a member from an organization.",
+        "params": {
+            "organization_id": "Organization to remove the member from.",
+            "user_id": "Member user ID to remove (or use user_email).",
+            "user_email": "Member email to remove (or use user_id).",
+        },
+    },
+    "delete_customers": {
+        "doc": "Delete customers (end users).",
+        "body": "Irreversible. Every listed customer is deleted in one call.",
+        "params": {"user_ids": "Customer IDs to delete; every listed ID in one call."},
+    },
+    "delete_budget": {
+        "doc": "Delete a budget object.",
+        "params": {"id": "Budget ID to delete."},
+    },
+    "delete_model": {
+        "doc": "Delete a model deployment.",
+        "params": {"id": "Model deployment ID to delete."},
+    },
+    "delete_access_group": {
+        "doc": "Delete a unified access group.",
+        "params": {"access_group_id": "Access group ID to delete."},
+    },
+    "delete_mcp_server": {
+        "doc": "Remove a registered MCP server from the gateway.",
+        "params": {"server_id": "MCP server ID to delete."},
+    },
+    "delete_toolset": {
+        "doc": "Delete an MCP toolset.",
+        "params": {"toolset_id": "Toolset ID to delete."},
+    },
+    "delete_credential": {
+        "doc": "Delete a stored provider credential.",
+        "params": {"credential_name": "Credential name to delete."},
+    },
+    "delete_tag": {
+        "doc": "Delete a spend-tracking tag.",
+        "params": {"name": "Tag name to delete."},
+    },
+    "delete_guardrail": {
+        "doc": "Delete a guardrail.",
+        "params": {"guardrail_id": "Guardrail ID to delete."},
+    },
+    "delete_fallback": {
+        "doc": "Remove a model's fallback chain.",
+        "params": {
+            "model": "Model whose fallback chain to remove.",
+            "fallback_type": "Which fallback list to remove.",
+        },
+    },
+    "cache_flushall": {
+        "doc": "Flush the ENTIRE proxy cache.",
+        "body": "Irreversible and unscoped: wipes every cached entry for all keys, "
+        "teams, and models at once. Use cache_delete to remove specific keys instead.",
+    },
+    # ===================== admin ==========================================
+    "update_sso_settings": {
+        "doc": "Update proxy-wide SSO configuration.",
+        "params": {
+            "ui_access_mode": "Who may reach the admin UI (mode name or a rule dict).",
+            "role_mappings": "Map IdP groups/roles to proxy roles as a dict.",
+        },
+    },
+    "update_default_team_settings": {
+        "doc": "Update the defaults applied to newly SSO-provisioned teams.",
+        "params": {
+            "models": "Default models new teams may access.",
+            "max_budget": _MAX_BUDGET,
+            "budget_duration": _BUDGET_DURATION,
+        },
+    },
+    "update_internal_user_settings": {
+        "doc": "Update the defaults applied to newly provisioned internal users.",
+        "params": {
+            "user_role": "Default proxy role for new users.",
+            "max_budget": _MAX_BUDGET,
+            "models": "Default models new users may access.",
+        },
+    },
+    "update_email_event_settings": {
+        "doc": "Configure which events trigger notification emails.",
+        "params": {"settings": "Per-event on/off settings as a list of dicts."},
+    },
+    "reset_email_event_settings": {"doc": "Reset email-event settings to defaults."},
+    "update_cost_margin_config": {
+        "doc": "Set the global cost-margin config (markup applied to model costs).",
+        "params": {"body": "Cost-margin config as a dict; shape per LiteLLM docs."},
+    },
+    "update_cost_discount_config": {
+        "doc": "Set the global cost-discount config (discount applied to model costs).",
+        "params": {"body": "Cost-discount config as a dict; shape per LiteLLM docs."},
+    },
+    "update_cache_settings": {
+        "doc": "Update the proxy cache configuration.",
+        "params": {"cache_settings": "Cache config as a dict (type, host, ttl, ...)."},
+    },
+    "add_allowed_ip": {
+        "doc": "Add an IP to the proxy allow-list.",
+        "params": {"ip": "IPv4/IPv6 address or CIDR to allow."},
+    },
+    "delete_allowed_ip": {
+        "doc": "Remove an IP from the proxy allow-list.",
+        "params": {"ip": "IPv4/IPv6 address or CIDR to remove."},
+    },
+    "global_spend_reset": {
+        "doc": "Reset ALL global spend counters to zero.",
+        "body": "Irreversible and proxy-wide: zeroes the aggregated spend for every "
+        "key, team, user, and model at once. Historical spend logs are not deleted, "
+        "but the running totals cannot be restored.",
+    },
+    "bulk_update_users": {
+        "doc": "Update many users in one sanctioned bulk call.",
+        "body": "Either target specific `users` or set all_users=true with a shared "
+        "`user_updates` patch. Applies to every matched user at once.",
+        "params": {
+            "users": "Per-user update dicts to apply.",
+            "all_users": "true applies user_updates to every user (mass edit).",
+            "user_updates": "Shared field patch applied when all_users is true.",
+        },
+    },
 }

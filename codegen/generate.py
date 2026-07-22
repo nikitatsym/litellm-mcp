@@ -260,12 +260,17 @@ def emit_op_source(spec: dict[str, Any], op: Op) -> tuple[str, set[str]]:
     query_params = [p for p in params if p.kind == "query"]
     opaque = next((p for p in params if p.kind == "opaque"), None)
 
-    # A verify entry emits `_verify_response(body, ...)`, so the op must build a
-    # body. A verify decision on a bodyless op is a data error (plan Step 6).
-    if ver is not None and not body_params:
+    # `skip`/`subset` verify emit `_verify_response(body, ...)`, so those forms
+    # require a named request body; a bodyless (or opaque-body) op carrying one is
+    # a data error. `no_verify` emits nothing and `present` checks response keys
+    # only (no body local), so both are allowed on bodyless ops - the Step-7
+    # status-envelope and block/unblock cases need exactly that.
+    references_body = ver_active and ("skip" in ver or "subset" in ver)
+    if references_body and not body_params:
         raise GenError(
-            f"{op.name}: has a verify.py entry but emits no request body "
-            "(the _verify_response call would reference an absent body local)"
+            f"{op.name}: has a body-referencing verify entry (skip/subset) but "
+            "emits no request body (the _verify_response call would reference an "
+            "absent body local)"
         )
     if ver_active and "subset" in ver:
         body_names = {p.name for p in body_params}
@@ -312,6 +317,14 @@ def emit_op_source(spec: dict[str, Any], op: Op) -> tuple[str, set[str]]:
                 lines.append(
                     f"    _verify_response({{k: body[k] for k in ({keys},) if k in body}}, result)"
                 )
+            elif "present" in ver:
+                # Presence form: assert the typed response echoes these keys
+                # regardless of what was sent (block/unblock rows echo `blocked`
+                # or a result field, not the addressing key we posted).
+                keys = ", ".join(repr(f) for f in ver["present"])
+                lines.append(
+                    f"    _verify_response({{k: None for k in ({keys},)}}, result)"
+                )
             else:
                 skip = sorted(set(ROOT_SKIP) | set(ver.get("skip", [])))
                 skip_lit = (
@@ -343,10 +356,12 @@ def _validate_hook(name: str, slim: dict[str, Any] | None, ver: dict[str, Any] |
         if "no_slim" not in slim and "fields" not in slim:
             raise GenError(f"{name}: malformed slims entry {slim!r}")
     if ver is not None:
-        if not ({"no_verify", "skip", "subset"} & set(ver)):
+        if not ({"no_verify", "skip", "subset", "present"} & set(ver)):
             raise GenError(f"{name}: malformed verify entry {ver!r}")
         if "subset" in ver and not (isinstance(ver["subset"], list) and ver["subset"]):
             raise GenError(f"{name}: verify subset must be a non-empty list")
+        if "present" in ver and not (isinstance(ver["present"], list) and ver["present"]):
+            raise GenError(f"{name}: verify present must be a non-empty list")
 
 
 def _validate_keys() -> None:
