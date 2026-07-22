@@ -347,7 +347,7 @@ def model_info(
     Rows are slimmed to essential fields; provider credentials are masked upstream.
     """
     result = _get_client().get("/v2/model/info", params=_qp(model=model, user_models_only=user_models_only, include_team_models=include_team_models, debug=debug, page=page, size=size, search=search, modelId=modelId, teamId=teamId, sortBy=sortBy, sortOrder=sortOrder))
-    return _slim_list(result, {'model_name', 'litellm_model', 'model_id', 'provider', 'input_cost', 'output_cost', 'db_model'}, limit, 'data')
+    return _slim_list(result, {'model_name', 'model_info'}, limit, 'data')
 
 
 @_op(litellm_read)

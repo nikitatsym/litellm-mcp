@@ -59,7 +59,9 @@ def block_team(
     body: dict[str, Any] = {}
     if team_id is not _UNSET:
         body["team_id"] = team_id
-    return _get_client().post("/team/block", json=body)
+    result = _get_client().post("/team/block", json=body)
+    _verify_response({k: None for k in ('blocked',)}, result)
+    return result
 
 
 @_op(litellm_execute)
@@ -601,4 +603,6 @@ def unblock_team(
     body: dict[str, Any] = {}
     if team_id is not _UNSET:
         body["team_id"] = team_id
-    return _get_client().post("/team/unblock", json=body)
+    result = _get_client().post("/team/unblock", json=body)
+    _verify_response({k: None for k in ('blocked',)}, result)
+    return result

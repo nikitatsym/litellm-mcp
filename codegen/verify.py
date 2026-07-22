@@ -46,8 +46,22 @@ ROOT_SKIP: frozenset[str] = frozenset(
 )
 
 _UNTYPED = (
-    "200 response is untyped {} in the snapshot; the echoed row shape is not "
-    "provable pre-live (Decision 10). Revisit in Step 9 and promote to subset."
+    "200 response is untyped {} in the snapshot and the Step-9 lifecycle does not "
+    "exercise this op, so the live echo was not observed; kept no_verify (residue) "
+    "rather than guessing a subset (Decision 10)."
+)
+
+# --- Step 9 live-observation reasons (promotion sweep, cited from the pinned image) --
+_DEL_ROW_ID = (
+    "live: returns the deleted budget row keyed by budget_id, not the sent `id` "
+    "param; no sent key is echoed under its own name to presence-check."
+)
+_DEL_MSG = (
+    "live: returns a {message} confirmation string, not a row echoing the sent id."
+)
+_DEL_COUNT = (
+    "live: returns a bare integer count of deleted rows; _verify_response no-ops "
+    "on a non-dict response."
 )
 
 # Step-7 NO_VERIFY reasons that are NOT untyped-promotable (the Step 9 sweep
@@ -135,25 +149,37 @@ VERIFY: dict[str, dict[str, Any]] = {
     # --- skip-form full verify: typed response echoes the whole sent body ------
     "update_access_group": {"skip": []},  # AccessGroupResponse echoes every body field
     "create_fallback": {"skip": []},      # FallbackResponse echoes model/fallback_models/fallback_type
-    # --- no_verify: untyped {} response, unprovable pre-live -------------------
-    "update_key": {"no_verify": _UNTYPED},
-    "update_team": {"no_verify": _UNTYPED},
+    # --- Step 9 promotions: live echo observed, promoted from _UNTYPED ---------
+    # update_key echoes the full key row at root; verify the mutable scalar knobs.
+    "update_key": {"subset": ["tpm_limit", "rpm_limit", "max_budget", "metadata", "models"]},
+    # update_team/update_user wrap the row under a nested `data` key; only the
+    # addressing id is at root, so that is the one presence-checkable sent field.
+    "update_team": {"subset": ["team_id"]},
+    "update_user": {"subset": ["user_id"]},
+    # new_budget/update_budget echo the full budget row at root.
+    "new_budget": {"subset": ["budget_id", "max_budget", "soft_budget", "tpm_limit", "rpm_limit"]},
+    "update_budget": {"subset": ["budget_id", "max_budget", "soft_budget", "tpm_limit", "rpm_limit"]},
+    # add_model echoes the deployment row; model_name is the sent identity at root
+    # (litellm_params values are encrypted on the echo, model_id is server-assigned).
+    "add_model": {"subset": ["model_name"]},
+    # create_access_group echoes the full group row (name + grant lists) at root.
+    "create_access_group": {"subset": ["access_group_name", "access_mcp_server_ids", "access_model_names"]},
+    # create/update_mcp_server echo the server row; credentials come back null
+    # (write-only) so they are excluded - verify the plain scalar config fields.
+    "create_mcp_server": {"subset": ["server_name", "url", "transport", "auth_type"]},
+    "update_mcp_server": {"subset": ["server_id", "url", "transport", "description"]},
+    # new_tag/update_tag return {message, tag}; the row is under `tag`, so a subset
+    # on the flat sent keys cannot reach it - assert the tag object is present.
+    "new_tag": {"present": ["tag"]},
+    "update_tag": {"present": ["tag"]},
+    # --- residue: untyped {} response, NOT exercised by the Step-9 lifecycle ----
     "team_model_add": {"no_verify": _UNTYPED},
-    "update_user": {"no_verify": _UNTYPED},
-    "new_budget": {"no_verify": _UNTYPED},
-    "update_budget": {"no_verify": _UNTYPED},
-    "add_model": {"no_verify": _UNTYPED},
     "update_model": {"no_verify": _UNTYPED},
     "patch_model": {"no_verify": _UNTYPED},
-    "create_access_group": {"no_verify": _UNTYPED},
-    "create_mcp_server": {"no_verify": _UNTYPED},
-    "update_mcp_server": {"no_verify": _UNTYPED},
     "create_toolset": {"no_verify": _UNTYPED},
     "update_toolset": {"no_verify": _UNTYPED},
     "create_credential": {"no_verify": _UNTYPED},
     "update_credential": {"no_verify": _UNTYPED},
-    "new_tag": {"no_verify": _UNTYPED},
-    "update_tag": {"no_verify": _UNTYPED},
     "create_guardrail": {"no_verify": _UNTYPED},
     "update_guardrail": {"no_verify": _UNTYPED},
     # --- no_verify: body genuinely not echoed as a row ------------------------
@@ -180,8 +206,10 @@ VERIFY: dict[str, dict[str, Any]] = {
         "subset": ["key_alias", "user_id", "team_id", "max_budget", "tpm_limit", "rpm_limit"],
     },
     "reset_key_spend": {"no_verify": _RESET_SPEND},
-    "block_team": {"no_verify": _UNTYPED},
-    "unblock_team": {"no_verify": _UNTYPED},
+    # live: block/unblock_team echo the full team row with `blocked` at root
+    # (same mechanism as block_key).
+    "block_team": {"present": ["blocked"]},
+    "unblock_team": {"present": ["blocked"]},
     "disable_team_logging": {"no_verify": _BODYLESS},
     "block_model": {"subset": ["model_id"]},  # LiteLLM_ProxyModelTable requires model_id
     "unblock_model": {"subset": ["model_id"]},
@@ -195,19 +223,21 @@ VERIFY: dict[str, dict[str, Any]] = {
     # Deletes rarely echo a row; body-carrying deletes with untyped {} responses
     # are _UNTYPED (Step 9 may promote), bodyless/path-addressed ones and the few
     # typed summary/list responses get non-promotable reasons.
-    "delete_keys": {"no_verify": _UNTYPED},
-    "delete_teams": {"no_verify": _UNTYPED},
+    # live: delete_keys/delete_teams return {deleted_keys|deleted_teams: [...]} -
+    # a result list the request did not send, so assert its presence.
+    "delete_keys": {"present": ["deleted_keys"]},
+    "delete_teams": {"present": ["deleted_teams"]},
     "team_member_delete": {"no_verify": _UNTYPED},
     "team_model_delete": {"no_verify": _UNTYPED},
-    "delete_users": {"no_verify": _UNTYPED},
+    "delete_users": {"no_verify": _DEL_COUNT},
     "delete_organizations": {"no_verify": _LIST_RESP},
     "organization_member_delete": {"no_verify": _UNTYPED},
     "delete_customers": {
         "no_verify": "DeleteCustomersResponse is a {deleted_customers, message} "
         "summary; the sent user_ids are not echoed as a row.",
     },
-    "delete_budget": {"no_verify": _UNTYPED},
-    "delete_model": {"no_verify": _UNTYPED},
+    "delete_budget": {"no_verify": _DEL_ROW_ID},
+    "delete_model": {"no_verify": _DEL_MSG},
     "delete_access_group": {"no_verify": _BODYLESS},
     "delete_mcp_server": {"no_verify": _BODYLESS},
     "delete_toolset": {"no_verify": _BODYLESS},
@@ -267,9 +297,11 @@ VERIFY: dict[str, dict[str, Any]] = {
     # ===================== platform: workflow runs ======================
     # 200 is untyped {} in the snapshot but these are real create/update writes
     # that should echo the run row live - _UNTYPED so Step 9 promotes them.
-    "create_workflow_run": {"no_verify": _UNTYPED},
-    "update_workflow_run": {"no_verify": _UNTYPED},
-    "append_workflow_event": {"no_verify": _UNTYPED},
+    # live: workflow writes echo the run/event row at root; verify the sent fields.
+    "create_workflow_run": {"subset": ["workflow_type", "input"]},
+    "update_workflow_run": {"subset": ["status"]},
+    "append_workflow_event": {"subset": ["event_type", "step_name", "data"]},
+    # append_workflow_message is not exercised by the lifecycle - residue.
     "append_workflow_message": {"no_verify": _UNTYPED},
     # ===================== platform: cloudzero ==========================
     "init_cloudzero": {"no_verify": _CZ_ENVELOPE},

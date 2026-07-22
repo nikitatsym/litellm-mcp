@@ -9,7 +9,7 @@ from pydantic import Field
 
 from ..registry import _UNSET, _op
 from .groups import litellm_delete
-from .helpers import _get_client, _qp
+from .helpers import _get_client, _qp, _verify_response
 
 
 @_op(litellm_delete)
@@ -93,7 +93,9 @@ def delete_keys(
         body["keys"] = keys
     if key_aliases is not _UNSET:
         body["key_aliases"] = key_aliases
-    return _get_client().post("/key/delete", json=body)
+    result = _get_client().post("/key/delete", json=body)
+    _verify_response({k: None for k in ('deleted_keys',)}, result)
+    return result
 
 
 @_op(litellm_delete)
@@ -151,7 +153,9 @@ def delete_teams(
     body: dict[str, Any] = {}
     if team_ids is not _UNSET:
         body["team_ids"] = team_ids
-    return _get_client().post("/team/delete", json=body)
+    result = _get_client().post("/team/delete", json=body)
+    _verify_response({k: None for k in ('deleted_teams',)}, result)
+    return result
 
 
 @_op(litellm_delete)

@@ -26,7 +26,9 @@ def add_model(
         body["litellm_params"] = litellm_params
     if model_info is not _UNSET:
         body["model_info"] = model_info
-    return _get_client().post("/model/new", json=body)
+    result = _get_client().post("/model/new", json=body)
+    _verify_response({k: body[k] for k in ('model_name',) if k in body}, result)
+    return result
 
 
 @_op(litellm_write)
@@ -73,7 +75,9 @@ def create_access_group(
         body["assigned_team_ids"] = assigned_team_ids
     if description is not _UNSET:
         body["description"] = description
-    return _get_client().post("/v1/access_group", json=body)
+    result = _get_client().post("/v1/access_group", json=body)
+    _verify_response({k: body[k] for k in ('access_group_name', 'access_mcp_server_ids', 'access_model_names',) if k in body}, result)
+    return result
 
 
 @_op(litellm_write)
@@ -263,7 +267,9 @@ def create_mcp_server(
         body["submitted_by"] = submitted_by
     if submitted_at is not _UNSET:
         body["submitted_at"] = submitted_at
-    return _get_client().post("/v1/mcp/server", json=body)
+    result = _get_client().post("/v1/mcp/server", json=body)
+    _verify_response({k: body[k] for k in ('server_name', 'url', 'transport', 'auth_type',) if k in body}, result)
+    return result
 
 
 @_op(litellm_write)
@@ -475,7 +481,9 @@ def new_budget(
         body["model_max_budget"] = model_max_budget
     if budget_reset_at is not _UNSET:
         body["budget_reset_at"] = budget_reset_at
-    return _get_client().post("/budget/new", json=body)
+    result = _get_client().post("/budget/new", json=body)
+    _verify_response({k: body[k] for k in ('budget_id', 'max_budget', 'soft_budget', 'tpm_limit', 'rpm_limit',) if k in body}, result)
+    return result
 
 
 @_op(litellm_write)
@@ -638,7 +646,9 @@ def new_tag(
         body["model_max_budget"] = model_max_budget
     if budget_duration is not _UNSET:
         body["budget_duration"] = budget_duration
-    return _get_client().post("/tag/new", json=body)
+    result = _get_client().post("/tag/new", json=body)
+    _verify_response({k: None for k in ('tag',)}, result)
+    return result
 
 
 @_op(litellm_write)
@@ -1115,7 +1125,9 @@ def update_budget(
         body["model_max_budget"] = model_max_budget
     if budget_reset_at is not _UNSET:
         body["budget_reset_at"] = budget_reset_at
-    return _get_client().post("/budget/update", json=body)
+    result = _get_client().post("/budget/update", json=body)
+    _verify_response({k: body[k] for k in ('budget_id', 'max_budget', 'soft_budget', 'tpm_limit', 'rpm_limit',) if k in body}, result)
+    return result
 
 
 @_op(litellm_write)
@@ -1328,7 +1340,9 @@ def update_key(
         body["rotation_interval"] = rotation_interval
     if organization_id is not _UNSET:
         body["organization_id"] = organization_id
-    return _get_client().post("/key/update", json=body)
+    result = _get_client().post("/key/update", json=body)
+    _verify_response({k: body[k] for k in ('tpm_limit', 'rpm_limit', 'max_budget', 'metadata', 'models',) if k in body}, result)
+    return result
 
 
 @_op(litellm_write)
@@ -1459,7 +1473,9 @@ def update_mcp_server(
         body["timeout"] = timeout
     if max_concurrent_requests is not _UNSET:
         body["max_concurrent_requests"] = max_concurrent_requests
-    return _get_client().put("/v1/mcp/server", json=body)
+    result = _get_client().put("/v1/mcp/server", json=body)
+    _verify_response({k: body[k] for k in ('server_id', 'url', 'transport', 'description',) if k in body}, result)
+    return result
 
 
 @_op(litellm_write)
@@ -1523,7 +1539,9 @@ def update_tag(
         body["model_max_budget"] = model_max_budget
     if budget_duration is not _UNSET:
         body["budget_duration"] = budget_duration
-    return _get_client().post("/tag/update", json=body)
+    result = _get_client().post("/tag/update", json=body)
+    _verify_response({k: None for k in ('tag',)}, result)
+    return result
 
 
 @_op(litellm_write)
@@ -1636,7 +1654,9 @@ def update_team(
         body["budget_limits"] = budget_limits
     if default_team_member_models is not _UNSET:
         body["default_team_member_models"] = default_team_member_models
-    return _get_client().post("/team/update", json=body)
+    result = _get_client().post("/team/update", json=body)
+    _verify_response({k: body[k] for k in ('team_id',) if k in body}, result)
+    return result
 
 
 @_op(litellm_write)
@@ -1763,4 +1783,6 @@ def update_user(
         body["user_role"] = user_role
     if user_email is not _UNSET:
         body["user_email"] = user_email
-    return _get_client().post("/user/update", json=body)
+    result = _get_client().post("/user/update", json=body)
+    _verify_response({k: body[k] for k in ('user_id',) if k in body}, result)
+    return result

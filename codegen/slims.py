@@ -37,9 +37,14 @@ _SLIM_USER = [
     "user_id", "user_email", "user_role", "teams", "spend",
     "max_budget", "created_at",
 ]
+# Live /v2/model/info rows nest identity+pricing under `model_info` (id,
+# db_model, *_cost_per_token) and provider config under `litellm_params`; only
+# `model_name` is a flat root field. Keep model_name + the model_info block
+# (id/db_model/costs) and drop litellm_params, which carries the encrypted
+# provider secrets (Step-9 live correction; the plan's flat field names did not
+# match the real nested shape).
 _SLIM_MODEL = [
-    "model_name", "litellm_model", "model_id", "provider",
-    "input_cost", "output_cost", "db_model",
+    "model_name", "model_info",
 ]
 _SLIM_SPEND_LOG = [
     "request_id", "api_key_alias", "model", "spend", "total_tokens",

@@ -27,7 +27,9 @@ def append_workflow_event(
         body["step_name"] = step_name
     if data is not _UNSET:
         body["data"] = data
-    return _get_client().post(f"/v1/workflows/runs/{run_id}/events", json=body)
+    result = _get_client().post(f"/v1/workflows/runs/{run_id}/events", json=body)
+    _verify_response({k: body[k] for k in ('event_type', 'step_name', 'data',) if k in body}, result)
+    return result
 
 
 @_op(litellm_write)
@@ -259,7 +261,9 @@ def create_workflow_run(
         body["input"] = input
     if metadata is not _UNSET:
         body["metadata"] = metadata
-    return _get_client().post("/v1/workflows/runs", json=body)
+    result = _get_client().post("/v1/workflows/runs", json=body)
+    _verify_response({k: body[k] for k in ('workflow_type', 'input',) if k in body}, result)
+    return result
 
 
 @_op(litellm_delete)
@@ -727,4 +731,6 @@ def update_workflow_run(
         body["output"] = output
     if metadata is not _UNSET:
         body["metadata"] = metadata
-    return _get_client().patch(f"/v1/workflows/runs/{run_id}", json=body)
+    result = _get_client().patch(f"/v1/workflows/runs/{run_id}", json=body)
+    _verify_response({k: body[k] for k in ('status',) if k in body}, result)
+    return result

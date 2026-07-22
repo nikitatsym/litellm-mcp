@@ -39,7 +39,8 @@ def test_regenerate_key_uses_body_variant(client_env, respx_mock):
 # --- delete_keys: list payload, omitted params off the wire ------------------
 
 def test_delete_keys_sends_list_payload(client_env, respx_mock):
-    route = respx_mock.post("/key/delete").respond(200, json={})
+    # live: /key/delete returns {deleted_keys: [...]}; delete_keys now asserts its presence.
+    route = respx_mock.post("/key/delete").respond(200, json={"deleted_keys": ["sk-1", "sk-2"]})
     delete_keys(keys=["sk-1", "sk-2"])
     payload = json.loads(route.calls.last.request.content)
     assert payload["keys"] == ["sk-1", "sk-2"]

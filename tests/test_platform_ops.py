@@ -56,7 +56,9 @@ def test_create_eval_run_wire(client_env, respx_mock):
 # --- append_workflow_event: nested run_id path + body -----------------------
 
 def test_append_workflow_event_wire(client_env, respx_mock):
-    route = respx_mock.post("/v1/workflows/runs/wf-1/events").respond(200, json={})
+    # live: the event row echoes the sent fields; append_workflow_event now verifies a subset.
+    echo = {"event_type": "step", "step_name": "s1", "data": {"k": "v"}}
+    route = respx_mock.post("/v1/workflows/runs/wf-1/events").respond(200, json=echo)
     append_workflow_event(run_id="wf-1", event_type="step", step_name="s1", data={"k": "v"})
     req = route.calls.last.request
     assert req.url.path == "/v1/workflows/runs/wf-1/events"
