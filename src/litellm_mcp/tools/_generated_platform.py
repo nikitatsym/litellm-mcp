@@ -12,6 +12,21 @@ from .groups import litellm_delete, litellm_execute, litellm_read, litellm_write
 from .helpers import _get_client, _qp, _slim_list, _verify_response
 
 
+@_op(litellm_read)
+def agent_daily_activity(
+    agent_ids: Annotated[str | None, Field(description='Comma-separated agent IDs to include.')] = cast(str | None, _UNSET),
+    start_date: Annotated[str | None, Field(description='Start of the window, YYYY-MM-DD.')] = cast(str | None, _UNSET),
+    end_date: Annotated[str | None, Field(description='End of the window, YYYY-MM-DD.')] = cast(str | None, _UNSET),
+    model: Annotated[str | None, Field(description='Filter to a single model name.')] = cast(str | None, _UNSET),
+    api_key: Annotated[str | None, Field(description='Filter to a single hashed key token.')] = cast(str | None, _UNSET),
+    page: Annotated[int, Field(description='1-based page number.')] = cast(int, _UNSET),
+    page_size: Annotated[int, Field(description='Rows per page.')] = cast(int, _UNSET),
+    exclude_agent_ids: Annotated[str | None, Field(description='Comma-separated agent IDs to exclude.')] = cast(str | None, _UNSET),
+) -> Any:
+    """Per-day A2A agent usage and spend."""
+    return _get_client().get("/agent/daily/activity", params=_qp(agent_ids=agent_ids, start_date=start_date, end_date=end_date, model=model, api_key=api_key, page=page, page_size=page_size, exclude_agent_ids=exclude_agent_ids))
+
+
 @_op(litellm_write)
 def append_workflow_event(
     run_id: Annotated[str, Field(description='Workflow run ID.')],

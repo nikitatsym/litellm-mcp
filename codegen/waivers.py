@@ -34,8 +34,6 @@ WAIVED_UNCOVERED: frozenset[tuple[str, str]] = frozenset({
     ('/access_group/{access_group}/update', 'PUT'),
     # /adaptive_router
     ('/adaptive_router/state', 'GET'),
-    # /agent
-    ('/agent/daily/activity', 'GET'),
     # /anthropic
     ('/anthropic/{endpoint}', 'DELETE'),
     ('/anthropic/{endpoint}', 'GET'),
@@ -310,16 +308,10 @@ WAIVED_UNCOVERED: frozenset[tuple[str, str]] = frozenset({
     ('/project/list', 'GET'),
     ('/project/new', 'POST'),
     ('/project/update', 'POST'),
-    # /prompts
-    ('/prompts', 'POST'),
-    ('/prompts/list', 'GET'),
+    # /prompts (CRUD wrapped by the prompts module; test_prompt lands in Step 3;
+    #  /info stays waived as the dedup of get_prompt)
     ('/prompts/test', 'POST'),
-    ('/prompts/{prompt_id}', 'DELETE'),
-    ('/prompts/{prompt_id}', 'GET'),
-    ('/prompts/{prompt_id}', 'PATCH'),
-    ('/prompts/{prompt_id}', 'PUT'),
     ('/prompts/{prompt_id}/info', 'GET'),
-    ('/prompts/{prompt_id}/versions', 'GET'),
     # /provider
     ('/provider/budgets', 'GET'),
     # /public

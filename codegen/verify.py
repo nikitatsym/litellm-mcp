@@ -309,4 +309,11 @@ VERIFY: dict[str, dict[str, Any]] = {
     "update_cloudzero_settings": {"no_verify": _CZ_ENVELOPE},
     "cloudzero_export": {"no_verify": _CZ_EXPORT},
     "delete_cloudzero_settings": {"no_verify": _BODYLESS},
+    # ===================== prompts =======================================
+    # create/patch return untyped {} in the snapshot; Step 4 promotes them to
+    # `subset` from the live echo (Decision 6). delete_prompt is bodyless (path
+    # id + query only) and stays no_verify - no row to check.
+    "create_prompt": {"no_verify": _UNTYPED},
+    "patch_prompt": {"no_verify": _UNTYPED},
+    "delete_prompt": {"no_verify": _BODYLESS},
 }

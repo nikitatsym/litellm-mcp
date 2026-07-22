@@ -21,6 +21,7 @@ from . import (  # noqa: F401
     _generated_delete,
     _generated_execute,
     _generated_platform,
+    _generated_prompts,
     _generated_read_core,
     _generated_read_infra,
     _generated_write,

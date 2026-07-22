@@ -21,25 +21,26 @@ write-response verification.
 
 ## Operations
 
-**200 operations total**: 199 grouped across the five meta-tools, plus one
+**208 operations total**: 207 grouped across the five meta-tools, plus one
 root `litellm_version` op. The count is machine-checked - it equals
-`len(OPS)` in `codegen/inventory.py` (199) plus the hand-written root op,
-and equals the summed `grep -c "^@_op" src/litellm_mcp/tools/*.py` (200).
+`len(OPS)` in `codegen/inventory.py` (207) plus the hand-written root op,
+and equals the summed `grep -c "^@_op" src/litellm_mcp/tools/*.py` (208).
 
 | Meta-tool | Risk | Ops |
 | --- | --- | ---: |
-| `litellm_read` | safe | 90 |
-| `litellm_write` | medium | 52 |
+| `litellm_read` | safe | 94 |
+| `litellm_write` | medium | 55 |
 | `litellm_execute` | medium | 20 |
-| `litellm_delete` | high | 25 |
+| `litellm_delete` | high | 26 |
 | `litellm_admin` | high | 12 |
 
 - **`litellm_read`** (safe): lists, infos, spend/usage, health, settings
-  reads, token/cost utils, MCP gateway registry reads.
+  reads, token/cost utils, MCP gateway registry reads, prompt registry
+  reads (list/get/versions), agent daily activity.
 - **`litellm_write`** (medium): create/update for keys, teams, users,
   orgs, customers, budgets, models, credentials, tags, guardrails,
   fallbacks, MCP servers/toolsets, access groups, policies, evals, agents,
-  and workflows.
+  workflows, and prompts (create/update/patch).
 - **`litellm_execute`** (medium): block/unblock toggles, key
   regenerate/reset, connection tests, targeted cache delete.
 - **`litellm_delete`** (high): irreversible deletes and cache flushall.

@@ -302,3 +302,47 @@ def create_eval_run(
     if metadata is not _UNSET:
         body["metadata"] = metadata
     return _post_eval(f"/v1/evals/{eval_id}/runs", body)
+
+
+@_op(litellm_write)
+def update_prompt(
+    prompt_id: Annotated[
+        str,
+        Field(
+            description="Prompt to update (path id). PUT creates a NEW version keyed "
+            "by this id; the body id is forced to match, never a rename."
+        ),
+    ],
+    litellm_params: Annotated[
+        dict[str, Any],
+        Field(
+            description="Prompt provider config (PromptLiteLLMParams) as a dict: "
+            "prompt_integration (registry kind, required), dotprompt_content (inline "
+            "template text), api_base/api_key for an external registry."
+        ),
+    ],
+    prompt_info: Annotated[
+        dict[str, Any] | None,
+        Field(
+            description="Prompt metadata (PromptInfo) as a dict; its 'environment' "
+            "selects the new version's environment (default 'development')."
+        ),
+    ] = cast(dict[str, Any] | None, _UNSET),
+) -> Any:
+    """Update a prompt: PUT creates a NEW version (not an in-place edit).
+
+    Generator quirk (Decision 11): the snapshot's Prompt body requires prompt_id
+    in BOTH the path and the body, but the generator drops the body field that
+    collides with a path param ("path wins"), so a generated op would 422.
+    Upstream ignores the body id anyway - the new row is keyed by the PATH id
+    (version suffix stripped), there is no rename. So this override exposes ONE
+    prompt_id and duplicates it into the body wire-side.
+
+    PUT does not edit in place: it appends a new version of the prompt, keyed by
+    prompt_id, with the environment taken from prompt_info.environment (default
+    'development'). This is the version arrow of the prompt loop.
+    """
+    body: dict[str, Any] = {"prompt_id": prompt_id, "litellm_params": litellm_params}
+    if prompt_info is not _UNSET:
+        body["prompt_info"] = prompt_info
+    return _get_client().put(f"/prompts/{prompt_id}", json=body)

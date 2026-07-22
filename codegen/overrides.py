@@ -59,4 +59,11 @@ OVERRIDES: dict[str, dict[str, Any]] = {
         "runs consume model inference - docstring notes cost",
         "step": 8,
     },
+    "update_prompt": {
+        "reason": "body prompt_id collides with the path param (the generator drops "
+        "the colliding body field, so the emitted op would 422) and upstream ignores "
+        "the body id anyway; the op exposes one prompt_id and duplicates it into the "
+        "body wire-side (Decision 11)",
+        "step": 2,
+    },
 }

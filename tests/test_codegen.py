@@ -37,6 +37,7 @@ def test_two_runs_byte_identical():
         "_generated_delete.py",
         "_generated_admin.py",
         "_generated_platform.py",
+        "_generated_prompts.py",
     }
 
 

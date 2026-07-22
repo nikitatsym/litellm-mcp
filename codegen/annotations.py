@@ -92,6 +92,23 @@ _CZ_PARAMS = {
 }
 _CZ_OPERATION = "Literal['replace_hourly', 'sum']"
 
+# --- prompts (prompts-and-agent-activity plan, Step 2) reused fragments -----
+_PROMPT_LITELLM_PARAMS = (
+    "Prompt provider config (PromptLiteLLMParams) as a dict: prompt_integration "
+    "(the registry kind, required, e.g. 'dotprompt'); dotprompt_content (inline "
+    "template text with frontmatter for the 'dotprompt' integration); "
+    "api_base/api_key to point at an EXTERNAL prompt registry; prompt_id inside "
+    "params overrides the registry lookup key. Secret-bearing (api_key) - never "
+    "surfaced in list output."
+)
+_PROMPT_INFO = (
+    "Prompt metadata (PromptInfo) as a dict; its 'environment' selects the "
+    "version's environment (default 'development')."
+)
+_PROMPT_ENV = (
+    "Environment to scope to, e.g. 'development' or 'production'; omit for the default."
+)
+
 ANNOTATIONS: dict[str, dict[str, Any]] = {
     # ===================== read_core =====================================
     "list_keys": {
@@ -1252,6 +1269,19 @@ ANNOTATIONS: dict[str, dict[str, Any]] = {
         "doc": "Remove a registered A2A agent.",
         "params": {"agent_id": "Agent ID."},
     },
+    "agent_daily_activity": {
+        "doc": "Per-day A2A agent usage and spend.",
+        "params": {
+            "agent_ids": "Comma-separated agent IDs to include.",
+            "exclude_agent_ids": "Comma-separated agent IDs to exclude.",
+            "start_date": _START,
+            "end_date": _END,
+            "model": "Filter to a single model name.",
+            "api_key": "Filter to a single hashed key token.",
+            "page": _PAGE,
+            "page_size": _PAGE_SIZE,
+        },
+    },
     # ===================== platform: workflow runs ======================
     "list_workflow_runs": {
         "doc": "List workflow runs (filter by type/status).",
@@ -1345,5 +1375,56 @@ ANNOTATIONS: dict[str, dict[str, Any]] = {
     },
     "delete_cloudzero_settings": {
         "doc": "Delete the CloudZero export settings (irreversible).",
+    },
+    # ===================== prompts =======================================
+    "list_prompts": {
+        "doc": "List prompts (rows slimmed; secret-bearing litellm_params dropped).",
+        "params": {"environment": _PROMPT_ENV},
+    },
+    "get_prompt": {
+        "doc": "Get one prompt's full spec, template, and environments.",
+        "body": "Returns the full PromptInfoResponse (not slimmed). Its "
+        "prompt_spec.litellm_params is secret-bearing (api_key, dotprompt_content), "
+        "so treat this response as sensitive.",
+        "params": {
+            "prompt_id": "Prompt ID to look up.",
+            "environment": _PROMPT_ENV,
+        },
+    },
+    "list_prompt_versions": {
+        "doc": "List every stored version of one prompt (rows slimmed).",
+        "params": {
+            "prompt_id": "Prompt ID whose versions to list.",
+            "environment": _PROMPT_ENV,
+        },
+    },
+    "create_prompt": {
+        "doc": "Register a prompt in the Prompt Management registry.",
+        "body": "Two shapes via litellm_params: an INLINE dotprompt "
+        "(prompt_integration='dotprompt' with dotprompt_content carrying the "
+        "template and its frontmatter), or an EXTERNAL registry reference "
+        "(prompt_integration naming the provider, api_base/api_key/prompt_id "
+        "pointing at it). prompt_id here is the registry key you assign.",
+        "params": {
+            "prompt_id": "Unique prompt identifier you assign (the registry key).",
+            "litellm_params": _PROMPT_LITELLM_PARAMS,
+            "prompt_info": _PROMPT_INFO,
+        },
+    },
+    "patch_prompt": {
+        "doc": "Partially update a prompt (only the fields you pass).",
+        "params": {
+            "prompt_id": "Prompt ID to patch.",
+            "litellm_params": _PROMPT_LITELLM_PARAMS,
+            "prompt_info": _PROMPT_INFO,
+            "environment": _PROMPT_ENV,
+        },
+    },
+    "delete_prompt": {
+        "doc": "Delete a prompt (irreversible).",
+        "params": {
+            "prompt_id": "Prompt ID to delete.",
+            "environment": _PROMPT_ENV,
+        },
     },
 }

@@ -77,6 +77,12 @@ _SLIM_AGENT = [
 _SLIM_CUSTOMER = [
     "user_id", "alias", "spend", "blocked", "default_model", "budget_id",
 ]
+# Prompt rows (prompts-and-agent-activity plan, Decision 5). Never litellm_params:
+# PromptLiteLLMParams carries api_key + dotprompt_content (secret/heavy-bearing),
+# so it stays out of list output, exactly as _SLIM_MCP_SERVER drops credentials.
+_SLIM_PROMPT = [
+    "prompt_id", "version", "environment", "created_at", "updated_at", "created_by",
+]
 
 SLIMS: dict[str, dict[str, Any]] = {
     # --- read_core ---------------------------------------------------------
@@ -130,4 +136,8 @@ SLIMS: dict[str, dict[str, Any]] = {
                              "untyped {} response in the snapshot, returned whole"},
     "list_workflow_messages": {"no_slim": "upstream-limited via the spec `limit` param; "
                                "untyped {} response in the snapshot, returned whole"},
+    # --- prompts (prompts-and-agent-activity plan) -------------------------
+    # Both use the ListPromptsResponse envelope key `prompts`.
+    "list_prompts": {"fields": _SLIM_PROMPT, "limit": 20, "container": "prompts"},
+    "list_prompt_versions": {"fields": _SLIM_PROMPT, "limit": 20, "container": "prompts"},
 }
