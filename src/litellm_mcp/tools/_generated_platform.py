@@ -267,6 +267,14 @@ def create_workflow_run(
 
 
 @_op(litellm_delete)
+def delete_agent(
+    agent_id: Annotated[str, Field(description='Agent ID.')],
+) -> Any:
+    """Remove a registered A2A agent."""
+    return _get_client().delete(f"/v1/agents/{agent_id}")
+
+
+@_op(litellm_delete)
 def delete_cloudzero_settings() -> Any:
     """Delete the CloudZero export settings (irreversible)."""
     return _get_client().delete("/cloudzero/delete")

@@ -71,10 +71,11 @@ def test_cross_process_determinism():
     assert hashlib.sha256(blob.encode()).hexdigest() in digests
 
 
-def test_emitted_op_count_is_190():
+def test_emitted_op_count():
     emitted = generate.emit_tree(SPEC)
     total = sum(src.count("\n@_op(") for src in emitted.values())
-    assert total == 190  # 198 inventory ops minus 8 override entries
+    # overrides are hand-written in tools/overrides.py, not emitted
+    assert total == len(OPS) - len(OVERRIDES)
 
 
 # --- (a) hand-mutate a generated file -> sync gate fails --------------------

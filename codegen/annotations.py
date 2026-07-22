@@ -1248,6 +1248,10 @@ ANNOTATIONS: dict[str, dict[str, Any]] = {
         "doc": "Update some of an A2A agent's fields (partial update).",
         "params": {"agent_id": "Agent ID.", **_AGENT_PARAMS},
     },
+    "delete_agent": {
+        "doc": "Remove a registered A2A agent.",
+        "params": {"agent_id": "Agent ID."},
+    },
     # ===================== platform: workflow runs ======================
     "list_workflow_runs": {
         "doc": "List workflow runs (filter by type/status).",

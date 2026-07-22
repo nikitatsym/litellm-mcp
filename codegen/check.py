@@ -24,6 +24,7 @@ from .inventory import OP_BY_NAME, OPS, Op
 from .overrides import OVERRIDES
 from .slims import SLIMS
 from .verify import VERIFY
+from .waivers import WAIVED_UNCOVERED
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 _TOOLS_DIR = _REPO_ROOT / "src" / "litellm_mcp" / "tools"
@@ -39,6 +40,10 @@ GATED_MODULES: frozenset[str] = frozenset(
 # snapshot, so shape detection cannot see the array. Curated so the slims gate
 # still demands a decision for them.
 _UNTYPED_LIST_OPS: frozenset[str] = frozenset({"model_info", "spend_logs"})
+
+_COVERAGE_VERBS: tuple[str, ...] = ("get", "post", "put", "patch", "delete")
+# Covered outside OPS: litellm_version -> GET /health/readiness.
+_ROOT_COVERED: frozenset[tuple[str, str]] = frozenset({("/health/readiness", "GET")})
 
 
 def _is_list_op(op: Op, spec: dict[str, Any]) -> bool:
@@ -90,6 +95,19 @@ def check_completeness(gated_modules: frozenset[str], spec: dict[str, Any]) -> l
                 "decision (add a skip/subset entry or NO_VERIFY in codegen/verify.py)"
             )
     return problems
+
+
+def check_spec_coverage(spec: dict[str, Any]) -> list[str]:
+    """Every spec endpoint (path + CRUD verb) is wrapped by an OPS row, a ROOT
+    op, or explicitly waived. Catches verbs dropped during transcription."""
+    covered = {(op.path, op.method.upper()) for op in OPS} | _ROOT_COVERED
+    problems: list[str] = []
+    for path, item in spec["paths"].items():
+        for verb in _COVERAGE_VERBS:
+            pair = (path, verb.upper())
+            if verb in item and pair not in covered and pair not in WAIVED_UNCOVERED:
+                problems.append(f"uncovered spec endpoint: {verb.upper()} {path}")
+    return sorted(problems)
 
 
 def check_sync(compare_dir: Path, emitted: dict[str, str]) -> list[str]:
@@ -161,6 +179,7 @@ def main() -> int:
     problems = check_sync(_TOOLS_DIR, emitted)
     problems += check_override_dedupe(OVERRIDES, OP_BY_NAME, GATED_MODULES, impl_names)
     problems += check_completeness(GATED_MODULES, spec)
+    problems += check_spec_coverage(spec)
 
     if problems:
         print("codegen sync gate FAILED:", file=sys.stderr)

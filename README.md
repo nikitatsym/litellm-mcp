@@ -21,17 +21,17 @@ write-response verification.
 
 ## Operations
 
-**199 operations total**: 198 grouped across the five meta-tools, plus one
+**200 operations total**: 199 grouped across the five meta-tools, plus one
 root `litellm_version` op. The count is machine-checked - it equals
-`len(OPS)` in `codegen/inventory.py` (198) plus the hand-written root op,
-and equals the summed `grep -c "^@_op" src/litellm_mcp/tools/*.py` (199).
+`len(OPS)` in `codegen/inventory.py` (199) plus the hand-written root op,
+and equals the summed `grep -c "^@_op" src/litellm_mcp/tools/*.py` (200).
 
 | Meta-tool | Risk | Ops |
 | --- | --- | ---: |
 | `litellm_read` | safe | 90 |
 | `litellm_write` | medium | 52 |
 | `litellm_execute` | medium | 20 |
-| `litellm_delete` | high | 24 |
+| `litellm_delete` | high | 25 |
 | `litellm_admin` | high | 12 |
 
 - **`litellm_read`** (safe): lists, infos, spend/usage, health, settings

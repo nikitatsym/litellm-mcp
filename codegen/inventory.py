@@ -3,7 +3,7 @@
 `OPS` is the machine-readable contract - one row per operation, fixed by the
 v2.5-build plan (op name, risk group, generated-module, HTTP method, path).
 `litellm_version` is hand-written (ROOT) and lives outside the inventory, so
-`len(OPS) == 198`. Transcribe EXACTLY: names/endpoints come from the plan's
+`len(OPS) == 199`. Transcribe EXACTLY: names/endpoints come from the plan's
 tables, methods from the snapshot. A row that does not resolve against the
 snapshot is a generation-time error naming the op.
 """
@@ -197,7 +197,7 @@ OPS: tuple[Op, ...] = (
     Op("delete_allowed_ip", "admin", "admin", "POST", "/delete/allowed_ip"),
     Op("global_spend_reset", "admin", "admin", "POST", "/global/spend/reset"),
     Op("bulk_update_users", "admin", "admin", "POST", "/user/bulk_update"),
-    # --- platform (50): policies / evals / a2a / workflows / cloudzero ---
+    # --- platform (51): policies / evals / a2a / workflows / cloudzero ---
     Op("list_policies", "read", "platform", "GET", "/policies/list"),
     Op("policy_info", "read", "platform", "GET", "/policies/{policy_id}"),
     Op("list_policy_versions", "read", "platform", "GET", "/policies/name/{policy_name}/versions"),
@@ -239,6 +239,7 @@ OPS: tuple[Op, ...] = (
     Op("create_agent", "write", "platform", "POST", "/v1/agents"),
     Op("update_agent", "write", "platform", "PUT", "/v1/agents/{agent_id}"),
     Op("patch_agent", "write", "platform", "PATCH", "/v1/agents/{agent_id}"),
+    Op("delete_agent", "delete", "platform", "DELETE", "/v1/agents/{agent_id}"),
     Op("list_workflow_runs", "read", "platform", "GET", "/v1/workflows/runs"),
     Op("get_workflow_run", "read", "platform", "GET", "/v1/workflows/runs/{run_id}"),
     Op("list_workflow_events", "read", "platform", "GET", "/v1/workflows/runs/{run_id}/events"),
@@ -256,7 +257,7 @@ OPS: tuple[Op, ...] = (
     Op("delete_cloudzero_settings", "delete", "platform", "DELETE", "/cloudzero/delete"),
 )
 
-assert len(OPS) == 198, f"expected 198 ops, got {len(OPS)}"
+assert len(OPS) == 199, f"expected 199 ops, got {len(OPS)}"
 
 _names = [op.name for op in OPS]
 assert len(_names) == len(set(_names)), "duplicate op names in OPS"

@@ -294,6 +294,7 @@ VERIFY: dict[str, dict[str, Any]] = {
     "patch_agent": {
         "subset": ["agent_name", "tpm_limit", "rpm_limit", "session_tpm_limit", "session_rpm_limit"],
     },
+    "delete_agent": {"no_verify": _BODYLESS},
     # ===================== platform: workflow runs ======================
     # 200 is untyped {} in the snapshot but these are real create/update writes
     # that should echo the run row live - _UNTYPED so Step 9 promotes them.
