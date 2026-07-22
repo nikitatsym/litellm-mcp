@@ -1,0 +1,10 @@
+{
+  "name": "litellm-mcp-scripts",
+  "private": true,
+  "description": "Workflow scripts for litellm-mcp - docker compose lifecycle for integration smokes",
+  "scripts": {
+    "litellm:up": "docker compose -f tests/docker-compose.yml up -d --wait",
+    "litellm:down": "docker compose -f tests/docker-compose.yml down -v",
+    "litellm:logs": "docker compose -f tests/docker-compose.yml logs -f"
+  }
+}

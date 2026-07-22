@@ -1,0 +1,8 @@
+# One mock model so the proxy boots with a model_list but reaches no provider.
+# `mock_response` short-circuits inference, so the api_key is never used.
+model_list:
+  - model_name: mock-gpt
+    litellm_params:
+      model: gpt-3.5-turbo
+      mock_response: "Mock response from the litellm-mcp integration harness."
+      api_key: sk-mock-unused
