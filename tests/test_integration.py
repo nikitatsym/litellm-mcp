@@ -368,12 +368,17 @@ def test_12_test_prompt_live() -> None:
 
 # --- 13. agent loop: create -> card -> invoke -> activity -> delete -------------
 
-def test_13_agent_loop() -> None:
-    tag = uuid.uuid4().hex[:8]
+def _create_echo_agent(tag: str) -> Any:
+    """Register the compose a2a echo fixture (mirrors request text) and return its id."""
     ag = call("create_agent", agent_name=f"itestagent{tag}",
               agent_card_params={"name": f"itestagent{tag}", "description": "itest",
                                  "url": "http://a2a-fixture:8080"})
-    agent_id = _extract_id(ag, "agent_id", "id")
+    return _extract_id(ag, "agent_id", "id")
+
+
+def test_13_agent_loop() -> None:
+    tag = uuid.uuid4().hex[:8]
+    agent_id = _create_echo_agent(tag)
     try:
         card = call("get_agent_card", agent_id=agent_id)
         assert isinstance(card, dict) and card.get("name")
@@ -418,3 +423,93 @@ def test_14_patch_prompt_silent_drop() -> None:
         _assert_unknown_field_caught(lambda: _get_client().patch(f"/prompts/{pid}", json=bogus))
     finally:
         call("delete_prompt", prompt_id=pid)
+
+
+# --- 15. guardrail loop + a2a composition (content filter, exact-string asserts) -
+
+# litellm_content_filter: in-process (regex/keywords, no external service), so its
+# MASK/BLOCK actions are deterministic on OSS. MASK replaces the keyword occurrence
+# with this exact class constant; BLOCK raises upstream naming the keyword.
+_REDACT = "[KEYWORD_REDACTED]"
+
+
+def _content_filter(name: str, mask_word: str, block_word: str) -> dict[str, Any]:
+    return {
+        "guardrail_name": name,
+        "litellm_params": {
+            "guardrail": "litellm_content_filter",
+            "mode": "pre_call",
+            "blocked_words": [
+                {"keyword": mask_word, "action": "MASK"},
+                {"keyword": block_word, "action": "BLOCK"},
+            ],
+        },
+    }
+
+
+def test_15_guardrail_loop() -> None:
+    name = _name("guard")
+    mask, mask2, block = "sekret", "classified", "forbidden"
+
+    created = call("create_guardrail", guardrail=_content_filter(name, mask, block))
+    gid = _extract_id(created, "guardrail_id", "id")
+    try:
+        assert name in _dumps(call("list_guardrails"))
+
+        # pre-update: the MASK keyword is redacted in place (exact class constant).
+        pre = call("apply_guardrail", guardrail_name=name, text=f"this is {mask} data")
+        assert _REDACT in pre["response_text"] and mask not in pre["response_text"]
+
+        # FULL replacement: NEW mask keyword + the UNCHANGED block entry (the block
+        # check below needs it to survive). The PUT echoes the flat stored row, which
+        # exercises the promoted guardrail_id/guardrail_name presence verify.
+        updated = call("update_guardrail", guardrail_id=gid,
+                       guardrail=_content_filter(name, mask2, block))
+        assert _extract_id(updated, "guardrail_id", "id") == gid
+
+        # v1.93.0 upstream limitation (recorded in guardrail-loop handover 2): the PUT
+        # re-syncs the in-memory callback with vars() over a DB-roundtripped dict, which
+        # no-ops, so the NEW keyword is NOT hot-applied and the ORIGINAL params stay live
+        # (the DB-poll reconciliation only drops deleted rows, never re-inits changed
+        # ones). Assert the observed reality: the NEW keyword passes through untouched
+        # while the ORIGINAL keyword still redacts - proving the guardrail is still
+        # applied after the update, and discriminating enough to fire if a later image
+        # hot-reloads the params.
+        after_new = call("apply_guardrail", guardrail_name=name, text=f"this is {mask2} data")
+        assert after_new["response_text"] == f"this is {mask2} data"
+        after_old = call("apply_guardrail", guardrail_name=name, text=f"this is {mask} data")
+        assert _REDACT in after_old["response_text"]
+
+        # adversarial block: the BLOCK keyword raises (HTTPException upstream). The body
+        # names the blocked keyword; the status is recorded in the handover, not pinned.
+        with pytest.raises(APIError) as exc:
+            call("apply_guardrail", guardrail_name=name, text=f"this is {block} data")
+        assert block in _dumps(exc.value.body).lower()
+
+        # a2a composition (Decision 7): a pre_call MASK rewrites the forwarded text in
+        # place before the agent sees it, and the echo agent mirrors what it received.
+        # The ACTIVE mask keyword is the ORIGINAL `mask` (the update did not hot-apply).
+        tag = uuid.uuid4().hex[:8]
+        agent_id = _create_echo_agent(tag)
+        try:
+            # control WITHOUT guardrails: the echo comes back un-masked (proves the
+            # masking below comes from the param, not an ambient hook).
+            ctrl = _dumps(call("invoke_agent", agent_id=agent_id, text=f"hi {mask} there")["result"])
+            assert mask in ctrl and _REDACT not in ctrl
+
+            # WITH guardrails: the forwarded text is masked before the agent sees it, so
+            # the echo carries the exact redaction. An intact echo means the engine never
+            # engaged and MUST fail here.
+            guarded = _dumps(call("invoke_agent", agent_id=agent_id, text=f"hi {mask} there",
+                                  guardrails=[name])["result"])
+            assert _REDACT in guarded and mask not in guarded
+        finally:
+            call("delete_agent", agent_id=agent_id)
+    finally:
+        call("delete_guardrail", guardrail_id=gid)
+
+    # resolve-by-name proven live: applying the deleted guardrail name 404s "not found".
+    with pytest.raises(APIError) as exc:
+        call("apply_guardrail", guardrail_name=name, text="anything")
+    assert exc.value.status == 404
+    assert "not found" in _dumps(exc.value.body).lower()

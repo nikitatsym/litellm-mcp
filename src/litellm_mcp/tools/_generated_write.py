@@ -127,7 +127,9 @@ def create_guardrail(
     body: dict[str, Any] = {}
     if guardrail is not _UNSET:
         body["guardrail"] = guardrail
-    return _get_client().post("/guardrails", json=body)
+    result = _get_client().post("/guardrails", json=body)
+    _verify_response({k: None for k in ('guardrail_id', 'guardrail_name',)}, result)
+    return result
 
 
 @_op(litellm_write)
@@ -1188,7 +1190,9 @@ def update_guardrail(
     body: dict[str, Any] = {}
     if guardrail is not _UNSET:
         body["guardrail"] = guardrail
-    return _get_client().put(f"/guardrails/{guardrail_id}", json=body)
+    result = _get_client().put(f"/guardrails/{guardrail_id}", json=body)
+    _verify_response({k: None for k in ('guardrail_id', 'guardrail_name',)}, result)
+    return result
 
 
 @_op(litellm_write)

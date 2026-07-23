@@ -180,8 +180,14 @@ VERIFY: dict[str, dict[str, Any]] = {
     "update_toolset": {"no_verify": _UNTYPED},
     "create_credential": {"no_verify": _UNTYPED},
     "update_credential": {"no_verify": _UNTYPED},
-    "create_guardrail": {"no_verify": _UNTYPED},
-    "update_guardrail": {"no_verify": _UNTYPED},
+    # --- Step 3 (guardrail-loop) live promotions --------------------------------
+    # create (POST /guardrails) and update (PUT /guardrails/{id}) both echo the
+    # FLATTENED stored row with guardrail_id + guardrail_name at root; the body is
+    # sent nested under a single `guardrail` wrapper key, so a subset of the sent
+    # keys cannot reach the echoed identity. Assert both are present - the
+    # new_tag/update_tag nested-body/flat-echo precedent. Observed live v1.93.0.
+    "create_guardrail": {"present": ["guardrail_id", "guardrail_name"]},
+    "update_guardrail": {"present": ["guardrail_id", "guardrail_name"]},
     # --- no_verify: body genuinely not echoed as a row ------------------------
     "team_member_add": {
         "no_verify": "TeamAddMemberResponse expands the member into "
