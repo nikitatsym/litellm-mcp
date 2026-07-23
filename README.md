@@ -25,16 +25,16 @@ write-response verification.
 
 ## Operations
 
-**210 operations total**: 209 grouped across the five meta-tools, plus one
+**211 operations total**: 210 grouped across the five meta-tools, plus one
 root `litellm_version` op. The count is machine-checked - it equals
-`len(OPS)` in `codegen/inventory.py` (209) plus the hand-written root op,
-and equals the summed `grep -c "^@_op" src/litellm_mcp/tools/*.py` (210).
+`len(OPS)` in `codegen/inventory.py` (210) plus the hand-written root op,
+and equals the summed `grep -c "^@_op" src/litellm_mcp/tools/*.py` (211).
 
 | Meta-tool | Risk | Ops |
 | --- | --- | ---: |
 | `litellm_read` | safe | 94 |
 | `litellm_write` | medium | 55 |
-| `litellm_execute` | medium | 22 |
+| `litellm_execute` | medium | 23 |
 | `litellm_delete` | high | 26 |
 | `litellm_admin` | high | 12 |
 
@@ -46,8 +46,9 @@ and equals the summed `grep -c "^@_op" src/litellm_mcp/tools/*.py` (210).
   fallbacks, MCP servers/toolsets, access groups, policies, evals, agents,
   workflows, and prompts (create/update/patch).
 - **`litellm_execute`** (medium): block/unblock toggles, key
-  regenerate/reset, connection tests, targeted cache delete, and one-shot
-  dev-loop invocation (test a prompt, invoke an agent) with bounded output.
+  regenerate/reset, connection tests, targeted cache delete, applying a
+  guardrail to text, and one-shot dev-loop invocation (test a prompt, invoke
+  an agent) with bounded output.
 - **`litellm_delete`** (high): irreversible deletes and cache flushall.
 - **`litellm_admin`** (high): proxy-global settings, allowed IPs, global
   spend reset, bulk user update.

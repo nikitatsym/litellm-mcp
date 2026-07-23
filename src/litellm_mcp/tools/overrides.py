@@ -537,6 +537,16 @@ def invoke_agent(
     metadata: Annotated[
         dict[str, Any] | None, Field(description="Arbitrary JSON-RPC params metadata, forwarded verbatim.")
     ] = cast(dict[str, Any] | None, _UNSET),
+    guardrails: Annotated[
+        list[str] | None,
+        Field(
+            description="Guardrail NAMES to run for this call, placed at the JSON-RPC "
+            "params root and merged with the agent's own guardrails (test an agent with "
+            "a guardrail in one call). A name matching no initialized guardrail is "
+            "SILENTLY SKIPPED on this path (no error, unlike apply_guardrail's 404) - "
+            "check a name with list_guardrails or apply_guardrail first."
+        ),
+    ] = cast(list[str] | None, _UNSET),
     message_id: Annotated[
         str | None,
         Field(
@@ -562,6 +572,10 @@ def invoke_agent(
     may answer with a Message or a Task (its choice); the result is returned
     bounded ({result, truncated}): oversized file bytes, long strings, and long
     Task history are cut, with a structural stub as the backstop.
+
+    Optional `guardrails` (names) run for this call, merged with the agent's own;
+    a name matching no initialized guardrail is silently skipped here (unlike
+    apply_guardrail, which 404s) - verify names with list_guardrails first.
     """
     has_text = text is not _UNSET
     has_message = message is not _UNSET
@@ -596,6 +610,8 @@ def invoke_agent(
     params: dict[str, Any] = {"message": message_value, "configuration": config}
     if metadata is not _UNSET:
         params["metadata"] = metadata
+    if guardrails is not _UNSET:
+        params["guardrails"] = guardrails
 
     envelope = {
         "jsonrpc": "2.0",
@@ -623,3 +639,47 @@ def invoke_agent(
         bounded = _a2a_result_stub(result)
         truncated = True
     return {"result": bounded, "truncated": truncated}
+
+
+@_op(litellm_execute)
+def apply_guardrail(
+    guardrail_name: Annotated[
+        str,
+        Field(
+            description="NAME of an initialized guardrail (as shown by list_guardrails), "
+            "resolved against the callback registry - NOT a guardrail_id."
+        ),
+    ],
+    text: Annotated[str, Field(description="Text to run the guardrail over.")],
+    input_type: Annotated[
+        str,
+        Field(
+            description="'request' (default) or 'response'; auto-upgraded to 'response' "
+            "for post_call guardrails."
+        ),
+    ] = "request",
+    messages: Annotated[
+        list[dict[str, Any]] | None,
+        Field(description="Optional chat context (role/content dicts) some guardrail types inspect."),
+    ] = cast(list[dict[str, Any]] | None, _UNSET),
+) -> Any:
+    """Run a named guardrail over text and return the processed result - MAY SPEND MONEY.
+
+    Provider-backed guardrail types (bedrock, lakera, presidio, llm_as_a_judge,
+    ...) call their external service and spend money, and every call writes
+    usage/spend traces; in-process types (litellm_content_filter) are free. The
+    guardrail is resolved BY NAME against the initialized callback registry, so an
+    unknown name 404s ("Guardrail '<name>' not found") - list_guardrails shows the
+    valid names. `response_text` in the result is the processed text (the original
+    text when the guardrail changes nothing). The v1.93.0 request schema also
+    carries `language` and `entities`, but the handler never forwards them, so they
+    are deliberately not exposed here.
+    """
+    body: dict[str, Any] = {
+        "guardrail_name": guardrail_name,
+        "text": text,
+        "input_type": input_type,
+    }
+    if messages is not _UNSET:
+        body["messages"] = messages
+    return _get_client().post("/guardrails/apply_guardrail", json=body)

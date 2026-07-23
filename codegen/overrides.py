@@ -78,4 +78,11 @@ OVERRIDES: dict[str, dict[str, Any]] = {
         "(Decision 4)",
         "step": 3,
     },
+    "apply_guardrail": {
+        "reason": "snapshot's ApplyGuardrailRequest carries language/entities but the "
+        "handler never forwards them (dead params in v1.93.0); the generator has no "
+        "field-exclusion knob, so the override exposes only the applied fields "
+        "(guardrail-loop Decision 3)",
+        "step": 2,
+    },
 }

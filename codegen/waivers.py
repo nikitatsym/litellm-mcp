@@ -178,7 +178,6 @@ WAIVED_UNCOVERED: frozenset[tuple[str, str]] = frozenset({
     # /global
     ('/global/spend/tags', 'GET'),
     # /guardrails
-    ('/guardrails/apply_guardrail', 'POST'),
     ('/guardrails/list', 'GET'),
     ('/guardrails/register', 'POST'),
     ('/guardrails/submissions', 'GET'),

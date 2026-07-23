@@ -1,12 +1,15 @@
-"""Execute overrides test_prompt + invoke_agent over respx (Step 3).
+"""Execute overrides test_prompt + invoke_agent + apply_guardrail over respx.
 
 test_prompt: an OpenAI-style SSE stream collected into the Decision 2 fixed
 shape; the cap-stop, the 2xx non-SSE raise, and the mid-stream error event.
 invoke_agent: the pinned JSON-RPC message/send envelope asserted exactly,
-verbatim forwarding of message/configuration/metadata, the op-side rejections
-(text+message, neither, blocking=false), a JSON-RPC error on HTTP 200, and the
-whole-result bounding rules (bytes_omitted, string cap, history_omitted, the
-generic DataPart/metadata walk, and the many-parts backstop stub).
+verbatim forwarding of message/configuration/metadata, the guardrails param at
+the params root (guardrail-loop Decision 4), the op-side rejections (text+message,
+neither, blocking=false), a JSON-RPC error on HTTP 200, and the whole-result
+bounding rules (bytes_omitted, string cap, history_omitted, the generic
+DataPart/metadata walk, and the many-parts backstop stub).
+apply_guardrail: the body carries only guardrail_name/text/input_type (+messages),
+never the dead language/entities fields (guardrail-loop Decision 3).
 """
 
 from __future__ import annotations
@@ -19,7 +22,7 @@ import pytest
 from litellm_mcp import server
 from litellm_mcp.client import APIError
 # Alias: the override is named test_prompt, which pytest would else collect as a test.
-from litellm_mcp.tools.overrides import invoke_agent
+from litellm_mcp.tools.overrides import apply_guardrail, invoke_agent
 from litellm_mcp.tools.overrides import test_prompt as run_test_prompt
 
 _SSE_CT = {"content-type": "text/event-stream"}
@@ -282,4 +285,77 @@ async def test_invoke_agent_unknown_param_rejected(client_env, respx_mock):
             "InvokeAgent", "litellm_execute", {"agent_id": "a1", "text": "hi", "bogus_field": 1}
         )
     assert "bogus_field" in str(ei.value)
+    assert route.call_count == 0
+
+
+# --- invoke_agent: guardrails param at the params root (Decision 4) ----------
+
+def test_invoke_agent_guardrails_at_params_root(client_env, respx_mock):
+    route = respx_mock.post("/v1/a2a/a1/message/send").respond(200, json={"result": {}})
+    invoke_agent(agent_id="a1", text="hi", guardrails=["g1"])
+    params = json.loads(route.calls.last.request.content)["params"]
+    assert params["guardrails"] == ["g1"]  # lands at the params ROOT, not inside message
+    assert "guardrails" not in params["message"]
+    # the pinned envelope is otherwise unchanged (just the extra root key)
+    assert set(params) == {"message", "configuration", "guardrails"}
+
+
+def test_invoke_agent_guardrails_omitted_key_absent(client_env, respx_mock):
+    route = respx_mock.post("/v1/a2a/a1/message/send").respond(200, json={"result": {}})
+    invoke_agent(agent_id="a1", text="hi")
+    params = json.loads(route.calls.last.request.content)["params"]
+    assert "guardrails" not in params  # omitted -> key absent
+
+
+async def test_invoke_agent_guardrails_wrong_type_rejected(client_env, respx_mock):
+    # str where list[str] is expected -> Pydantic rejection BEFORE any HTTP.
+    route = respx_mock.post("/v1/a2a/a1/message/send").respond(200, json={"result": {}})
+    with pytest.raises(ValueError) as ei:
+        await server._dispatch(
+            "InvokeAgent", "litellm_execute", {"agent_id": "a1", "text": "hi", "guardrails": "g1"}
+        )
+    assert "guardrails" in str(ei.value)
+    assert route.call_count == 0
+
+
+# --- apply_guardrail: body carries only the applied fields (Decision 3) ------
+
+def test_apply_guardrail_body_required_and_default(client_env, respx_mock):
+    route = respx_mock.post("/guardrails/apply_guardrail").respond(200, json={"response_text": "ok"})
+    apply_guardrail(guardrail_name="cf", text="hi")
+    sent = json.loads(route.calls.last.request.content)
+    # required name+text sent, input_type default passthrough, messages omitted
+    assert sent == {"guardrail_name": "cf", "text": "hi", "input_type": "request"}
+    # the dead snapshot fields are NEVER in the body
+    assert "language" not in sent and "entities" not in sent
+
+
+def test_apply_guardrail_forwards_messages_and_input_type(client_env, respx_mock):
+    route = respx_mock.post("/guardrails/apply_guardrail").respond(200, json={"response_text": "ok"})
+    msgs = [{"role": "user", "content": "hi"}]
+    apply_guardrail(guardrail_name="cf", text="hi", input_type="response", messages=msgs)
+    sent = json.loads(route.calls.last.request.content)
+    assert sent == {
+        "guardrail_name": "cf",
+        "text": "hi",
+        "input_type": "response",
+        "messages": msgs,
+    }
+    assert "language" not in sent and "entities" not in sent
+
+
+# --- apply_guardrail adversarial: the dead-param drop is loud, not silent ----
+
+async def test_apply_guardrail_unknown_params_rejected(client_env, respx_mock):
+    route = respx_mock.post("/guardrails/apply_guardrail").respond(200, json={"response_text": "ok"})
+    # language and entities (the dead snapshot fields) are rejected as unknowns,
+    # not silently accepted-and-ignored.
+    for bogus in ("language", "entities", "bogus_field"):
+        with pytest.raises(ValueError) as ei:
+            await server._dispatch(
+                "ApplyGuardrail",
+                "litellm_execute",
+                {"guardrail_name": "cf", "text": "hi", bogus: "x"},
+            )
+        assert bogus in str(ei.value)
     assert route.call_count == 0

@@ -1,9 +1,10 @@
 """The operation inventory: this plan's tables transcribed as data.
 
 `OPS` is the machine-readable contract - one row per operation, fixed by the
-v2.5-build plan and the prompts-and-agent-activity follow-on (op name, risk
-group, generated-module, HTTP method, path). `litellm_version` is hand-written
-(ROOT) and lives outside the inventory, so `len(OPS) == 209`. Transcribe
+v2.5-build plan and the prompts-and-agent-activity / guardrail-loop follow-ons
+(op name, risk group, generated-module, HTTP method, path). `litellm_version`
+is hand-written (ROOT) and lives outside the inventory, so `len(OPS) == 210`.
+Transcribe
 EXACTLY: names/endpoints come from the plan's
 tables, methods from the snapshot. A row that does not resolve against the
 snapshot is a generation-time error naming the op.
@@ -150,7 +151,9 @@ OPS: tuple[Op, ...] = (
     Op("create_guardrail", "write", "write", "POST", "/guardrails"),
     Op("update_guardrail", "write", "write", "PUT", "/guardrails/{guardrail_id}"),
     Op("create_fallback", "write", "write", "POST", "/fallback"),
-    # --- execute (16) ---
+    # --- execute (17) ---
+    # apply_guardrail is an override (dead language/entities in the snapshot, Decision 3).
+    Op("apply_guardrail", "execute", "execute", "POST", "/guardrails/apply_guardrail"),
     Op("block_key", "execute", "execute", "POST", "/key/block"),
     Op("unblock_key", "execute", "execute", "POST", "/key/unblock"),
     Op("regenerate_key", "execute", "execute", "POST", "/key/regenerate"),
@@ -273,7 +276,7 @@ OPS: tuple[Op, ...] = (
     Op("test_prompt", "execute", "prompts", "POST", "/prompts/test"),
 )
 
-assert len(OPS) == 209, f"expected 209 ops, got {len(OPS)}"
+assert len(OPS) == 210, f"expected 210 ops, got {len(OPS)}"
 
 _names = [op.name for op in OPS]
 assert len(_names) == len(set(_names)), "duplicate op names in OPS"

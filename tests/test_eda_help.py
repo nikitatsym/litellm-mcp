@@ -38,6 +38,23 @@ def test_cache_delete_override_present_in_execute_help():
     assert "keys: Cache keys to delete; must be non-empty." in h
 
 
+def test_apply_guardrail_help_cost_note():
+    """The guardrail-loop override renders with the loud cost note (Decision 2)."""
+    h = _help("litellm_execute")
+    assert "ApplyGuardrail(guardrail_name: str, text: str, input_type: str = 'request'" in h
+    assert "MAY SPEND MONEY" in h  # provider-backed types call an external service
+    assert "resolved BY NAME" in h  # 404-on-unknown-name resolution documented
+    assert "guardrail_name: NAME of an initialized guardrail" in h
+
+
+def test_invoke_agent_guardrails_bullet_in_help():
+    """invoke_agent's new guardrails param surfaces the silent-unknown-name warning."""
+    h = _help("litellm_execute")
+    assert "InvokeAgent(" in h
+    assert "SILENTLY SKIPPED on this path" in h  # unlike apply_guardrail's 404
+    assert "check a name with list_guardrails or apply_guardrail first." in h
+
+
 # --- delete -----------------------------------------------------------------
 
 def test_delete_signatures_and_irreversible_bodies():
