@@ -45,7 +45,8 @@ def _prompt_row(i: int) -> dict[str, object]:
 # --- create_prompt: Prompt body, omitted-vs-null ----------------------------
 
 def test_create_prompt_body_omits_unset(client_env, respx_mock):
-    route = respx_mock.post("/prompts").respond(200, json={})
+    # echo carries prompt_id: the promoted subset verify (Step 4) checks its presence.
+    route = respx_mock.post("/prompts").respond(200, json={"prompt_id": "p1"})
     create_prompt(prompt_id="p1", litellm_params=_PARAMS)
     body = json.loads(route.calls.last.request.content)
     assert body == {"prompt_id": "p1", "litellm_params": _PARAMS}
@@ -53,16 +54,26 @@ def test_create_prompt_body_omits_unset(client_env, respx_mock):
 
 
 def test_create_prompt_explicit_null_survives(client_env, respx_mock):
-    route = respx_mock.post("/prompts").respond(200, json={})
+    route = respx_mock.post("/prompts").respond(200, json={"prompt_id": "p1"})
     create_prompt(prompt_id="p1", litellm_params=_PARAMS, prompt_info=None)
     body = json.loads(route.calls.last.request.content)
     assert "prompt_info" in body and body["prompt_info"] is None  # explicit null survives
 
 
+# --- create_prompt: the promoted subset verify catches a dropped id (Step 4) ---
+
+def test_create_prompt_verify_catches_dropped_id(client_env, respx_mock):
+    respx_mock.post("/prompts").respond(200, json={"unrelated": 1})  # echo drops prompt_id
+    with pytest.raises(ValueError) as ei:
+        create_prompt(prompt_id="p1", litellm_params=_PARAMS)
+    assert "prompt_id" in str(ei.value)
+
+
 # --- update_prompt: Decision 11 wire shape (path id duplicated into the body) -
 
 def test_update_prompt_duplicates_id_into_body(client_env, respx_mock):
-    route = respx_mock.put("/prompts/p1").respond(200, json={})
+    # echo carries prompt_id: the override's subset verify (Step 4) checks its presence.
+    route = respx_mock.put("/prompts/p1").respond(200, json={"prompt_id": "p1.v2"})
     update_prompt(prompt_id="p1", litellm_params=_PARAMS)
     req = route.calls.last.request
     assert req.url.path == "/prompts/p1"  # path id

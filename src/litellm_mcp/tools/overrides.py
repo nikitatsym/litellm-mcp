@@ -354,7 +354,11 @@ def update_prompt(
     body: dict[str, Any] = {"prompt_id": prompt_id, "litellm_params": litellm_params}
     if prompt_info is not _UNSET:
         body["prompt_info"] = prompt_info
-    return _get_client().put(f"/prompts/{prompt_id}", json=body)
+    result = _get_client().put(f"/prompts/{prompt_id}", json=body)
+    # live (Step 4): PUT echoes the new version's stored row with prompt_id at root
+    # (suffixed with the version); presence-only, so the suffix is irrelevant.
+    _verify_response({"prompt_id": prompt_id}, result)
+    return result
 
 
 @_op(litellm_execute)
@@ -535,7 +539,11 @@ def invoke_agent(
     ] = cast(dict[str, Any] | None, _UNSET),
     message_id: Annotated[
         str | None,
-        Field(description="messageId for the convenience 'text' form only (autofilled with a uuid4 if omitted)."),
+        Field(
+            description="messageId for the convenience 'text' form only (autofilled "
+            "with a uuid4 if omitted). Rejected with 'message': put the messageId "
+            "inside the message dict there."
+        ),
     ] = cast(str | None, _UNSET),
     timeout: Annotated[
         float,
@@ -559,6 +567,11 @@ def invoke_agent(
     has_message = message is not _UNSET
     if has_text == has_message:
         raise ValueError("invoke_agent requires exactly one of 'text' or 'message'")
+    if has_message and message_id is not _UNSET:
+        raise ValueError(
+            "invoke_agent: message_id is text-form only; with the full 'message' form "
+            "put the messageId inside the message dict"
+        )
 
     config: dict[str, Any] = {}
     if configuration is not _UNSET and configuration is not None:

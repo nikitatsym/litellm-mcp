@@ -310,10 +310,16 @@ VERIFY: dict[str, dict[str, Any]] = {
     "cloudzero_export": {"no_verify": _CZ_EXPORT},
     "delete_cloudzero_settings": {"no_verify": _BODYLESS},
     # ===================== prompts =======================================
-    # create/patch return untyped {} in the snapshot; Step 4 promotes them to
-    # `subset` from the live echo (Decision 6). delete_prompt is bodyless (path
-    # id + query only) and stays no_verify - no row to check.
-    "create_prompt": {"no_verify": _UNTYPED},
-    "patch_prompt": {"no_verify": _UNTYPED},
+    # Step 4 live promotions (v1.93.0 pinned image): create/patch echo the stored
+    # prompt row at root, so both moved from _UNTYPED to `subset` from the echo.
+    # live: create echoes prompt_id at root (suffixed with the version, e.g. '.v1';
+    # presence-only, so the suffix is irrelevant). litellm_params is echoed too but
+    # is secret-bearing and normalized, so only the scalar id anchor is verified.
+    "create_prompt": {"subset": ["prompt_id"]},
+    # live: patch's prompt_id is path-only (not a body field), so the subset anchors
+    # on litellm_params - echoed back, and the presence recursion proves the sent
+    # provider-config keys (prompt_integration, dotprompt_content) survived.
+    "patch_prompt": {"subset": ["litellm_params"]},
+    # live: delete returns {message: 'Prompt <id> deleted successfully'}, not a row.
     "delete_prompt": {"no_verify": _BODYLESS},
 }

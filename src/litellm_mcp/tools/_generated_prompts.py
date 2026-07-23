@@ -9,7 +9,7 @@ from pydantic import Field
 
 from ..registry import _UNSET, _op
 from .groups import litellm_delete, litellm_read, litellm_write
-from .helpers import _get_client, _qp, _slim_list
+from .helpers import _get_client, _qp, _slim_list, _verify_response
 
 
 @_op(litellm_write)
@@ -29,7 +29,9 @@ def create_prompt(
         body["litellm_params"] = litellm_params
     if prompt_info is not _UNSET:
         body["prompt_info"] = prompt_info
-    return _get_client().post("/prompts", json=body)
+    result = _get_client().post("/prompts", json=body)
+    _verify_response({k: body[k] for k in ('prompt_id',) if k in body}, result)
+    return result
 
 
 @_op(litellm_delete)
@@ -87,4 +89,6 @@ def patch_prompt(
         body["litellm_params"] = litellm_params
     if prompt_info is not _UNSET:
         body["prompt_info"] = prompt_info
-    return _get_client().patch(f"/prompts/{prompt_id}", params=_qp(environment=environment), json=body)
+    result = _get_client().patch(f"/prompts/{prompt_id}", params=_qp(environment=environment), json=body)
+    _verify_response({k: body[k] for k in ('litellm_params',) if k in body}, result)
+    return result

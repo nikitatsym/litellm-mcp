@@ -38,3 +38,16 @@ services:
       timeout: 5s
       retries: 40
       start_period: 30s
+
+  # Deterministic A2A agent backend for the invoke_agent smoke: the proxy forwards
+  # message/send here (create_agent sets agent_card_params.url to this service).
+  a2a-fixture:
+    image: python:3.12-slim
+    command: ["python", "/app/a2a_fixture.py"]
+    volumes:
+      - ./a2a_fixture.py:/app/a2a_fixture.py:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/')"]
+      interval: 5s
+      timeout: 5s
+      retries: 20

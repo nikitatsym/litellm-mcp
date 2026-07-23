@@ -20,6 +20,7 @@ import asyncio
 import json
 import os
 import uuid
+from collections.abc import Callable
 from typing import Any
 
 import pytest
@@ -76,6 +77,19 @@ def _uniq(prefix: str) -> str:
 def _name(prefix: str) -> str:
     # MCP server names reject '-' upstream, so this variant is hyphen-free.
     return f"itest{prefix}{uuid.uuid4().hex[:8]}"
+
+
+def _assert_unknown_field_caught(send: Callable[[], Any], field: str = "itest_unknown_field") -> None:
+    """The silent-drop guarantee (incus-11b disjunction): an unknown body field is
+    either rejected fail-fast (APIError 400/422) or dropped from a 2xx echo, which
+    _verify_response turns into a ValueError. An echo that carried the field back
+    would raise neither and fail pytest.raises - exactly the drop we want to catch.
+    `send` posts the bogus body and returns the echo."""
+    with pytest.raises((APIError, ValueError)) as exc:
+        echo = send()
+        _verify_response({field: "sentinel"}, echo)
+    if isinstance(exc.value, APIError):
+        assert exc.value.status in (400, 422), f"expected fail-fast, got {exc.value.status}"
 
 
 # --- 1. version -----------------------------------------------------------------
@@ -249,21 +263,8 @@ def test_8_update_team_silent_drop() -> None:
     team = call("new_team", team_alias=_uniq("drop"))
     team_id = team["team_id"]
     bogus = {"team_id": team_id, "itest_unknown_field": "sentinel"}
-
-    def attempt() -> None:
-        # Branch A: upstream rejects the unknown field (APIError 400/422 - fail
-        # fast). Branch B: a 2xx echo that drops the field, which
-        # _verify_response turns into a ValueError. If the server echoes the
-        # field back instead, neither raises and pytest.raises fails the test -
-        # exactly the silent-drop guarantee we want to catch.
-        echo = _get_client().post("/team/update", json=bogus)
-        _verify_response({"itest_unknown_field": "sentinel"}, echo)
-
     try:
-        with pytest.raises((APIError, ValueError)) as exc:
-            attempt()
-        if isinstance(exc.value, APIError):
-            assert exc.value.status in (400, 422), f"expected fail-fast, got {exc.value.status}"
+        _assert_unknown_field_caught(lambda: _get_client().post("/team/update", json=bogus))
     finally:
         call("delete_teams", team_ids=[team_id])
 
@@ -298,3 +299,122 @@ def test_9_secret_contract() -> None:
             call("delete_mcp_server", server_id=_extract_id(srv, "server_id", "id"))
     finally:
         call("delete_teams", team_ids=[team_id])
+
+
+# --- 10. prompt lifecycle -------------------------------------------------------
+
+# The config model's fixed mock reply (mirrors tests/litellm-config.yaml).
+_MOCK_RESPONSE = "Mock response from the litellm-mcp integration harness."
+
+
+def _dotprompt(body: str) -> str:
+    return f"---\nmodel: mock-gpt\n---\n{body}"
+
+
+def test_10_prompt_lifecycle() -> None:
+    pid = _uniq("prompt")
+    params = {"prompt_integration": "dotprompt", "dotprompt_content": _dotprompt("Hello {{name}}")}
+    call("create_prompt", prompt_id=pid, litellm_params=params)
+    try:
+        # list_prompts shows it, slimmed - secret-bearing litellm_params dropped.
+        listed = call("list_prompts", limit=0)  # limit=0: no client-side truncation
+        assert pid in _dumps(listed)
+        assert "litellm_params" not in _dumps(listed)
+        assert "dotprompt_content" not in _dumps(listed)
+
+        assert pid in _dumps(call("get_prompt", prompt_id=pid))
+
+        # PUT creates a NEW version (Decision 11 wire shape, live) and verifies its echo.
+        params2 = {"prompt_integration": "dotprompt", "dotprompt_content": _dotprompt("Updated {{name}}")}
+        call("update_prompt", prompt_id=pid, litellm_params=params2)
+
+        versions = call("list_prompt_versions", prompt_id=pid)
+        assert versions["total"] >= 2  # v1 + v2 both stored
+
+        # patch_prompt echo is subset-verified (promoted from no_verify this step).
+        params3 = {"prompt_integration": "dotprompt", "dotprompt_content": _dotprompt("Patched {{name}}")}
+        call("patch_prompt", prompt_id=pid, litellm_params=params3)
+    finally:
+        call("delete_prompt", prompt_id=pid)
+    assert pid not in _dumps(call("list_prompts", limit=0))
+
+
+# --- 11. prompt attach to a key (enterprise-gated on OSS v1.93.0, Decision 13) --
+
+def test_11_prompt_attach_gated() -> None:
+    pid = _uniq("attach")
+    params = {"prompt_integration": "dotprompt", "dotprompt_content": _dotprompt("Hi")}
+    call("create_prompt", prompt_id=pid, litellm_params=params)
+    try:
+        # Attaching prompts to a key is an Enterprise feature on this image; the
+        # key is never minted. Assert the documented gate rather than skipping.
+        with pytest.raises(APIError) as exc:
+            call("generate_key", key_alias=_uniq("pkey"), prompts=[pid])
+        assert exc.value.status in (403, 500)
+        assert "enterprise" in _dumps(exc.value.body).lower()
+    finally:
+        call("delete_prompt", prompt_id=pid)
+
+
+# --- 12. test_prompt live: deterministic mock stream collected client-side ------
+
+def test_12_test_prompt_live() -> None:
+    out = call("test_prompt", dotprompt_content=_dotprompt("Say hi to {{name}}"),
+               prompt_variables={"name": "Ada"})
+    assert out["truncated"] is False
+    assert out["model"] == "mock-gpt"
+    assert out["text"] == _MOCK_RESPONSE  # the whole SSE stream collected into text
+
+
+# --- 13. agent loop: create -> card -> invoke -> activity -> delete -------------
+
+def test_13_agent_loop() -> None:
+    tag = uuid.uuid4().hex[:8]
+    ag = call("create_agent", agent_name=f"itestagent{tag}",
+              agent_card_params={"name": f"itestagent{tag}", "description": "itest",
+                                 "url": "http://a2a-fixture:8080"})
+    agent_id = _extract_id(ag, "agent_id", "id")
+    try:
+        card = call("get_agent_card", agent_id=agent_id)
+        assert isinstance(card, dict) and card.get("name")
+
+        # convenience text form: the fixture mirrors the request text back.
+        ping = f"ping-{tag}"
+        out = call("invoke_agent", agent_id=agent_id, text=ping)
+        assert out["truncated"] is False
+        assert ping in _dumps(out["result"])
+
+        # full message form with an explicit contextId - passthrough proven live.
+        ctx_ping = f"ctxping-{tag}"
+        msg = {"role": "user", "parts": [{"kind": "text", "text": ctx_ping}],
+               "messageId": uuid.uuid4().hex, "contextId": "ctx-itest"}
+        out2 = call("invoke_agent", agent_id=agent_id, message=msg)
+        assert ctx_ping in _dumps(out2["result"])
+        assert "ctx-itest" in _dumps(out2["result"])
+
+        # user_daily_activity-shaped envelope; a $0 mock invoke may leave results empty.
+        activity = call("agent_daily_activity", start_date="2020-01-01",
+                        end_date="2030-01-01", agent_ids=agent_id)
+        assert {"results", "metadata"} <= set(activity)
+    finally:
+        call("delete_agent", agent_id=agent_id)
+
+    # Adversarial: invoking the deleted agent surfaces an agent-not-found error
+    # (HTTP 404 carrying a JSON-RPC error body, or a JSON-RPC error at HTTP 200).
+    with pytest.raises((APIError, ValueError)) as exc:
+        call("invoke_agent", agent_id=agent_id, text="after-delete")
+    detail = exc.value.body if isinstance(exc.value, APIError) else str(exc.value)
+    assert "not found" in _dumps(detail).lower()
+
+
+# --- 14. adversarial silent-drop on patch_prompt (once promoted to subset) ------
+
+def test_14_patch_prompt_silent_drop() -> None:
+    pid = _uniq("drop")
+    params = {"prompt_integration": "dotprompt", "dotprompt_content": _dotprompt("Hi")}
+    call("create_prompt", prompt_id=pid, litellm_params=params)
+    bogus = {"litellm_params": params, "itest_unknown_field": "sentinel"}
+    try:
+        _assert_unknown_field_caught(lambda: _get_client().patch(f"/prompts/{pid}", json=bogus))
+    finally:
+        call("delete_prompt", prompt_id=pid)

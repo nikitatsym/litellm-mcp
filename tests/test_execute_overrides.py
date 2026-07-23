@@ -176,6 +176,16 @@ def test_invoke_agent_blocking_false_rejected(client_env, respx_mock):
     assert route.call_count == 0
 
 
+def test_invoke_agent_message_id_with_message_form_rejected(client_env, respx_mock):
+    # message_id is text-form only; a messageId belongs inside the message dict in
+    # the full form, so passing both is a loud op-side reject before any HTTP.
+    route = respx_mock.post("/v1/a2a/a1/message/send").respond(200, json={"result": {}})
+    with pytest.raises(ValueError) as ei:
+        invoke_agent(agent_id="a1", message={"role": "user"}, message_id="mid")
+    assert "message_id" in str(ei.value)
+    assert route.call_count == 0
+
+
 # --- invoke_agent: a JSON-RPC error object raises even on HTTP 200 -----------
 
 def test_invoke_agent_jsonrpc_error_raises_with_code_and_message(client_env, respx_mock):
