@@ -26,7 +26,7 @@ dev = [
     "pytest-asyncio>=0.24",
     "respx>=0.21",
     "mypy>=1.10",
-    "ruff>=0.6.0",
+    "ruff==0.16.0",
 ]
 
 [tool.pytest.ini_options]
@@ -42,6 +42,11 @@ line-length = 100
 [tool.ruff.lint]
 # F401/F541 mirror incus-mcp: intentional re-exports / lone fixture literals.
 ignore = ["F401", "F541"]
+
+[tool.ruff.lint.flake8-bugbear]
+# cast() is a typing no-op returning the same _UNSET singleton each call -
+# B008's mutable-default-per-call concern does not apply.
+extend-immutable-calls = ["typing.cast"]
 
 [tool.mypy]
 strict = true

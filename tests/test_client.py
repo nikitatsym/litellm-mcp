@@ -136,9 +136,8 @@ def test_post_sse_clean_done_yields_each_data_dict(respx_mock):
 
 def test_post_sse_non_2xx_raises_apierror_with_body(respx_mock):
     respx_mock.post("/prompts/test").respond(400, json={"error": "no model in frontmatter"})
-    with pytest.raises(APIError) as ei:
-        with _client().post_sse("/prompts/test", json={}):
-            pass
+    with pytest.raises(APIError) as ei, _client().post_sse("/prompts/test", json={}):
+        pass
     assert ei.value.status == 400
     assert ei.value.body == {"error": "no model in frontmatter"}
 
@@ -149,9 +148,8 @@ def test_post_sse_2xx_non_stream_raises_with_payload_preview(respx_mock):
     respx_mock.post("/prompts/test").respond(
         200, headers={"content-type": "application/json"}, content='{"unexpected": "json"}'
     )
-    with pytest.raises(APIError) as ei:
-        with _client().post_sse("/prompts/test", json={}):
-            pass
+    with pytest.raises(APIError) as ei, _client().post_sse("/prompts/test", json={}):
+        pass
     assert ei.value.status == 200
     assert "unexpected" in ei.value.body
 
@@ -159,9 +157,8 @@ def test_post_sse_2xx_non_stream_raises_with_payload_preview(respx_mock):
 def test_post_sse_bad_json_chunk_raises(respx_mock):
     body = _sse_body('{"ok": 1}', "not-json-at-all", "[DONE]")
     respx_mock.post("/prompts/test").respond(200, headers=_SSE_CT, content=body)
-    with pytest.raises(APIError):
-        with _client().post_sse("/prompts/test", json={}) as events:
-            list(events)
+    with pytest.raises(APIError), _client().post_sse("/prompts/test", json={}) as events:
+        list(events)
 
 
 def test_post_sse_premature_eof_raises(respx_mock):
@@ -169,9 +166,8 @@ def test_post_sse_premature_eof_raises(respx_mock):
     answer."""
     body = _sse_body('{"i": 0}', '{"i": 1}')  # no [DONE]
     respx_mock.post("/prompts/test").respond(200, headers=_SSE_CT, content=body)
-    with pytest.raises(APIError) as ei:
-        with _client().post_sse("/prompts/test", json={}) as events:
-            list(events)
+    with pytest.raises(APIError) as ei, _client().post_sse("/prompts/test", json={}) as events:
+        list(events)
     assert "[DONE]" in str(ei.value)
 
 

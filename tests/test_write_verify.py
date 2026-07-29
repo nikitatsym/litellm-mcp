@@ -20,7 +20,6 @@ from litellm_mcp.tools.groups import litellm_write
 from litellm_mcp.tools.helpers import _get_client, _verify_response
 from litellm_mcp.tools.overrides import update_organization
 
-
 # --- _verify_response semantics --------------------------------------------
 
 def test_pass_when_all_sent_keys_present():

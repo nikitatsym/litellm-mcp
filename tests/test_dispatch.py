@@ -15,7 +15,7 @@ from typing import Annotated, cast
 import pytest
 from pydantic import Field
 
-import litellm_mcp.server as server
+from litellm_mcp import server
 from litellm_mcp.registry import _UNSET, Group
 
 GROUP = "test_group"

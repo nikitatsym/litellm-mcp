@@ -57,10 +57,10 @@ class _Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def do_GET(self) -> None:  # noqa: N802 (http.server API)
+    def do_GET(self) -> None:
         self._send(200, _CARD)
 
-    def do_POST(self) -> None:  # noqa: N802 (http.server API)
+    def do_POST(self) -> None:
         length = int(self.headers.get("content-length", 0) or 0)
         raw = self.rfile.read(length) if length else b"{}"
         req = json.loads(raw)

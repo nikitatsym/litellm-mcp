@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import pytest
 
-from litellm_mcp.registry import _UNSET, Group, _Unset, _op
+from litellm_mcp.registry import _UNSET, Group, _op, _Unset
 
 
 def test_unset_singleton():

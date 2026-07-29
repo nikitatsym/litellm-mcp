@@ -109,7 +109,7 @@ def map_type(schema: dict[str, Any]) -> str:
 # --- per-op parameter collection -------------------------------------------
 
 class Param:
-    __slots__ = ("name", "kind", "type_str", "required")
+    __slots__ = ("kind", "name", "required", "type_str")
 
     def __init__(self, name: str, kind: str, type_str: str, required: bool) -> None:
         self.name = name
@@ -183,12 +183,11 @@ def emit_op_source(spec: dict[str, Any], op: Op) -> tuple[str, set[str]]:
     spec_op = paths[op.path][op.method.lower()]
 
     has_body = "requestBody" in spec_op
-    if op.method in _BODY_VERBS and not has_body:
-        if op.name not in BODYLESS_OK:
-            raise GenError(
-                f"{op.name}: {op.method} {op.path} has no requestBody and is not in "
-                "bodyless_ok.py or overrides.py"
-            )
+    if op.method in _BODY_VERBS and not has_body and op.name not in BODYLESS_OK:
+        raise GenError(
+            f"{op.name}: {op.method} {op.path} has no requestBody and is not in "
+            "bodyless_ok.py or overrides.py"
+        )
 
     params = _collect_params(comps, op, spec_op)
     ann = ANNOTATIONS.get(op.name, {})
@@ -291,9 +290,7 @@ def emit_op_source(spec: dict[str, Any], op: Op) -> tuple[str, set[str]]:
         used.add("_qp")
         kw = ", ".join(f"{p.name}={p.name}" for p in query_params)
         call_args.append(f"params=_qp({kw})")
-    if body_params:
-        call_args.append("json=body")
-    elif opaque is not None:
+    if body_params or opaque is not None:
         call_args.append("json=body")
 
     verb = _VERB[op.method]

@@ -22,7 +22,6 @@ from litellm_mcp.tools._generated_execute import (
 )
 from litellm_mcp.tools.overrides import cache_delete
 
-
 # --- regenerate_key: key in the BODY, never the URL path (Decision 9) --------
 
 def test_regenerate_key_uses_body_variant(client_env, respx_mock):

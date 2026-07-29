@@ -9,8 +9,8 @@ from __future__ import annotations
 import pytest
 import respx
 
-import litellm_mcp.tools.helpers as helpers
 from litellm_mcp.config import _reset_settings
+from litellm_mcp.tools import helpers
 
 TEST_BASE_URL = "https://litellm.test"
 

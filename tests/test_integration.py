@@ -25,10 +25,10 @@ from typing import Any
 
 import pytest
 
-import litellm_mcp.tools.helpers as helpers
 from litellm_mcp.client import APIError
 from litellm_mcp.config import _reset_settings
 from litellm_mcp.server import _all_grouped, _dispatch, _to_pascal
+from litellm_mcp.tools import helpers
 from litellm_mcp.tools.helpers import _get_client, _verify_response
 from litellm_mcp.tools.overrides import litellm_version
 

@@ -18,7 +18,6 @@ from litellm_mcp.tools._generated_read_core import (
 from litellm_mcp.tools._generated_read_infra import list_guardrails, model_info
 from litellm_mcp.tools.overrides import health, key_health, model_cost_map
 
-
 # --- query construction: _UNSET omitted, explicit values present -----------
 
 def test_query_construction_drops_unset(client_env, respx_mock):
