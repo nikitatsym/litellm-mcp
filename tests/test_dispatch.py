@@ -8,6 +8,7 @@ Step 3) generated tool inventory.
 from __future__ import annotations
 
 import importlib
+import inspect
 import json
 import sys
 from typing import Annotated, cast
@@ -17,6 +18,7 @@ from pydantic import Field
 
 from litellm_mcp import server
 from litellm_mcp.registry import _UNSET, Group
+from litellm_mcp.tools import groups as groups_module
 
 GROUP = "test_group"
 
@@ -197,3 +199,33 @@ def test_docstringless_op_in_throwaway_module_crashes_registration(
             importlib.import_module("throwaway_bad_ops")
     finally:
         sys.modules.pop("throwaway_bad_ops", None)
+
+
+def test_group_doc_examples_name_registered_operations():
+    """Every example in a real group doc names an op that group exposes."""
+    all_groups = [
+        obj
+        for _, obj in inspect.getmembers(
+            groups_module, lambda o: isinstance(o, Group)
+        )
+        if obj.name in server._group_ops
+    ]
+    assert len(all_groups) == len(server._group_ops)
+    for group in all_groups:
+        for name in server._EXAMPLE_OPERATION.findall(group.doc):
+            if name == "help":
+                continue
+            assert name in server._group_ops[group.name], (
+                f"{group.name} example names {name!r}, which it does not expose"
+            )
+
+
+def test_doc_example_validation_rejects_unknown_operation():
+    with pytest.raises(RuntimeError, match="NoSuchOp"):
+        server._validate_doc_examples(
+            "litellm_read",
+            'Example: litellm_read(operation="NoSuchOp")',
+            {"ListKeys": None},
+        )
+
+    server._validate_doc_examples("litellm_read", 'operation="help"', {})
