@@ -84,9 +84,13 @@ def test_emitted_op_count():
 def test_a_hand_mutated_file_fails_sync(tmp_path):
     emitted = generate.emit_tree(SPEC)
     for name, src in emitted.items():
-        (tmp_path / name).write_text(src)
+        (tmp_path / name).write_text(src, encoding="utf-8", newline="\n")
     victim = tmp_path / "_generated_read_core.py"
-    victim.write_text(victim.read_text().replace("def budget_info(", "def budget_INFO(", 1))
+    victim.write_text(
+        victim.read_text(encoding="utf-8").replace("def budget_info(", "def budget_INFO(", 1),
+        encoding="utf-8",
+        newline="\n",
+    )
 
     problems = check.check_sync(tmp_path, emitted)
     assert any("_generated_read_core.py" in p for p in problems), problems

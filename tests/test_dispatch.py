@@ -188,7 +188,8 @@ def test_docstringless_op_in_throwaway_module_crashes_registration(
         "\n"
         "@_op(litellm_read)\n"
         "def broken_op(x: int):\n"
-        "    return x\n"
+        "    return x\n",
+        encoding="utf-8",
     )
     monkeypatch.syspath_prepend(str(tmp_path))
     try:

@@ -123,7 +123,7 @@ def check_sync(compare_dir: Path, emitted: dict[str, str]) -> list[str]:
         if not path.exists():
             problems.append(f"{name}: emitted but missing on disk (run codegen)")
             continue
-        if path.read_text() != want:
+        if path.read_text(encoding="utf-8") != want:
             problems.append(f"{name}: committed tree differs from freshly generated output")
     return problems
 

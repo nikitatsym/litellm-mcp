@@ -41,7 +41,7 @@ class GenError(Exception):
 # --- spec access -----------------------------------------------------------
 
 def load_spec() -> dict[str, Any]:
-    with _SPEC_PATH.open() as fh:
+    with _SPEC_PATH.open(encoding="utf-8") as fh:
         spec: dict[str, Any] = json.load(fh)
     return spec
 
@@ -438,7 +438,9 @@ def emit_tree(spec: dict[str, Any]) -> dict[str, str]:
 def write_tree(files: dict[str, str], out_dir: Path) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     for filename, source in files.items():
-        (out_dir / filename).write_text(source)
+        # A locale-default encoding truncates the module mid-write on Windows;
+        # newline pins the emitted bytes identical across platforms.
+        (out_dir / filename).write_text(source, encoding="utf-8", newline="\n")
 
 
 def main() -> None:
