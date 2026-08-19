@@ -201,8 +201,8 @@ def test_docstringless_op_in_throwaway_module_crashes_registration(
         sys.modules.pop("throwaway_bad_ops", None)
 
 
-def test_group_doc_examples_name_registered_operations():
-    """Every example in a real group doc names an op that group exposes."""
+def test_group_docs_resolve_operation_placeholders():
+    """Every real group doc renders with no placeholder left behind."""
     all_groups = [
         obj
         for _, obj in inspect.getmembers(
@@ -212,20 +212,45 @@ def test_group_doc_examples_name_registered_operations():
     ]
     assert len(all_groups) == len(server._group_ops)
     for group in all_groups:
-        for name in server._EXAMPLE_OPERATION.findall(group.doc):
-            if name == "help":
-                continue
-            assert name in server._group_ops[group.name], (
-                f"{group.name} example names {name!r}, which it does not expose"
-            )
+        rendered = server._render_group_doc(
+            group.name, group.doc, server._group_ops[group.name]
+        )
+        assert "$" not in rendered, (
+            f"{group.name} doc left a placeholder unrendered"
+        )
 
 
-def test_doc_example_validation_rejects_unknown_operation():
+def test_render_group_doc_rejects_unknown_placeholder():
     with pytest.raises(RuntimeError, match="NoSuchOp"):
-        server._validate_doc_examples(
+        server._render_group_doc(
             "litellm_read",
-            'Example: litellm_read(operation="NoSuchOp")',
+            'Example: litellm_read(operation="$NoSuchOp")',
             {"ListKeys": None},
         )
 
-    server._validate_doc_examples("litellm_read", 'operation="help"', {})
+
+def test_render_group_doc_rejects_hardcoded_operation():
+    with pytest.raises(RuntimeError, match="hardcodes"):
+        server._render_group_doc(
+            "litellm_read",
+            'Example: litellm_read(operation="ListKeys")',
+            {"ListKeys": None},
+        )
+
+    with pytest.raises(RuntimeError, match="hardcodes"):
+        server._render_group_doc(
+            "litellm_read",
+            'Example: litellm_read(operation = "ListKeys")',
+            {"ListKeys": None},
+        )
+
+
+def test_render_group_doc_resolves_meta_and_keeps_generic_form():
+    rendered = server._render_group_doc(
+        "litellm_read",
+        'operation="$help" or operation="$schema" or operation="<OpName>"',
+        {},
+    )
+    assert rendered == (
+        'operation="help" or operation="schema" or operation="<OpName>"'
+    )
