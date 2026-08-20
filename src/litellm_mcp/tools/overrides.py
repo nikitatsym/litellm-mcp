@@ -340,12 +340,10 @@ def update_prompt(
 ) -> Any:
     """Update a prompt: PUT creates a NEW version (not an in-place edit).
 
-    Generator quirk (Decision 11): the snapshot's Prompt body requires prompt_id
-    in BOTH the path and the body, but the generator drops the body field that
-    collides with a path param ("path wins"), so a generated op would 422.
-    Upstream ignores the body id anyway - the new row is keyed by the PATH id
-    (version suffix stripped), there is no rename. So this override exposes ONE
-    prompt_id and duplicates it into the body wire-side.
+    The snapshot requires prompt_id in BOTH the path and body. The exact
+    path/body disposition records that one caller argument must fill both
+    locations. This override duplicates prompt_id into the body and adds
+    presence verification for the version-creating write.
 
     PUT does not edit in place: it appends a new version of the prompt, keyed by
     prompt_id, with the environment taken from prompt_info.environment (default

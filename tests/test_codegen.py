@@ -10,15 +10,21 @@ from __future__ import annotations
 
 import hashlib
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
+from typing import Literal, get_args, get_origin
 
 import pytest
+from pydantic import ValidationError
 
 from codegen import check, generate
 from codegen.inventory import OP_BY_NAME, OPS, Op
 from codegen.overrides import OVERRIDES
+from codegen.path_body import PATH_BODY_FIELD_DISPOSITIONS
+from litellm_mcp import server
+from litellm_mcp.registry import _UNSET
 
 SPEC = generate.load_spec()
 _REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -153,6 +159,241 @@ def test_committed_tree_is_in_sync():
     emitted = generate.emit_tree(SPEC)
     problems = check.check_sync(check._TOOLS_DIR, emitted)
     assert problems == []
+
+
+class _RecordedSSE:
+    def __enter__(self):
+        return ()
+
+    def __exit__(self, *_args):
+        return False
+
+
+class _BodyRecorder:
+    def __init__(self):
+        self.calls = []
+
+    def __getattr__(self, name):
+        def call(*_args, **kwargs):
+            self.calls.append((name, _args, kwargs))
+            return _RecordedSSE() if name == "post_sse" else None
+
+        return call
+
+
+def _sample_for_annotation(annotation):
+    origin = get_origin(annotation)
+    args = get_args(annotation)
+    if origin is Literal:
+        return args[0]
+    if origin is list:
+        return []
+    if origin is dict:
+        return {}
+    if args:
+        return _sample_for_annotation(
+            next(arg for arg in args if arg is not type(None))
+        )
+    if annotation is bool:
+        return True
+    if annotation is int:
+        return 1
+    if annotation is float:
+        return 1.0
+    return "value"
+
+
+def _resolve_openapi_ref(value):
+    while "$ref" in value:
+        ref = value["$ref"]
+        value = SPEC
+        for part in ref.removeprefix("#/").split("/"):
+            value = value[part]
+    return value
+
+def _resolve_openapi_body(value):
+    schema = _resolve_openapi_ref(value)
+    if "anyOf" in schema:
+        non_null = [member for member in schema["anyOf"] if member.get("type") != "null"]
+        if len(non_null) == 1:
+            return _resolve_openapi_ref(non_null[0])
+    return schema
+
+
+def _path_body_field_collisions():
+    collisions = set()
+    for op in OPS:
+        spec_op = SPEC["paths"][op.path][op.method.lower()]
+        if "requestBody" not in spec_op:
+            continue
+        request_body = _resolve_openapi_ref(spec_op["requestBody"])
+        schema = _resolve_openapi_body(
+            request_body["content"]["application/json"]["schema"]
+        )
+        path_fields = set(re.findall(r"{([^}]+)}", op.path))
+        for name in schema.get("properties", {}):
+            if name in path_fields:
+                collisions.add((op.name, name))
+    return collisions
+
+
+def test_path_body_field_dispositions_match_openapi():
+    """Every path/body name collision has one current, explicit disposition."""
+    assert set(PATH_BODY_FIELD_DISPOSITIONS) == _path_body_field_collisions()
+    for key, entry in PATH_BODY_FIELD_DISPOSITIONS.items():
+        assert set(entry) == {"action", "reason"}, key
+        assert entry["action"] in {"serialize", "exempt"}, key
+        assert entry["reason"].strip(), key
+
+
+def _required_openapi_body_cases():
+    for op in OPS:
+        spec_op = SPEC["paths"][op.path][op.method.lower()]
+        if "requestBody" not in spec_op:
+            continue
+        request_body = _resolve_openapi_ref(spec_op["requestBody"])
+        if not request_body.get("required"):
+            continue
+        schema = _resolve_openapi_body(
+            request_body["content"]["application/json"]["schema"]
+        )
+        dispositions = {
+            name: entry["action"]
+            for (op_name, name), entry in PATH_BODY_FIELD_DISPOSITIONS.items()
+            if op_name == op.name
+        }
+        fields = [
+            name
+            for name in schema.get("required", [])
+            if name in schema.get("properties", {})
+            and dispositions.get(name) != "exempt"
+        ]
+        if fields:
+            yield op, "fields", fields
+        elif "properties" in schema:
+            yield op, "empty", []
+        else:
+            yield op, "opaque", ["body"]
+
+
+def _has_error_for_field(error, field_name):
+    return any(item["loc"] and item["loc"][0] == field_name for item in error.errors())
+
+
+def test_required_openapi_bodies_are_required_or_serialized(monkeypatch):
+    """Snapshot-required bodies cannot be silently omitted by registered tools."""
+    recorder = _BodyRecorder()
+    covered_overrides = set()
+    required_body_overrides = {
+        "apply_guardrail",
+        "update_prompt",
+        "test_prompt",
+    }
+    failures = []
+
+    for op, shape, fields in _required_openapi_body_cases():
+        op_name = server._to_pascal(op.name)
+        group_name = server._all_grouped[op_name]
+        fn = server._group_ops[group_name][op_name]
+        if op.name in OVERRIDES:
+            covered_overrides.add(op.name)
+        model = fn._mcp_params_model
+        complete = {
+            name: _sample_for_annotation(field.annotation)
+            for name, field in model.model_fields.items()
+            if field.is_required()
+        }
+        validated = model.model_validate(complete).model_dump(exclude_unset=True)
+
+        if shape == "fields" or shape == "opaque":
+            schema_required = model.model_json_schema().get("required", [])
+            for field_name in fields:
+                if field_name not in schema_required:
+                    failures.append(f"{op.name}.{field_name} is not schema-required")
+                    continue
+
+                missing = dict(validated)
+                missing.pop(field_name)
+                with pytest.raises(ValidationError) as caught:
+                    model.model_validate(missing)
+                if not _has_error_for_field(caught.value, field_name):
+                    failures.append(
+                        f"{op.name}.{field_name} omission failed for another field"
+                    )
+
+                for omitted_value in (None, _UNSET):
+                    invalid = {**validated, field_name: omitted_value}
+                    with pytest.raises(ValidationError) as caught:
+                        model.model_validate(invalid)
+                    if not _has_error_for_field(caught.value, field_name):
+                        failures.append(
+                            f"{op.name}.{field_name} rejects {omitted_value!r} elsewhere"
+                        )
+
+        recorder.calls.clear()
+        monkeypatch.setitem(fn.__globals__, "_get_client", lambda: recorder)
+        fn(**validated)
+        if not recorder.calls:
+            failures.append(f"{op.name} did not make an HTTP call")
+            continue
+        sent = recorder.calls[-1][2].get("json")
+        if shape == "empty":
+            if sent != {}:
+                failures.append(f"{op.name} sent {sent!r} instead of an empty body")
+        elif shape == "opaque":
+            if sent != validated["body"]:
+                failures.append(f"{op.name} did not serialize its required body")
+        else:
+            if not isinstance(sent, dict):
+                failures.append(f"{op.name} sent a non-object body {sent!r}")
+                continue
+            for field_name in fields:
+                if field_name not in sent:
+                    failures.append(f"{op.name}.{field_name} was omitted at wire")
+                elif sent[field_name] != validated[field_name]:
+                    failures.append(
+                        f"{op.name}.{field_name} serialized {sent[field_name]!r} "
+                        f"instead of {validated[field_name]!r}"
+                    )
+
+    assert required_body_overrides <= covered_overrides, (
+        "Required JSON-body overrides escaped the registered-operation guard: "
+        f"{sorted(required_body_overrides - covered_overrides)}"
+    )
+    assert not failures, "; ".join(failures)
+
+
+def test_update_credential_serializes_path_body_field_once(monkeypatch):
+    """The one MCP path argument is also sent exactly once in its required JSON body."""
+    op_name = "UpdateCredential"
+    fn = server._group_ops[server._all_grouped[op_name]][op_name]
+    assert tuple(fn._mcp_params_model.model_fields) == (
+        "credential_name",
+        "credential_info",
+        "credential_values",
+    )
+
+    recorder = _BodyRecorder()
+    monkeypatch.setitem(fn.__globals__, "_get_client", lambda: recorder)
+    fn(
+        credential_name="credential-a",
+        credential_info={"label": "primary"},
+        credential_values={"api_key": "secret"},
+    )
+
+    assert recorder.calls == [
+        (
+            "patch",
+            ("/credentials/credential-a",),
+            {
+                "json": {
+                    "credential_name": "credential-a",
+                    "credential_info": {"label": "primary"},
+                    "credential_values": {"api_key": "secret"},
+                }
+            },
+        )
+    ]
 
 
 # --- slim emission (active in Step 5) / verify emission (dormant until Step 6) -

@@ -1140,6 +1140,8 @@ def update_credential(
 ) -> Any:
     """Update a stored credential."""
     body: dict[str, Any] = {}
+    if credential_name is not _UNSET:
+        body["credential_name"] = credential_name
     if credential_info is not _UNSET:
         body["credential_info"] = credential_info
     if credential_values is not _UNSET:

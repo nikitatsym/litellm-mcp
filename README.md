@@ -223,10 +223,11 @@ npm run litellm:logs    # follow container logs
 
 The tool surface is generated, not hand-transcribed.
 `codegen/inventory.py` fixes the operation list; the judgment layer (param
-descriptions, docstring bodies, slim specs, verify skip sets, override
-list) lives as plain data in `codegen/annotations.py`, `slims.py`,
-`verify.py`, `overrides.py`, and `bodyless_ok.py`. `codegen/generate.py` is
-a pure function of the committed OpenAPI snapshot
+descriptions, docstring bodies, slim specs, verify skip sets, override list,
+and path/body collision dispositions) lives as plain data in
+`codegen/annotations.py`, `slims.py`, `verify.py`, `overrides.py`,
+`bodyless_ok.py`, and `path_body.py`. `codegen/generate.py` is a pure function
+of the committed OpenAPI snapshot
 (`codegen/openapi-v1.93.0.json`) plus that data, emitting the
 `src/litellm_mcp/tools/_generated_*.py` modules. Generated files are never
 hand-edited; ops that need bespoke logic are listed in

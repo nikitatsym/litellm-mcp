@@ -22,6 +22,7 @@ from .annotations import ANNOTATIONS
 from .bodyless_ok import BODYLESS_OK
 from .inventory import GROUP_VARS, MODULES, OPS, Op
 from .overrides import OVERRIDES
+from .path_body import PATH_BODY_FIELD_DISPOSITIONS
 from .slims import SLIMS
 from .verify import ROOT_SKIP, VERIFY
 
@@ -113,24 +114,27 @@ class Param:
 
     def __init__(self, name: str, kind: str, type_str: str, required: bool) -> None:
         self.name = name
-        self.kind = kind  # path | query | body | opaque
-        self.type_str = type_str
+        self.kind = kind  # path | path_body | query | body | opaque
         self.required = required
+        self.type_str = type_str
 
 
 def _collect_params(comps: dict[str, Any], op: Op, spec_op: dict[str, Any]) -> list[Param]:
-    """Path + body + query params, deduped by precedence path > body > query."""
+    """Collect path, body, and query params with dispositioned path/body collisions."""
     path_names = re.findall(r"\{([^}]+)\}", op.path)
     declared_path = {
         p["name"]: p for p in spec_op.get("parameters", []) if p.get("in") == "path"
     }
     params: list[Param] = []
+    path_params: dict[str, Param] = {}
     taken: set[str] = set()
 
     for pn in path_names:
         decl = declared_path.get(pn)
         type_str = map_type(decl["schema"]) if decl else "str"
-        params.append(Param(pn, "path", type_str, required=True))
+        path_param = Param(pn, "path", type_str, required=True)
+        params.append(path_param)
+        path_params[pn] = path_param
         taken.add(pn)
 
     if "requestBody" in spec_op:
@@ -140,7 +144,20 @@ def _collect_params(comps: dict[str, Any], op: Op, spec_op: dict[str, Any]) -> l
         if "properties" in body:
             required_fields = set(body.get("required", []))
             for fn, fs in body["properties"].items():
-                if fn in taken:  # path wins (addressing field never duplicated)
+                if fn in taken:
+                    if fn in path_params:
+                        disposition = PATH_BODY_FIELD_DISPOSITIONS.get((op.name, fn))
+                        if disposition is None:
+                            raise GenError(
+                                f"{op.name}.{fn}: path/body collision has no exact disposition"
+                            )
+                        action = disposition["action"]
+                        if action == "serialize":
+                            path_params[fn].kind = "path_body"
+                        elif action != "exempt":
+                            raise GenError(
+                                f"{op.name}.{fn}: unknown path/body disposition {action!r}"
+                            )
                     continue
                 params.append(Param(fn, "body", map_type(fs), fn in required_fields))
                 taken.add(fn)
@@ -255,7 +272,7 @@ def emit_op_source(spec: dict[str, Any], op: Op) -> tuple[str, set[str]]:
     else:
         lines.append(f'    """{head}"""')
 
-    body_params = [p for p in params if p.kind == "body"]
+    body_params = [p for p in params if p.kind == "body" or p.kind == "path_body"]
     query_params = [p for p in params if p.kind == "query"]
     opaque = next((p for p in params if p.kind == "opaque"), None)
 
@@ -361,6 +378,50 @@ def _validate_hook(name: str, slim: dict[str, Any] | None, ver: dict[str, Any] |
             raise GenError(f"{name}: verify present must be a non-empty list")
 
 
+
+def _path_body_field_collisions(spec: dict[str, Any]) -> set[tuple[str, str]]:
+    """Return every request-body property that shares an operation's path name."""
+    collisions: set[tuple[str, str]] = set()
+    comps = spec["components"]["schemas"]
+    paths = spec["paths"]
+    for op in OPS:
+        if op.path not in paths or op.method.lower() not in paths[op.path]:
+            continue
+        spec_op = paths[op.path][op.method.lower()]
+        request_body = spec_op.get("requestBody")
+        if request_body is None:
+            continue
+        body = _resolve_body(comps, request_body["content"]["application/json"]["schema"])
+        path_fields = set(re.findall(r"\{([^}]+)}", op.path))
+        for name in body.get("properties", {}):
+            if name in path_fields:
+                collisions.add((op.name, name))
+    return collisions
+
+
+def _validate_path_body_field_dispositions(spec: dict[str, Any]) -> None:
+    """Every path/body collision has one exact, current, explained disposition."""
+    actual = _path_body_field_collisions(spec)
+    declared = set(PATH_BODY_FIELD_DISPOSITIONS)
+    missing = sorted(actual - declared)
+    stale = sorted(declared - actual)
+    if missing or stale:
+        details = []
+        if missing:
+            details.append(f"missing dispositions for {missing}")
+        if stale:
+            details.append(f"stale dispositions for {stale}")
+        raise GenError("path_body.py: " + "; ".join(details))
+    for key, entry in PATH_BODY_FIELD_DISPOSITIONS.items():
+        if not isinstance(entry, dict):
+            raise GenError(f"path_body.py: {key} has a malformed disposition")
+        if set(entry) != {"action", "reason"}:
+            raise GenError(f"path_body.py: {key} must contain only action and reason")
+        if entry["action"] not in {"serialize", "exempt"}:
+            raise GenError(f"path_body.py: {key} has unknown action {entry['action']!r}")
+        if not isinstance(entry["reason"], str) or not entry["reason"].strip():
+            raise GenError(f"path_body.py: {key} needs a non-empty reason")
+
 def _validate_keys() -> None:
     """Every data key must name a known op (stale keys are loud)."""
     known = {op.name for op in OPS}
@@ -385,6 +446,8 @@ def _validate_keys() -> None:
         spec_op = spec["paths"][op.path][op.method.lower()]
         if "requestBody" in spec_op:
             raise GenError(f"{name}: listed in bodyless_ok.py but the endpoint HAS a requestBody")
+
+    _validate_path_body_field_dispositions(spec)
 
 
 def _module_header(module: str, ops_used: set[str]) -> str:
