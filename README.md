@@ -142,7 +142,7 @@ litellm_delete(operation="DeleteKeys", params={"keys": ["sk-..."]})
 to filter by substring across names and docstrings (it also hints at
 matches in other groups). `operation="schema"` returns one op's full JSON
 Schema. Params are validated strictly via Pydantic: unknown keys, wrong
-types, and missing required fields all surface as a `ValueError` with
+types, and missing required fields return a contextual error result with
 field-level detail pointing at `operation='schema'`.
 
 ### v2.5 dispatch model
@@ -169,8 +169,8 @@ field-level detail pointing at `operation='schema'`.
 
 Some endpoints depend on the LiteLLM edition or on extra provider config.
 Observed on the OSS `ghcr.io/berriai/litellm:v1.93.0` image; the MCP does
-not special-case them - the upstream error propagates verbatim as an
-`APIError` with the body intact.
+not special-case them - the upstream API context and body are returned in a
+contextual error result.
 
 Enterprise-licensed (fail on the OSS image without `LITELLM_LICENSE`):
 
