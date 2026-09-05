@@ -256,7 +256,8 @@ ANNOTATIONS: dict[str, dict[str, Any]] = {
         "doc": "List model IDs available to the caller (OpenAI /v1/models shape).",
         "params": {
             "team_id": "Scope the listing to a team's models.",
-            "return_wildcard_routes": "Include wildcard (provider/*) routes.",
+            "return_wildcard_routes": "Append wildcard (provider/*) routes "
+            "(upstream is additive: they appear even when false).",
             "healthy_only": "Only models that passed their last health check.",
         },
     },

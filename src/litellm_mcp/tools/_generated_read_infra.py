@@ -271,7 +271,7 @@ def list_mcp_tools() -> Any:
 
 @_op(litellm_read)
 def list_models(
-    return_wildcard_routes: Annotated[bool | None, Field(description='Include wildcard (provider/*) routes.')] = cast(bool | None, _UNSET),
+    return_wildcard_routes: Annotated[bool | None, Field(description='Append wildcard (provider/*) routes (upstream is additive: they appear even when false).')] = cast(bool | None, _UNSET),
     team_id: Annotated[str | None, Field(description="Scope the listing to a team's models.")] = cast(str | None, _UNSET),
     include_model_access_groups: bool | None = cast(bool | None, _UNSET),
     only_model_access_groups: bool | None = cast(bool | None, _UNSET),
