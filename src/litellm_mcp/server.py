@@ -14,7 +14,9 @@ from typing import Any, cast
 from urllib.parse import urlsplit, urlunsplit
 
 import httpx
-from mcp.server.mcpserver import MCPServer
+import pydantic_core
+from mcp.server.mcpserver import Image, MCPServer
+from mcp.types import ContentBlock, TextContent
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -130,6 +132,37 @@ def _safe_tool(fn: Callable[..., Any]) -> Callable[..., Any]:
             return _error_result(exc)
 
     return sync_wrapped
+
+
+def _compact(fn: Callable[..., Any]) -> Callable[..., Any]:
+    """Serialize a data result as one-line JSON.
+
+    The SDK pretty-prints non-string results (`indent=2`), which costs the
+    caller ~20% more tokens for nothing; a ready TextContent passes through
+    untouched. Strings, content blocks and images keep the SDK path. Mirrors
+    fn's sync/async flavor so a sync tool stays on the SDK worker thread.
+    """
+
+    def to_content(result: Any) -> Any:
+        if result is None or isinstance(result, str | ContentBlock | Image):
+            return result
+        return TextContent(
+            type="text", text=pydantic_core.to_json(result, fallback=str).decode()
+        )
+
+    if inspect.iscoroutinefunction(fn):
+
+        @wraps(fn)
+        async def async_compact(*args: Any, **kwargs: Any) -> Any:
+            return to_content(await cast("Awaitable[Any]", fn(*args, **kwargs)))
+
+        return async_compact
+
+    @wraps(fn)
+    def sync_compact(*args: Any, **kwargs: Any) -> Any:
+        return to_content(fn(*args, **kwargs))
+
+    return sync_compact
 
 
 def _to_pascal(name: str) -> str:
@@ -490,7 +523,7 @@ def _register_tools() -> None:
             tagged = cast(TaggedFn, raw_fn)
             group: Group = tagged._mcp_group
             if group is ROOT:
-                mcp.tool()(_safe_tool(raw_fn))
+                mcp.tool(structured_output=False)(_compact(_safe_tool(raw_fn)))
             else:
                 fn = _prepare_op(tagged)
                 if group.name not in groups:
@@ -504,7 +537,7 @@ def _register_tools() -> None:
         for pascal_name in ops:
             _all_grouped[pascal_name] = group_name
 
-        mcp.tool()(_safe_tool(_make_tool(group_name, doc)))
+        mcp.tool(structured_output=False)(_compact(_safe_tool(_make_tool(group_name, doc))))
 
 
 def main() -> None:
