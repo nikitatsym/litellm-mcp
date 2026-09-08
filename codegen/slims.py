@@ -46,6 +46,11 @@ _SLIM_USER = [
 _SLIM_MODEL = [
     "model_name", "model_info",
 ]
+# Live /v1/models rows: `object`, `created`, `owned_by` are the same constant
+# on every row (362/362 measured); only id and the token limits vary.
+_SLIM_MODEL_ID = [
+    "id", "max_input_tokens", "max_output_tokens",
+]
 _SLIM_SPEND_LOG = [
     "request_id", "api_key_alias", "model", "spend", "total_tokens",
     "startTime", "user", "team_id", "status",
@@ -96,10 +101,7 @@ SLIMS: dict[str, dict[str, Any]] = {
     "model_info": {"fields": _SLIM_MODEL, "limit": 20, "container": "data"},
     "spend_logs": {"fields": _SLIM_SPEND_LOG, "limit": 20, "container": "data"},
     "list_mcp_servers": {"fields": _SLIM_MCP_SERVER, "limit": 20},
-    "list_models": {
-        "no_slim": "OpenAI-shape id list; rows are already minimal id records "
-        "and reshaping would break OpenAI compatibility"
-    },
+    "list_models": {"fields": _SLIM_MODEL_ID, "limit": 100, "container": "data"},
     "list_access_groups": {"no_slim": "bounded config list; access groups are few"},
     "list_credentials": {"no_slim": "bounded config list; secret values masked upstream"},
     "list_tags": {"no_slim": "returns a bounded tag->info map, not a row list"},

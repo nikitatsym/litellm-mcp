@@ -253,7 +253,9 @@ ANNOTATIONS: dict[str, dict[str, Any]] = {
     },
     # ===================== read_infra ====================================
     "list_models": {
-        "doc": "List model IDs available to the caller (OpenAI /v1/models shape).",
+        "doc": "List model IDs available to the caller.",
+        "body": "Rows are slimmed to id and token limits; the constant OpenAI "
+        "envelope fields (object/created/owned_by) are dropped.",
         "params": {
             "team_id": "Scope the listing to a team's models.",
             "return_wildcard_routes": "Append wildcard (provider/*) routes "

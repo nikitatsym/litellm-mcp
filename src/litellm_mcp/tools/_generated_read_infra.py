@@ -279,9 +279,14 @@ def list_models(
     fallback_type: str | None = cast(str | None, _UNSET),
     scope: str | None = cast(str | None, _UNSET),
     healthy_only: Annotated[bool | None, Field(description='Only models that passed their last health check.')] = cast(bool | None, _UNSET),
+    limit: Annotated[int, Field(description='Max rows kept after client-side slimming of the returned page (0 = no cap).')] = 100,
 ) -> Any:
-    """List model IDs available to the caller (OpenAI /v1/models shape)."""
-    return _get_client().get("/v1/models", params=_qp(return_wildcard_routes=return_wildcard_routes, team_id=team_id, include_model_access_groups=include_model_access_groups, only_model_access_groups=only_model_access_groups, include_metadata=include_metadata, fallback_type=fallback_type, scope=scope, healthy_only=healthy_only))
+    """List model IDs available to the caller.
+
+    Rows are slimmed to id and token limits; the constant OpenAI envelope fields (object/created/owned_by) are dropped.
+    """
+    result = _get_client().get("/v1/models", params=_qp(return_wildcard_routes=return_wildcard_routes, team_id=team_id, include_model_access_groups=include_model_access_groups, only_model_access_groups=only_model_access_groups, include_metadata=include_metadata, fallback_type=fallback_type, scope=scope, healthy_only=healthy_only))
+    return _slim_list(result, {'id', 'max_input_tokens', 'max_output_tokens'}, limit, 'data')
 
 
 @_op(litellm_read)
