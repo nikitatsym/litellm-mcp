@@ -24,9 +24,10 @@ def test_missing_env_crashes_on_client_use_not_import(monkeypatch):
     monkeypatch.delenv("LITELLM_URL", raising=False)
     monkeypatch.delenv("LITELLM_API_KEY", raising=False)
     config_mod._reset_settings()
-    # Empty defaults load fine; the crash is on first client construction.
+    # Empty defaults load fine; the crash is on first client construction, and
+    # names the setting - a startup traceback has to say what is unset.
     assert get_settings().litellm_url == ""
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="LITELLM_URL"):
         LiteLLMClient()
 
 

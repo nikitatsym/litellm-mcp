@@ -203,7 +203,6 @@ WAIVED_UNCOVERED: frozenset[tuple[str, str]] = frozenset({
     ('/health/license', 'GET'),
     ('/health/liveliness', 'GET'),
     ('/health/liveness', 'GET'),
-    ('/health/readiness/details', 'GET'),
     ('/health/shared-status', 'GET'),
     # /images
     ('/images/edits', 'POST'),

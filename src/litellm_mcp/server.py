@@ -31,6 +31,7 @@ from pydantic import (
 from . import tools as _tools_pkg
 from .client import APIError
 from .registry import _UNSET, ROOT, Group, OpFn, TaggedFn, _Unset
+from .tools.helpers import _get_client
 
 mcp = MCPServer("litellm")
 
@@ -556,6 +557,10 @@ def main() -> None:
     parser.add_argument("--host", default="127.0.0.1", help="bind address for --http")
     parser.add_argument("--port", type=int, default=8000, help="port for --http")
     args = parser.parse_args()
+
+    # Fail here, not on the first tool call: an unreachable proxy or a rejected
+    # key stops startup, stdio and --http alike, with the failing request named.
+    _get_client().check()
 
     if args.http:
         # Stateless: the gateway in front opens a session per call; nothing outlives a request.

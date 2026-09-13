@@ -37,20 +37,22 @@ def test_registration_preserves_sync_async_flavor():
 
 def test_registered_root_returns_contextual_api_error(monkeypatch):
     class BrokenClient:
-        def get(self, _path: str):
-            raise APIError(503, "GET", "/health/readiness?token=secret", {"detail": "unavailable"})
+        def check(self):
+            raise APIError(
+                503, "GET", "/health/readiness/details?token=secret", {"detail": "unavailable"}
+            )
 
     monkeypatch.setattr(overrides, "_get_client", lambda: BrokenClient())
 
     result = _data(_registered("litellm_version")())
 
-    assert result["error"].startswith("GET /health/readiness -> 503")
+    assert result["error"].startswith("GET /health/readiness/details -> 503")
     assert "secret" not in result["error"]
 
 
 def test_registered_root_preserves_success_shape(monkeypatch):
     class OkClient:
-        def get(self, _path: str):
+        def check(self):
             return {"status": "healthy"}
 
     monkeypatch.setattr(overrides, "_get_client", lambda: OkClient())

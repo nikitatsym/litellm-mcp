@@ -4,7 +4,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from json import JSONDecodeError
 from json import loads as _json_loads
-from typing import Any
+from typing import Any, cast
 
 import httpx
 
@@ -210,3 +210,13 @@ class LiteLLMClient:
         # delete() carries a json body: several LiteLLM delete endpoints
         # (organization delete, org member delete) take a required body.
         return self._request("DELETE", path, params=params, json=json, auth=auth, timeout=timeout)
+
+    def check(self) -> dict[str, Any]:
+        """Prove the credential with one authenticated request: readiness details.
+
+        `main()` calls this at startup and `litellm_version` reports what it
+        returns, so a bad URL or key fails before the server serves anything.
+        The plain /health/readiness probe is public - it answers 200 without a
+        token, so it cannot tell a good key from a bad one.
+        """
+        return cast(dict[str, Any], self.get("/health/readiness/details"))

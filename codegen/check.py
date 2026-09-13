@@ -42,8 +42,9 @@ GATED_MODULES: frozenset[str] = frozenset(
 _UNTYPED_LIST_OPS: frozenset[str] = frozenset({"model_info", "spend_logs"})
 
 _COVERAGE_VERBS: tuple[str, ...] = ("get", "post", "put", "patch", "delete")
-# Covered outside OPS: litellm_version -> GET /health/readiness.
-_ROOT_COVERED: frozenset[tuple[str, str]] = frozenset({("/health/readiness", "GET")})
+# Covered outside OPS: litellm_version -> GET /health/readiness/details (the
+# client's check(); the public /health/readiness is the health_readiness op).
+_ROOT_COVERED: frozenset[tuple[str, str]] = frozenset({("/health/readiness/details", "GET")})
 
 
 def _is_list_op(op: Op, spec: dict[str, Any]) -> bool:

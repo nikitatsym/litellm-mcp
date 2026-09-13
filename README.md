@@ -53,9 +53,11 @@ and equals the summed `grep -c "^@_op" src/litellm_mcp/tools/*.py` (211).
 - **`litellm_admin`** (high): proxy-global settings, allowed IPs, global
   spend reset, bulk user update.
 
-Root: `litellm_version` returns `{"mcp": <package version>, "service": GET
-/health/readiness}`. On LiteLLM v1.93.0 the readiness payload is
-`{status, db}` (that image carries no LiteLLM version field).
+Root: `litellm_version` returns `{"mcp": <package version>, "service":
+LiteLLMClient.check()}`, the client's startup credential check - GET
+/health/readiness/details, which answers `{status, db, cache,
+litellm_version, ...}`. The public /health/readiness probe needs no token,
+so it cannot stand in for that check.
 
 ## Install
 
@@ -98,7 +100,8 @@ config.
 
 The package can also be imported: `mcp`, `Settings`, the client class, and
 `client_var` (a `ContextVar` the host sets per request) let one process serve
-several instances.
+several instances; such a host calls `LiteLLMClient.check()` on each client at
+startup, as `main()` does for its own.
 
 ## Configuration
 
@@ -107,9 +110,10 @@ several instances.
 | `LITELLM_URL` | Yes | Base URL of the LiteLLM proxy (no trailing slash) |
 | `LITELLM_API_KEY` | Yes | Admin bearer key (master or admin virtual key) |
 
-Both are read lazily: the server imports and lists ops without them, and
-fails on the first call that reaches the proxy. `LITELLM_API_KEY` is sent
-as `Authorization: Bearer`.
+Both are read lazily: the server imports and lists ops without them. `main()`
+then calls `LiteLLMClient.check()` before serving, so a missing setting, an
+unreachable proxy, or a rejected key stops startup instead of surfacing on the
+first tool call. `LITELLM_API_KEY` is sent as `Authorization: Bearer`.
 
 ## Minting an admin key
 

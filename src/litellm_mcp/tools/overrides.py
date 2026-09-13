@@ -33,14 +33,15 @@ _EXEC_RESULT_CAP = 100_000
 def litellm_version() -> dict[str, Any]:
     """Get the MCP server version and the LiteLLM service readiness.
 
-    `mcp` is this package's version (importlib metadata). `service` is
-    GET /health/readiness, reporting the proxy's status and database
-    connectivity - on LiteLLM v1.93.0 that payload is {status, db}, with no
-    LiteLLM version field.
+    `mcp` is this package's version (importlib metadata). `service` is the
+    client's startup check - GET /health/readiness/details, the authenticated
+    readiness probe, reporting {status, db, cache, litellm_version, ...}. The
+    public /health/readiness answers without a token, so it cannot double as
+    the credential check `main()` runs at startup.
     """
     return {
         "mcp": importlib.metadata.version("litellm-mcp"),
-        "service": _get_client().get("/health/readiness"),
+        "service": _get_client().check(),
     }
 
 

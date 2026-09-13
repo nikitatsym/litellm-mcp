@@ -98,6 +98,19 @@ def test_per_call_auth_override_scoped_to_one_call(respx_mock):
     assert listing.calls.last.request.headers["Authorization"] == "Bearer sk-test"
 
 
+def test_check_rejects_a_bad_credential(respx_mock):
+    """The startup probe has to be an AUTHENTICATED request: the public
+    /health/readiness answers 200 without a token, so only the details route
+    tells a good key from a rejected one."""
+    route = respx_mock.get("/health/readiness/details").respond(
+        401, json={"error": {"message": "Invalid proxy server token passed", "code": "401"}}
+    )
+    with pytest.raises(APIError) as ei:
+        _client().check()
+    assert route.calls.last.request.headers["Authorization"] == "Bearer sk-test"
+    assert ei.value.status == 401
+
+
 # --- post_sse: the Decision 12 streaming contract ---------------------------
 
 _SSE_CT = {"content-type": "text/event-stream"}

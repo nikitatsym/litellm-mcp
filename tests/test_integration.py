@@ -98,7 +98,7 @@ def test_1_version() -> None:
     result = call("litellm_version")
     assert result["mcp"]
     service = result["service"]
-    # /health/readiness on v1.93.0 returns {status, db}; no version field on this image.
+    # check() -> /health/readiness/details: {status, db, cache, litellm_version, ...}.
     assert isinstance(service, dict) and service.get("status")
 
 
