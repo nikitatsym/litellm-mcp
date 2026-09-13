@@ -1,6 +1,6 @@
 """Config contract: empty-string defaults so nothing crashes at import;
 the client crashes on first use when env is missing; `_reset_settings`
-isolates the cache between tests.
+isolates the cache between tests; a host-bound client beats the singleton.
 """
 
 from __future__ import annotations
@@ -11,6 +11,7 @@ import litellm_mcp.client as client_mod
 import litellm_mcp.config as config_mod
 from litellm_mcp.client import LiteLLMClient
 from litellm_mcp.config import get_settings
+from litellm_mcp.tools import helpers
 
 
 def test_import_does_not_require_env():
@@ -27,6 +28,18 @@ def test_missing_env_crashes_on_client_use_not_import(monkeypatch):
     assert get_settings().litellm_url == ""
     with pytest.raises(ValueError):
         LiteLLMClient()
+
+
+def test_bound_client_wins_over_singleton(client_env):
+    # A host serving several instances binds one client per request; reading the
+    # module singleton instead would answer with another instance's credentials.
+    bound = LiteLLMClient(base_url="https://bound.test", api_key="sk-bound")
+    token = helpers.client_var.set(bound)
+    try:
+        assert helpers._get_client() is bound
+    finally:
+        helpers.client_var.reset(token)
+    assert helpers._get_client() is not bound
 
 
 def test_reset_settings_isolates(monkeypatch):

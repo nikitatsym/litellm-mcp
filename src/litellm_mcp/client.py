@@ -8,7 +8,7 @@ from typing import Any
 
 import httpx
 
-from .config import get_settings
+from .config import Settings, get_settings
 
 _DEFAULT_TIMEOUT = 30.0
 # Non-SSE 2xx payload preview length carried in the raised APIError body.
@@ -52,7 +52,9 @@ class LiteLLMClient:
 
     Bearer auth from `LITELLM_API_KEY`, `timeout=30.0` with a per-call
     override. `APIError(status, method, path, body)` on 4xx/5xx with the
-    upstream body intact; 204/empty response bodies map to `None`.
+    upstream body intact; 204/empty response bodies map to `None`. A host
+    serving several instances passes `settings=Settings(...)` instead of the
+    process-wide env; explicit `base_url` / `api_key` still win per field.
     """
 
     def __init__(
@@ -60,8 +62,10 @@ class LiteLLMClient:
         base_url: str | None = None,
         api_key: str | None = None,
         transport: httpx.BaseTransport | None = None,
+        *,
+        settings: Settings | None = None,
     ) -> None:
-        s = get_settings()
+        s = settings or get_settings()
         base = (base_url or s.litellm_url).rstrip("/")
         key = api_key or s.litellm_api_key
         if not base:

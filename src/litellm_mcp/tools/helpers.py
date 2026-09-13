@@ -1,16 +1,21 @@
 """Shared helpers for the LiteLLM tool modules.
 
-Client singleton, query-param builder, the slim/truncation wrappers for list
+Client accessor (request-scoped `client_var` first, module singleton
+fallback), query-param builder, the slim/truncation wrappers for list
 results, and `_verify_response` (the write-echo drop check).
 """
 
 from __future__ import annotations
 
+from contextvars import ContextVar
 from typing import Any
 
 from ..client import LiteLLMClient
 from ..registry import _UNSET
 
+# Public: a host serving several LiteLLM instances in one process binds the
+# per-request client here, so tools never read credentials from module state.
+client_var: ContextVar[LiteLLMClient | None] = ContextVar("litellm_client", default=None)
 _client: LiteLLMClient | None = None
 
 
@@ -46,7 +51,10 @@ def _verify_response(
 
 
 def _get_client() -> LiteLLMClient:
+    """Return the client bound to this request, else the module singleton."""
     global _client
+    if (bound := client_var.get()) is not None:
+        return bound
     if _client is None:
         _client = LiteLLMClient()
     return _client
