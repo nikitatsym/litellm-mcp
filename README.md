@@ -18,25 +18,12 @@ dotprompt, `invoke_agent` sends an A2A `message/send`. Both are graded as
 `litellm_execute` (they spend inference) and return bounded output, never a
 raw stream.
 
-Built on the v2.5 MCP server family: five meta-tools dispatched by
+Built on the v2.5 MCP server family: risk-graded meta-tools dispatched by
 `operation` + `params`, strict Pydantic validation, per-op `help` and JSON
 `schema` introspection, list slimming with truncation metadata, and
 write-response verification.
 
 ## Operations
-
-**211 operations total**: 210 grouped across the five meta-tools, plus one
-root `litellm_version` op. The count is machine-checked - it equals
-`len(OPS)` in `codegen/inventory.py` (210) plus the hand-written root op,
-and equals the summed `grep -c "^@_op" src/litellm_mcp/tools/*.py` (211).
-
-| Meta-tool | Risk | Ops |
-| --- | --- | ---: |
-| `litellm_read` | safe | 94 |
-| `litellm_write` | medium | 55 |
-| `litellm_execute` | medium | 23 |
-| `litellm_delete` | high | 26 |
-| `litellm_admin` | high | 12 |
 
 - **`litellm_read`** (safe): lists, infos, spend/usage, health, settings
   reads, token/cost utils, MCP gateway registry reads, prompt registry
