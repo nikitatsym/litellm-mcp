@@ -1,10 +1,16 @@
-"""Operations implemented by hand and excluded from generated output.
+"""Ops implemented by hand in `tools/overrides.py`, skipped by the emitter.
 
-Overrides cover snapshot endpoints without request bodies and operations
-whose client-side behavior the emitter cannot express. Unknown operation
-names are generation errors. The sync gate requires implementations for
-overrides in gated modules and an inventory entry for every non-ROOT
-operation in tools/overrides.py.
+Two kinds of entry. Spec-gap ops (seeded in Step 4) whose snapshot endpoint has
+no requestBody - the generator cannot emit a body it does not know. And ops
+that DO resolve from the snapshot but need bespoke client-side logic the emitter
+does not express (`health`'s per-call httpx timeout, `model_cost_map`'s
+substring filter + truncation over a huge map) - added in Step 5. Each entry
+names the reason and the step that lands the implementation. An entry stays
+PENDING until its module's completeness gate turns on: the sync gate requires an
+override to be implemented in `tools/overrides.py` only once its module is
+gated, and conversely requires every non-ROOT `@op` in `tools/overrides.py` to
+be listed here (no silent runtime duplicate). An unknown key is a
+generation-time error.
 """
 
 from __future__ import annotations

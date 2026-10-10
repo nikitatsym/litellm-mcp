@@ -1,15 +1,21 @@
-"""List-response projection and truncation configuration.
+"""Per-list-op slim data (read modules authored in Step 5).
 
-Each entry is keyed by operation name; unknown names are generation errors.
+Each entry is keyed by op name; an unknown key is a generation-time error.
 
-    SLIMS[op_name] = {"fields": [...], "limit": 20}
+    SLIMS[op_name] = {"fields": [...], "limit": 20}                # bare list
     SLIMS[op_name] = {"fields": [...], "limit": 20, "container": "keys"}
     SLIMS[op_name] = {"no_slim": "reason the full payload is returned"}
 
-`container` names the envelope key containing rows. Without it, the response
-is the row list. slim_list projects rows to `fields`, caps the returned list
-at `limit`, and reports truncation. Other envelope fields are returned under
-`page_info`. Every list operation in a gated module requires an entry.
+`container` names the envelope key holding the rows (`keys`, `teams`, `data`,
+...) for endpoints that wrap their page; without it the response is the row
+list itself. The emitter turns an entry into `slim_list(result, {fields},
+limit, container?)` - each row projected to `fields` (upstream key order kept),
+the page capped at `limit`, cut counts reported, and any other envelope fields
+(server pagination counts) carried through under `page_info`.
+
+Baseline field sets are fixed by the v2.5-build plan (Decision 11). Adding a
+field is allowed; a removal or rename is a gap-decision. A list op with no
+entry fails the completeness gate once its module is gated.
 """
 
 from __future__ import annotations
