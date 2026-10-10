@@ -1,17 +1,15 @@
-"""Integration smokes against a live LiteLLM proxy (tests/docker-compose.yml).
+"""Integration tests against the LiteLLM proxy in tests/docker-compose.yml.
 
-Every scenario drives the REGISTERED ops through the dispatch layer, so the
-slims / _verify_response / override behavior is exactly what is under test - not
-raw httpx. The one exception is scenario 8, which posts an unknown field through
-the client on purpose (the tool signature would reject it before the wire).
+Scenarios call registered operations through the dispatch layer to exercise
+response projection, write verification, and overrides. The unknown-field
+tests use the client directly because tool validation rejects that field
+before sending a request.
 
-Run:  npm run litellm:up && uv run python dev.py e2e   (then npm run litellm:down)
+Run `npm run litellm:up && uv run python dev.py e2e`, then
+`npm run litellm:down`.
 
-Decision 13: a platform area that turns out enterprise-gated or module-absent on
-the OSS image raises an APIError with the documented shape (premium body OR
-404/501). Those areas are asserted with `pytest.raises(APIError)` once observed
-live; the checked-in lifecycles below assume the feature is present and are
-narrowed to the observed reality during the live run.
+Tests for features unavailable in the configured edition assert the
+upstream APIError status and response body.
 """
 
 from __future__ import annotations
@@ -25,11 +23,11 @@ from typing import Any
 
 import pytest
 
+from litellm_mcp import config
 from litellm_mcp.client import APIError
-from litellm_mcp.config import _reset_settings
 from litellm_mcp.server import _all_grouped, _dispatch, _to_pascal
 from litellm_mcp.tools import helpers
-from litellm_mcp.tools.helpers import _get_client, _verify_response
+from litellm_mcp.tools.helpers import get_client, verify_response
 from litellm_mcp.tools.overrides import litellm_version
 
 pytestmark = pytest.mark.integration
@@ -43,7 +41,7 @@ def _live_env(monkeypatch: pytest.MonkeyPatch) -> None:
     """Point the client at the compose instance for each integration test."""
     monkeypatch.setenv("LITELLM_URL", BASE_URL)
     monkeypatch.setenv("LITELLM_API_KEY", MASTER_KEY)
-    _reset_settings()
+    config._settings = None
     helpers._client = None
 
 
@@ -80,14 +78,14 @@ def _name(prefix: str) -> str:
 
 
 def _assert_unknown_field_caught(send: Callable[[], Any], field: str = "itest_unknown_field") -> None:
-    """The silent-drop guarantee (incus-11b disjunction): an unknown body field is
-    either rejected fail-fast (APIError 400/422) or dropped from a 2xx echo, which
-    _verify_response turns into a ValueError. An echo that carried the field back
-    would raise neither and fail pytest.raises - exactly the drop we want to catch.
-    `send` posts the bogus body and returns the echo."""
+    """Require an unknown field to be rejected or detected as missing from the echo.
+
+    send posts the request directly and returns the response. Accepted fields
+    echoed unchanged cause this assertion to fail.
+    """
     with pytest.raises((APIError, ValueError)) as exc:
         echo = send()
-        _verify_response({field: "sentinel"}, echo)
+        verify_response({field: "sentinel"}, echo)
     if isinstance(exc.value, APIError):
         assert exc.value.status in (400, 422), f"expected fail-fast, got {exc.value.status}"
 
@@ -264,7 +262,7 @@ def test_8_update_team_silent_drop() -> None:
     team_id = team["team_id"]
     bogus = {"team_id": team_id, "itest_unknown_field": "sentinel"}
     try:
-        _assert_unknown_field_caught(lambda: _get_client().post("/team/update", json=bogus))
+        _assert_unknown_field_caught(lambda: get_client().post("/team/update", json=bogus))
     finally:
         call("delete_teams", team_ids=[team_id])
 
@@ -420,7 +418,7 @@ def test_14_patch_prompt_silent_drop() -> None:
     call("create_prompt", prompt_id=pid, litellm_params=params)
     bogus = {"litellm_params": params, "itest_unknown_field": "sentinel"}
     try:
-        _assert_unknown_field_caught(lambda: _get_client().patch(f"/prompts/{pid}", json=bogus))
+        _assert_unknown_field_caught(lambda: get_client().patch(f"/prompts/{pid}", json=bogus))
     finally:
         call("delete_prompt", prompt_id=pid)
 

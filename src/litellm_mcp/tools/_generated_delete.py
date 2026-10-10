@@ -7,48 +7,48 @@ from typing import Annotated, Any, Literal, cast
 
 from pydantic import Field
 
-from ..registry import _UNSET, _op
+from ..registry import UNSET, op
 from .groups import litellm_delete
-from .helpers import _get_client, _qp, _verify_response
+from .helpers import get_client, query_params, verify_response
 
 
-@_op(litellm_delete)
+@op(litellm_delete)
 def cache_flushall() -> Any:
     """Flush the ENTIRE proxy cache.
 
     Irreversible and unscoped: wipes every cached entry for all keys, teams, and models at once. Use cache_delete to remove specific keys instead.
     """
-    return _get_client().post("/cache/flushall")
+    return get_client().post("/cache/flushall")
 
 
-@_op(litellm_delete)
+@op(litellm_delete)
 def delete_access_group(
     access_group_id: Annotated[str, Field(description='Access group ID to delete.')],
 ) -> Any:
     """Delete a unified access group."""
-    return _get_client().delete(f"/v1/access_group/{access_group_id}")
+    return get_client().delete(f"/v1/access_group/{access_group_id}")
 
 
-@_op(litellm_delete)
+@op(litellm_delete)
 def delete_budget(
     id: Annotated[str, Field(description='Budget ID to delete.')],
 ) -> Any:
     """Delete a budget object."""
     body: dict[str, Any] = {}
-    if id is not _UNSET:
+    if id is not UNSET:
         body["id"] = id
-    return _get_client().post("/budget/delete", json=body)
+    return get_client().post("/budget/delete", json=body)
 
 
-@_op(litellm_delete)
+@op(litellm_delete)
 def delete_credential(
     credential_name: Annotated[str, Field(description='Credential name to delete.')],
 ) -> Any:
     """Delete a stored provider credential."""
-    return _get_client().delete(f"/credentials/{credential_name}")
+    return get_client().delete(f"/credentials/{credential_name}")
 
 
-@_op(litellm_delete)
+@op(litellm_delete)
 def delete_customers(
     user_ids: Annotated[list[str], Field(description='Customer IDs to delete; every listed ID in one call.')],
 ) -> Any:
@@ -57,67 +57,67 @@ def delete_customers(
     Irreversible. Every listed customer is deleted in one call.
     """
     body: dict[str, Any] = {}
-    if user_ids is not _UNSET:
+    if user_ids is not UNSET:
         body["user_ids"] = user_ids
-    return _get_client().post("/customer/delete", json=body)
+    return get_client().post("/customer/delete", json=body)
 
 
-@_op(litellm_delete)
+@op(litellm_delete)
 def delete_fallback(
     model: Annotated[str, Field(description='Model whose fallback chain to remove.')],
-    fallback_type: Annotated[Literal['general', 'context_window', 'content_policy'], Field(description='Which fallback list to remove.')] = cast(Literal['general', 'context_window', 'content_policy'], _UNSET),
+    fallback_type: Annotated[Literal['general', 'context_window', 'content_policy'], Field(description='Which fallback list to remove.')] = cast(Literal['general', 'context_window', 'content_policy'], UNSET),
 ) -> Any:
     """Remove a model's fallback chain."""
-    return _get_client().delete(f"/fallback/{model}", params=_qp(fallback_type=fallback_type))
+    return get_client().delete(f"/fallback/{model}", params=query_params(fallback_type=fallback_type))
 
 
-@_op(litellm_delete)
+@op(litellm_delete)
 def delete_guardrail(
     guardrail_id: Annotated[str, Field(description='Guardrail ID to delete.')],
 ) -> Any:
     """Delete a guardrail."""
-    return _get_client().delete(f"/guardrails/{guardrail_id}")
+    return get_client().delete(f"/guardrails/{guardrail_id}")
 
 
-@_op(litellm_delete)
+@op(litellm_delete)
 def delete_keys(
-    keys: Annotated[list[str] | None, Field(description='Key tokens to delete; every listed key is removed in one call.')] = cast(list[str] | None, _UNSET),
-    key_aliases: Annotated[list[str] | None, Field(description='Key aliases to delete instead of tokens; batch semantics.')] = cast(list[str] | None, _UNSET),
+    keys: Annotated[list[str] | None, Field(description='Key tokens to delete; every listed key is removed in one call.')] = cast(list[str] | None, UNSET),
+    key_aliases: Annotated[list[str] | None, Field(description='Key aliases to delete instead of tokens; batch semantics.')] = cast(list[str] | None, UNSET),
 ) -> Any:
     """Delete virtual keys.
 
     Irreversible: the keys stop working immediately and cannot be recovered. Pass either `keys` (tokens) or `key_aliases`.
     """
     body: dict[str, Any] = {}
-    if keys is not _UNSET:
+    if keys is not UNSET:
         body["keys"] = keys
-    if key_aliases is not _UNSET:
+    if key_aliases is not UNSET:
         body["key_aliases"] = key_aliases
-    result = _get_client().post("/key/delete", json=body)
-    _verify_response({k: None for k in ('deleted_keys',)}, result)
+    result = get_client().post("/key/delete", json=body)
+    verify_response({k: None for k in ('deleted_keys',)}, result)
     return result
 
 
-@_op(litellm_delete)
+@op(litellm_delete)
 def delete_mcp_server(
     server_id: Annotated[str, Field(description='MCP server ID to delete.')],
 ) -> Any:
     """Remove a registered MCP server from the gateway."""
-    return _get_client().delete(f"/v1/mcp/server/{server_id}")
+    return get_client().delete(f"/v1/mcp/server/{server_id}")
 
 
-@_op(litellm_delete)
+@op(litellm_delete)
 def delete_model(
     id: Annotated[str, Field(description='Model deployment ID to delete.')],
 ) -> Any:
     """Delete a model deployment."""
     body: dict[str, Any] = {}
-    if id is not _UNSET:
+    if id is not UNSET:
         body["id"] = id
-    return _get_client().post("/model/delete", json=body)
+    return get_client().post("/model/delete", json=body)
 
 
-@_op(litellm_delete)
+@op(litellm_delete)
 def delete_organizations(
     organization_ids: Annotated[list[str], Field(description='Organization IDs to delete; every listed ID in one call.')],
 ) -> Any:
@@ -126,23 +126,23 @@ def delete_organizations(
     Irreversible; returns the deleted org rows. Every listed org is removed in one call.
     """
     body: dict[str, Any] = {}
-    if organization_ids is not _UNSET:
+    if organization_ids is not UNSET:
         body["organization_ids"] = organization_ids
-    return _get_client().delete("/organization/delete", json=body)
+    return get_client().delete("/organization/delete", json=body)
 
 
-@_op(litellm_delete)
+@op(litellm_delete)
 def delete_tag(
     name: Annotated[str, Field(description='Tag name to delete.')],
 ) -> Any:
     """Delete a spend-tracking tag."""
     body: dict[str, Any] = {}
-    if name is not _UNSET:
+    if name is not UNSET:
         body["name"] = name
-    return _get_client().post("/tag/delete", json=body)
+    return get_client().post("/tag/delete", json=body)
 
 
-@_op(litellm_delete)
+@op(litellm_delete)
 def delete_teams(
     team_ids: Annotated[list[str], Field(description='Team IDs to delete; every listed ID in one call.')],
 ) -> Any:
@@ -151,22 +151,22 @@ def delete_teams(
     Irreversible. Every listed team is deleted in one call.
     """
     body: dict[str, Any] = {}
-    if team_ids is not _UNSET:
+    if team_ids is not UNSET:
         body["team_ids"] = team_ids
-    result = _get_client().post("/team/delete", json=body)
-    _verify_response({k: None for k in ('deleted_teams',)}, result)
+    result = get_client().post("/team/delete", json=body)
+    verify_response({k: None for k in ('deleted_teams',)}, result)
     return result
 
 
-@_op(litellm_delete)
+@op(litellm_delete)
 def delete_toolset(
     toolset_id: Annotated[str, Field(description='Toolset ID to delete.')],
 ) -> Any:
     """Delete an MCP toolset."""
-    return _get_client().delete(f"/v1/mcp/toolset/{toolset_id}")
+    return get_client().delete(f"/v1/mcp/toolset/{toolset_id}")
 
 
-@_op(litellm_delete)
+@op(litellm_delete)
 def delete_users(
     user_ids: Annotated[list[str], Field(description='User IDs to delete; every listed ID in one call.')],
 ) -> Any:
@@ -175,54 +175,54 @@ def delete_users(
     Irreversible. Every listed user is deleted in one call.
     """
     body: dict[str, Any] = {}
-    if user_ids is not _UNSET:
+    if user_ids is not UNSET:
         body["user_ids"] = user_ids
-    return _get_client().post("/user/delete", json=body)
+    return get_client().post("/user/delete", json=body)
 
 
-@_op(litellm_delete)
+@op(litellm_delete)
 def organization_member_delete(
     organization_id: Annotated[str, Field(description='Organization to remove the member from.')],
-    user_id: Annotated[str | None, Field(description='Member user ID to remove (or use user_email).')] = cast(str | None, _UNSET),
-    user_email: Annotated[str | None, Field(description='Member email to remove (or use user_id).')] = cast(str | None, _UNSET),
+    user_id: Annotated[str | None, Field(description='Member user ID to remove (or use user_email).')] = cast(str | None, UNSET),
+    user_email: Annotated[str | None, Field(description='Member email to remove (or use user_id).')] = cast(str | None, UNSET),
 ) -> Any:
     """Remove a member from an organization."""
     body: dict[str, Any] = {}
-    if user_id is not _UNSET:
+    if user_id is not UNSET:
         body["user_id"] = user_id
-    if user_email is not _UNSET:
+    if user_email is not UNSET:
         body["user_email"] = user_email
-    if organization_id is not _UNSET:
+    if organization_id is not UNSET:
         body["organization_id"] = organization_id
-    return _get_client().delete("/organization/member_delete", json=body)
+    return get_client().delete("/organization/member_delete", json=body)
 
 
-@_op(litellm_delete)
+@op(litellm_delete)
 def team_member_delete(
     team_id: Annotated[str, Field(description='Team to remove the member from.')],
-    user_id: Annotated[str | None, Field(description='Member user ID to remove (or use user_email).')] = cast(str | None, _UNSET),
-    user_email: Annotated[str | None, Field(description='Member email to remove (or use user_id).')] = cast(str | None, _UNSET),
+    user_id: Annotated[str | None, Field(description='Member user ID to remove (or use user_email).')] = cast(str | None, UNSET),
+    user_email: Annotated[str | None, Field(description='Member email to remove (or use user_id).')] = cast(str | None, UNSET),
 ) -> Any:
     """Remove a member from a team."""
     body: dict[str, Any] = {}
-    if user_id is not _UNSET:
+    if user_id is not UNSET:
         body["user_id"] = user_id
-    if user_email is not _UNSET:
+    if user_email is not UNSET:
         body["user_email"] = user_email
-    if team_id is not _UNSET:
+    if team_id is not UNSET:
         body["team_id"] = team_id
-    return _get_client().post("/team/member_delete", json=body)
+    return get_client().post("/team/member_delete", json=body)
 
 
-@_op(litellm_delete)
+@op(litellm_delete)
 def team_model_delete(
     team_id: Annotated[str, Field(description='Team whose model access to revoke.')],
     models: Annotated[list[str], Field(description='Model names to remove from the team; every listed name in one call.')],
 ) -> Any:
     """Revoke a team's access to models."""
     body: dict[str, Any] = {}
-    if team_id is not _UNSET:
+    if team_id is not UNSET:
         body["team_id"] = team_id
-    if models is not _UNSET:
+    if models is not UNSET:
         body["models"] = models
-    return _get_client().post("/team/model/delete", json=body)
+    return get_client().post("/team/model/delete", json=body)

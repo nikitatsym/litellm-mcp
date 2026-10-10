@@ -44,7 +44,7 @@ line-length = 100
 ignore = ["F401", "F541"]
 
 [tool.ruff.lint.flake8-bugbear]
-# cast() is a typing no-op returning the same _UNSET singleton each call -
+# cast() is a typing no-op returning the same UNSET singleton each call -
 # B008's mutable-default-per-call concern does not apply.
 extend-immutable-calls = ["typing.cast"]
 

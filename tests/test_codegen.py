@@ -8,7 +8,9 @@ data.
 
 from __future__ import annotations
 
+import ast
 import hashlib
+import json
 import os
 import re
 import subprocess
@@ -24,7 +26,7 @@ from codegen.inventory import OP_BY_NAME, OPS, Op
 from codegen.overrides import OVERRIDES
 from codegen.path_body import PATH_BODY_FIELD_DISPOSITIONS
 from litellm_mcp import server
-from litellm_mcp.registry import _UNSET
+from litellm_mcp.registry import UNSET
 
 SPEC = generate.load_spec()
 _REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -78,11 +80,48 @@ def test_cross_process_determinism():
     assert hashlib.sha256(blob.encode()).hexdigest() in digests
 
 
-def test_emitted_op_count():
+def test_emitted_operations_match_inventory():
     emitted = generate.emit_tree(SPEC)
-    total = sum(src.count("\n@_op(") for src in emitted.values())
-    # overrides are hand-written in tools/overrides.py, not emitted
-    assert total == len(OPS) - len(OVERRIDES)
+    names = [
+        node.name
+        for source in emitted.values()
+        for node in ast.parse(source).body
+        if isinstance(node, ast.FunctionDef) and node.decorator_list
+    ]
+    assert len(names) == len(set(names))
+    assert set(names) == {operation.name for operation in OPS} - set(OVERRIDES)
+
+
+@pytest.mark.parametrize(
+    "name", ["get_client", "query_params", "slim_list", "verify_response", "UNSET", "cast", "body", "result"]
+)
+def test_emitted_parameters_cannot_shadow_symbols(monkeypatch, name):
+    operation = OP_BY_NAME["new_team"]
+    original = generate._collect_params(SPEC["components"]["schemas"], operation,
+                                        SPEC["paths"][operation.path]["post"])
+    params = original + [generate.Param(name, "query", "str", False)]
+    monkeypatch.setattr(generate, "_collect_params", lambda *_args: params)
+    monkeypatch.setattr(generate, "SLIMS", {"new_team": {"fields": ["team_id"]}})
+    monkeypatch.setattr(generate, "VERIFY", {"new_team": {"skip": []}})
+    with pytest.raises(generate.GenError, match=name) as caught:
+        generate.emit_op_source(SPEC, operation)
+    assert operation.name in str(caught.value)
+
+
+def test_opaque_body_parameter_is_not_a_symbol_collision(
+    monkeypatch, regenerated_op, client_env, respx_mock
+):
+    operation = OP_BY_NAME["add_model"]
+    monkeypatch.setattr(generate, "_collect_params", lambda *_args: [
+        generate.Param("body", "opaque", "dict[str, Any]", True)
+    ])
+    monkeypatch.setattr(generate, "VERIFY", {"add_model": {"no_verify": "opaque body"}})
+    source, used = generate.emit_op_source(SPEC, operation)
+    module = generate._module_header("write", used) + "\n\n" + source
+    fn = regenerated_op(module, "add_model")
+    route = respx_mock.post("/model/new").respond(200, json={"status": "created"})
+    assert fn(body={"model_name": "m"}) == {"status": "created"}
+    assert json.loads(route.calls.last.request.content) == {"model_name": "m"}
 
 
 # --- (a) hand-mutate a generated file -> sync gate fails --------------------
@@ -134,7 +173,7 @@ def test_d_gated_override_not_implemented_fails():
     assert any("update_organization" in p and "gated" in p for p in problems), problems
 
 
-# --- (e) unlisted @_op in tools/overrides.py -> reverse dedupe fails --------
+# --- (e) unlisted @op in tools/overrides.py -> reverse dedupe fails --------
 
 def test_e_unlisted_override_impl_fails():
     problems = check.check_override_dedupe(
@@ -321,7 +360,7 @@ def test_required_openapi_bodies_are_required_or_serialized(monkeypatch):
                         f"{op.name}.{field_name} omission failed for another field"
                     )
 
-                for omitted_value in (None, _UNSET):
+                for omitted_value in (None, UNSET):
                     invalid = {**validated, field_name: omitted_value}
                     with pytest.raises(ValidationError) as caught:
                         model.model_validate(invalid)
@@ -331,7 +370,7 @@ def test_required_openapi_bodies_are_required_or_serialized(monkeypatch):
                         )
 
         recorder.calls.clear()
-        monkeypatch.setitem(fn.__globals__, "_get_client", lambda: recorder)
+        monkeypatch.setitem(fn.__globals__, "get_client", lambda: recorder)
         fn(**validated)
         if not recorder.calls:
             failures.append(f"{op.name} did not make an HTTP call")
@@ -363,83 +402,91 @@ def test_required_openapi_bodies_are_required_or_serialized(monkeypatch):
     assert not failures, "; ".join(failures)
 
 
-def test_update_credential_serializes_path_body_field_once(monkeypatch):
+def test_update_credential_serializes_path_body_field_once(client_env, respx_mock):
     """The one MCP path argument is also sent exactly once in its required JSON body."""
-    op_name = "UpdateCredential"
-    fn = server._group_ops[server._all_grouped[op_name]][op_name]
-    assert tuple(fn._mcp_params_model.model_fields) == (
-        "credential_name",
-        "credential_info",
-        "credential_values",
-    )
-
-    recorder = _BodyRecorder()
-    monkeypatch.setitem(fn.__globals__, "_get_client", lambda: recorder)
+    name = "UpdateCredential"
+    fn = server._group_ops[server._all_grouped[name]][name]
+    fields = fn._mcp_params_model.model_fields
+    assert set(fields) == {"credential_name", "credential_info", "credential_values"}
+    assert fields["credential_name"].is_required()
+    route = respx_mock.patch("/credentials/credential-a").respond(200, json={})
     fn(
         credential_name="credential-a",
         credential_info={"label": "primary"},
         credential_values={"api_key": "secret"},
     )
-
-    assert recorder.calls == [
-        (
-            "patch",
-            ("/credentials/credential-a",),
-            {
-                "json": {
-                    "credential_name": "credential-a",
-                    "credential_info": {"label": "primary"},
-                    "credential_values": {"api_key": "secret"},
-                }
-            },
-        )
-    ]
+    assert route.call_count == 1
+    request = route.calls.last.request
+    assert request.method == "PATCH"
+    assert request.url.path == "/credentials/credential-a"
+    assert json.loads(request.content) == {
+        "credential_name": "credential-a",
+        "credential_info": {"label": "primary"},
+        "credential_values": {"api_key": "secret"},
+    }
 
 
-# --- slim emission (active in Step 5) / verify emission (dormant until Step 6) -
-
-def test_slim_hook_emits_slim_list(monkeypatch):
-    """A bare slims entry wraps the list op in _slim_list and injects `limit`."""
+def test_slim_hook_projects_rows_and_applies_default_limit(
+    monkeypatch, regenerated_op, client_env, respx_mock
+):
     monkeypatch.setattr(generate, "SLIMS", {"list_keys": {"fields": ["token", "spend"], "limit": 5}})
-    src = generate.emit_tree(SPEC)["_generated_read_core.py"]
-    assert "result = _get_client().get" in src
-    assert "return _slim_list(result, {'token', 'spend'}, limit)" in src
-    assert "] = 5," in src  # injected limit param default from the entry
+    fn = regenerated_op(generate.emit_tree(SPEC)["_generated_read_core.py"], "list_keys")
+    rows = [{"token": str(index), "spend": index, "secret": "hidden"} for index in range(7)]
+    respx_mock.get("/key/list").respond(200, json=rows)
+    assert fn() == {
+        "data": [{"token": str(index), "spend": index} for index in range(5)],
+        "total": 7,
+        "returned": 5,
+        "truncated": True,
+    }
+    assert fn(limit=0)["data"] == [{"token": str(index), "spend": index} for index in range(7)]
 
 
-def test_slim_hook_emits_container(monkeypatch):
-    """An entry with a container passes the envelope key to _slim_list."""
+def test_slim_hook_preserves_envelope(monkeypatch, regenerated_op, client_env, respx_mock):
     monkeypatch.setattr(
-        generate, "SLIMS", {"list_keys": {"fields": ["token"], "limit": 5, "container": "keys"}}
+        generate, "SLIMS", {"list_keys": {"fields": ["token"], "limit": 1, "container": "keys"}}
     )
-    src = generate.emit_tree(SPEC)["_generated_read_core.py"]
-    assert "return _slim_list(result, {'token'}, limit, 'keys')" in src
+    fn = regenerated_op(generate.emit_tree(SPEC)["_generated_read_core.py"], "list_keys")
+    respx_mock.get("/key/list").respond(
+        200, json={"keys": [{"token": "first", "secret": "hidden"}, {"token": "second"}], "page": 3}
+    )
+    assert fn() == {
+        "data": [{"token": "first"}], "total": 2, "returned": 1,
+        "truncated": True, "page_info": {"page": 3},
+    }
 
 
-def test_verify_hook_emits_verify_call(monkeypatch):
-    """A skip-form verify.py entry makes the write op check the echoed row."""
+def test_verify_skip_checks_other_fields(monkeypatch, regenerated_op, client_env, respx_mock):
     monkeypatch.setattr(generate, "ROOT_SKIP", frozenset())
     monkeypatch.setattr(generate, "VERIFY", {"new_team": {"skip": ["team_id"]}})
-    src = generate.emit_tree(SPEC)["_generated_write.py"]
-    assert "_verify_response(body, result, frozenset({'team_id'}))" in src
+    fn = regenerated_op(generate.emit_tree(SPEC)["_generated_write.py"], "new_team")
+    route = respx_mock.post("/team/new").respond(200, json={"team_alias": "t"})
+    assert fn(team_id="id", team_alias="t") == {"team_alias": "t"}
+    route.respond(200, json={})
+    with pytest.raises(ValueError, match="team_alias"):
+        fn(team_id="id", team_alias="t")
 
 
-def test_verify_hook_emits_subset_call(monkeypatch):
-    """A subset entry filters the sent body to the whitelisted keys."""
+def test_verify_subset_checks_only_sent_subset(
+    monkeypatch, regenerated_op, client_env, respx_mock
+):
     monkeypatch.setattr(generate, "VERIFY", {"new_team": {"subset": ["team_id", "tpm_limit"]}})
-    src = generate.emit_tree(SPEC)["_generated_write.py"]
-    assert (
-        "_verify_response({k: body[k] for k in ('team_id', 'tpm_limit',) if k in body}, result)"
-        in src
-    )
+    fn = regenerated_op(generate.emit_tree(SPEC)["_generated_write.py"], "new_team")
+    route = respx_mock.post("/team/new").respond(200, json={"team_id": "id"})
+    assert fn(team_id="id", team_alias="t") == {"team_id": "id"}
+    with pytest.raises(ValueError, match="tpm_limit"):
+        fn(team_id="id", team_alias="t", tpm_limit=5)
+    route.respond(200, json={"team_id": "id", "tpm_limit": 5})
+    assert fn(team_id="id", tpm_limit=5)["tpm_limit"] == 5
 
 
-def test_verify_no_verify_emits_nothing(monkeypatch):
-    """A no_verify entry emits no _verify_response call for that op."""
+def test_no_verify_accepts_non_echo_response(
+    monkeypatch, regenerated_op, client_env, respx_mock
+):
     monkeypatch.setattr(generate, "VERIFY", {"add_model": {"no_verify": "envelope"}})
-    src = generate.emit_tree(SPEC)["_generated_write.py"]
-    # add_model is the only VERIFY entry here, so nothing verifies.
-    assert "_verify_response" not in src
+    fn = regenerated_op(generate.emit_tree(SPEC)["_generated_write.py"], "add_model")
+    respx_mock.post("/model/new").respond(200, json={"status": "created"})
+    assert fn(model_name="m", litellm_params={}, model_info={}) == {"status": "created"}
 
 
 def test_verify_entry_on_bodyless_op_fails(monkeypatch):
@@ -450,26 +497,30 @@ def test_verify_entry_on_bodyless_op_fails(monkeypatch):
     assert "global_spend_reset" in str(exc.value)
 
 
-def test_verify_present_emits_response_key_check(monkeypatch):
-    """A present entry checks response keys regardless of what was sent (Step 7)."""
-    monkeypatch.setattr(generate, "VERIFY", {"block_key": {"present": ["blocked"]}})
-    src = generate.emit_tree(SPEC)["_generated_execute.py"]
-    assert "_verify_response({k: None for k in ('blocked',)}, result)" in src
+@pytest.mark.parametrize(
+    "name,module,path,params,field",
+    [
+        ("block_key", "execute", "/key/block", {"key": "sk-test"}, "blocked"),
+        ("global_spend_reset", "admin", "/global/spend/reset", {}, "status"),
+    ],
+)
+def test_verify_present_requires_response_key(
+    monkeypatch, regenerated_op, client_env, respx_mock, name, module, path, params, field
+):
+    monkeypatch.setattr(generate, "VERIFY", {name: {"present": [field]}})
+    fn = regenerated_op(generate.emit_tree(SPEC)[f"_generated_{module}.py"], name)
+    route = respx_mock.post(path).respond(200, json={})
+    with pytest.raises(ValueError, match=field):
+        fn(**params)
+    route.respond(200, json={field: False})
+    assert fn(**params) == {field: False}
 
 
-def test_verify_no_verify_allowed_on_bodyless(monkeypatch):
-    """no_verify on a bodyless op is allowed - it emits nothing, no GenError."""
+def test_no_verify_allowed_on_bodyless(monkeypatch, regenerated_op, client_env, respx_mock):
     monkeypatch.setattr(generate, "VERIFY", {"global_spend_reset": {"no_verify": "envelope"}})
-    src = generate.emit_tree(SPEC)["_generated_admin.py"]
-    assert "def global_spend_reset() -> Any:" in src
-    assert "_verify_response" not in src  # the only VERIFY entry, and it verifies nothing
-
-
-def test_verify_present_allowed_on_bodyless(monkeypatch):
-    """present references response keys only, so it is legal even with no body."""
-    monkeypatch.setattr(generate, "VERIFY", {"global_spend_reset": {"present": ["status"]}})
-    src = generate.emit_tree(SPEC)["_generated_admin.py"]
-    assert "_verify_response({k: None for k in ('status',)}, result)" in src
+    fn = regenerated_op(generate.emit_tree(SPEC)["_generated_admin.py"], "global_spend_reset")
+    respx_mock.post("/global/spend/reset").respond(200, json={"unrelated": "value"})
+    assert fn() == {"unrelated": "value"}
 
 
 def test_verify_present_non_list_fails(monkeypatch):
@@ -486,16 +537,6 @@ def test_verify_subset_non_body_field_fails(monkeypatch):
     with pytest.raises(generate.GenError) as exc:
         generate.emit_tree(SPEC)
     assert "not_a_field" in str(exc.value)
-
-
-def test_write_module_verifies_reads_do_not():
-    """The write module emits _verify_response; read modules never do."""
-    emitted = generate.emit_tree(SPEC)
-    assert "_slim_list(" in emitted["_generated_read_core.py"]
-    assert "_slim_list(" in emitted["_generated_read_infra.py"]
-    assert "_verify_response(" in emitted["_generated_write.py"]
-    assert "_verify_response" not in emitted["_generated_read_core.py"]
-    assert "_verify_response" not in emitted["_generated_read_infra.py"]
 
 
 def test_missing_verify_decision_fails(monkeypatch):

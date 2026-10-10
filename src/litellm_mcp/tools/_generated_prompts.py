@@ -7,88 +7,88 @@ from typing import Annotated, Any, cast
 
 from pydantic import Field
 
-from ..registry import _UNSET, _op
+from ..registry import UNSET, op
 from .groups import litellm_delete, litellm_read, litellm_write
-from .helpers import _get_client, _qp, _slim_list, _verify_response
+from .helpers import get_client, query_params, slim_list, verify_response
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def create_prompt(
     prompt_id: Annotated[str, Field(description='Unique prompt identifier you assign (the registry key).')],
     litellm_params: Annotated[dict[str, Any], Field(description="Prompt provider config (PromptLiteLLMParams) as a dict: prompt_integration (the registry kind, required, e.g. 'dotprompt'); dotprompt_content (inline template text with frontmatter for the 'dotprompt' integration); api_base/api_key to point at an EXTERNAL prompt registry; prompt_id inside params overrides the registry lookup key. Secret-bearing (api_key) - never surfaced in list output.")],
-    prompt_info: Annotated[dict[str, Any] | None, Field(description="Prompt metadata (PromptInfo) as a dict; its 'environment' selects the version's environment (default 'development').")] = cast(dict[str, Any] | None, _UNSET),
+    prompt_info: Annotated[dict[str, Any] | None, Field(description="Prompt metadata (PromptInfo) as a dict; its 'environment' selects the version's environment (default 'development').")] = cast(dict[str, Any] | None, UNSET),
 ) -> Any:
     """Register a prompt in the Prompt Management registry.
 
     Two shapes via litellm_params: an INLINE dotprompt (prompt_integration='dotprompt' with dotprompt_content carrying the template and its frontmatter), or an EXTERNAL registry reference (prompt_integration naming the provider, api_base/api_key/prompt_id pointing at it). prompt_id here is the registry key you assign.
     """
     body: dict[str, Any] = {}
-    if prompt_id is not _UNSET:
+    if prompt_id is not UNSET:
         body["prompt_id"] = prompt_id
-    if litellm_params is not _UNSET:
+    if litellm_params is not UNSET:
         body["litellm_params"] = litellm_params
-    if prompt_info is not _UNSET:
+    if prompt_info is not UNSET:
         body["prompt_info"] = prompt_info
-    result = _get_client().post("/prompts", json=body)
-    _verify_response({k: body[k] for k in ('prompt_id',) if k in body}, result)
+    result = get_client().post("/prompts", json=body)
+    verify_response({k: body[k] for k in ('prompt_id',) if k in body}, result)
     return result
 
 
-@_op(litellm_delete)
+@op(litellm_delete)
 def delete_prompt(
     prompt_id: Annotated[str, Field(description='Prompt ID to delete.')],
-    environment: Annotated[str | None, Field(description="Environment to scope to, e.g. 'development' or 'production'; omit for the default.")] = cast(str | None, _UNSET),
+    environment: Annotated[str | None, Field(description="Environment to scope to, e.g. 'development' or 'production'; omit for the default.")] = cast(str | None, UNSET),
 ) -> Any:
     """Delete a prompt (irreversible)."""
-    return _get_client().delete(f"/prompts/{prompt_id}", params=_qp(environment=environment))
+    return get_client().delete(f"/prompts/{prompt_id}", params=query_params(environment=environment))
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def get_prompt(
     prompt_id: Annotated[str, Field(description='Prompt ID to look up.')],
-    environment: Annotated[str | None, Field(description="Environment to scope to, e.g. 'development' or 'production'; omit for the default.")] = cast(str | None, _UNSET),
+    environment: Annotated[str | None, Field(description="Environment to scope to, e.g. 'development' or 'production'; omit for the default.")] = cast(str | None, UNSET),
 ) -> Any:
     """Get one prompt's full spec, template, and environments.
 
     Returns the full PromptInfoResponse (not slimmed). Its prompt_spec.litellm_params is secret-bearing (api_key, dotprompt_content), so treat this response as sensitive.
     """
-    return _get_client().get(f"/prompts/{prompt_id}", params=_qp(environment=environment))
+    return get_client().get(f"/prompts/{prompt_id}", params=query_params(environment=environment))
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def list_prompt_versions(
     prompt_id: Annotated[str, Field(description='Prompt ID whose versions to list.')],
-    environment: Annotated[str | None, Field(description="Environment to scope to, e.g. 'development' or 'production'; omit for the default.")] = cast(str | None, _UNSET),
+    environment: Annotated[str | None, Field(description="Environment to scope to, e.g. 'development' or 'production'; omit for the default.")] = cast(str | None, UNSET),
     limit: Annotated[int, Field(description='Max rows kept after client-side slimming of the returned page (0 = no cap).')] = 20,
 ) -> Any:
     """List every stored version of one prompt (rows slimmed)."""
-    result = _get_client().get(f"/prompts/{prompt_id}/versions", params=_qp(environment=environment))
-    return _slim_list(result, {'prompt_id', 'version', 'environment', 'created_at', 'updated_at', 'created_by'}, limit, 'prompts')
+    result = get_client().get(f"/prompts/{prompt_id}/versions", params=query_params(environment=environment))
+    return slim_list(result, {'prompt_id', 'version', 'environment', 'created_at', 'updated_at', 'created_by'}, limit, 'prompts')
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def list_prompts(
-    environment: Annotated[str | None, Field(description="Environment to scope to, e.g. 'development' or 'production'; omit for the default.")] = cast(str | None, _UNSET),
+    environment: Annotated[str | None, Field(description="Environment to scope to, e.g. 'development' or 'production'; omit for the default.")] = cast(str | None, UNSET),
     limit: Annotated[int, Field(description='Max rows kept after client-side slimming of the returned page (0 = no cap).')] = 20,
 ) -> Any:
     """List prompts (rows slimmed; secret-bearing litellm_params dropped)."""
-    result = _get_client().get("/prompts/list", params=_qp(environment=environment))
-    return _slim_list(result, {'prompt_id', 'version', 'environment', 'created_at', 'updated_at', 'created_by'}, limit, 'prompts')
+    result = get_client().get("/prompts/list", params=query_params(environment=environment))
+    return slim_list(result, {'prompt_id', 'version', 'environment', 'created_at', 'updated_at', 'created_by'}, limit, 'prompts')
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def patch_prompt(
     prompt_id: Annotated[str, Field(description='Prompt ID to patch.')],
-    litellm_params: Annotated[dict[str, Any] | None, Field(description="Prompt provider config (PromptLiteLLMParams) as a dict: prompt_integration (the registry kind, required, e.g. 'dotprompt'); dotprompt_content (inline template text with frontmatter for the 'dotprompt' integration); api_base/api_key to point at an EXTERNAL prompt registry; prompt_id inside params overrides the registry lookup key. Secret-bearing (api_key) - never surfaced in list output.")] = cast(dict[str, Any] | None, _UNSET),
-    prompt_info: Annotated[dict[str, Any] | None, Field(description="Prompt metadata (PromptInfo) as a dict; its 'environment' selects the version's environment (default 'development').")] = cast(dict[str, Any] | None, _UNSET),
-    environment: Annotated[str | None, Field(description="Environment to scope to, e.g. 'development' or 'production'; omit for the default.")] = cast(str | None, _UNSET),
+    litellm_params: Annotated[dict[str, Any] | None, Field(description="Prompt provider config (PromptLiteLLMParams) as a dict: prompt_integration (the registry kind, required, e.g. 'dotprompt'); dotprompt_content (inline template text with frontmatter for the 'dotprompt' integration); api_base/api_key to point at an EXTERNAL prompt registry; prompt_id inside params overrides the registry lookup key. Secret-bearing (api_key) - never surfaced in list output.")] = cast(dict[str, Any] | None, UNSET),
+    prompt_info: Annotated[dict[str, Any] | None, Field(description="Prompt metadata (PromptInfo) as a dict; its 'environment' selects the version's environment (default 'development').")] = cast(dict[str, Any] | None, UNSET),
+    environment: Annotated[str | None, Field(description="Environment to scope to, e.g. 'development' or 'production'; omit for the default.")] = cast(str | None, UNSET),
 ) -> Any:
     """Partially update a prompt (only the fields you pass)."""
     body: dict[str, Any] = {}
-    if litellm_params is not _UNSET:
+    if litellm_params is not UNSET:
         body["litellm_params"] = litellm_params
-    if prompt_info is not _UNSET:
+    if prompt_info is not UNSET:
         body["prompt_info"] = prompt_info
-    result = _get_client().patch(f"/prompts/{prompt_id}", params=_qp(environment=environment), json=body)
-    _verify_response({k: body[k] for k in ('litellm_params',) if k in body}, result)
+    result = get_client().patch(f"/prompts/{prompt_id}", params=query_params(environment=environment), json=body)
+    verify_response({k: body[k] for k in ('litellm_params',) if k in body}, result)
     return result

@@ -6,13 +6,30 @@ no real LiteLLM instance and no real credentials.
 
 from __future__ import annotations
 
+from importlib.util import module_from_spec, spec_from_file_location
+
 import pytest
 import respx
 
-from litellm_mcp.config import _reset_settings
+from litellm_mcp import config
 from litellm_mcp.tools import helpers
 
 TEST_BASE_URL = "https://litellm.test"
+
+
+@pytest.fixture
+def regenerated_op(tmp_path):
+    """Load an emitted module with its actual package-relative dependencies."""
+    def load_op(module_source, name):
+        path = tmp_path / "regenerated.py"
+        path.write_text(module_source, encoding="utf-8")
+        spec = spec_from_file_location("litellm_mcp.tools.regenerated", path)
+        assert spec is not None and spec.loader is not None
+        module = module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return getattr(module, name)
+
+    return load_op
 
 
 @pytest.fixture(autouse=True)
@@ -20,22 +37,21 @@ def _reset_state():
     """Drop the cached settings + client singletons before and after every
     test so env changes / a mocked client in one case never leak into the
     next."""
-    _reset_settings()
+    config._settings = None
     helpers._client = None
     yield
-    _reset_settings()
+    config._settings = None
     helpers._client = None
 
 
 @pytest.fixture
 def client_env(monkeypatch):
-    """Set LITELLM_URL / LITELLM_API_KEY to test values and reset the cache.
+    """Set LITELLM_URL / LITELLM_API_KEY to test values.
 
     Use in tests that walk the settings/config path directly.
     """
     monkeypatch.setenv("LITELLM_URL", TEST_BASE_URL)
     monkeypatch.setenv("LITELLM_API_KEY", "sk-test")
-    _reset_settings()
     return TEST_BASE_URL
 
 

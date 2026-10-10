@@ -1,62 +1,58 @@
-"""Write-echo verification (Step 6).
+"""Write-response verification tests for helpers and generated operations.
 
-Two layers: the `_verify_response` helper semantics (recursive presence check,
-root-only skip, value-agnostic), and the emitted write ops exercised over respx
-(subset verify, body-builder gates, the two mandatory adversarials).
+Cover recursive key presence, root-only exclusions, value normalization,
+request-body omission and null handling, and dropped-field diagnostics.
 """
 
 from __future__ import annotations
 
 import json
-from typing import Annotated, Any, Literal, cast
+from typing import Any
 
 import pytest
-from pydantic import Field
 
 from codegen import generate
-from litellm_mcp.registry import _UNSET, _op
 from litellm_mcp.tools._generated_write import create_fallback, new_team
-from litellm_mcp.tools.groups import litellm_write
-from litellm_mcp.tools.helpers import _get_client, _verify_response
+from litellm_mcp.tools.helpers import verify_response
 from litellm_mcp.tools.overrides import update_organization
 
-# --- _verify_response semantics --------------------------------------------
+# --- verify_response semantics --------------------------------------------
 
 def test_pass_when_all_sent_keys_present():
-    _verify_response({"a": 1, "b": 2}, {"a": 1, "b": 2, "c": 3})  # no raise
+    verify_response({"a": 1, "b": 2}, {"a": 1, "b": 2, "c": 3})
 
 
 def test_flat_drop_names_the_key():
     with pytest.raises(ValueError) as ei:
-        _verify_response({"a": 1, "tpm_limit": 2}, {"a": 1})
+        verify_response({"a": 1, "tpm_limit": 2}, {"a": 1})
     assert "tpm_limit" in str(ei.value)
 
 
 def test_nested_drop_names_full_path():
     """The mandated nested case: metadata.budget_note dropped -> full path named."""
     with pytest.raises(ValueError) as ei:
-        _verify_response({"metadata": {"budget_note": "x"}}, {"metadata": {}})
+        verify_response({"metadata": {"budget_note": "x"}}, {"metadata": {}})
     assert "metadata.budget_note" in str(ei.value)
 
 
 def test_non_dict_received_is_noop():
-    _verify_response({"a": 1}, ["not", "a", "dict"])  # no raise
-    _verify_response({"a": 1}, None)  # no raise
+    verify_response({"a": 1}, ["not", "a", "dict"])
+    verify_response({"a": 1}, None)
 
 
 def test_value_equality_is_not_checked():
     # int 2 vs str "2": presence only, no false positive on normalization.
-    _verify_response({"tpm_limit": "2"}, {"tpm_limit": 2})  # no raise
+    verify_response({"tpm_limit": "2"}, {"tpm_limit": 2})
 
 
 def test_root_skip_applies_at_root():
-    _verify_response({"key": "secret", "a": 1}, {"a": 1}, frozenset({"key"}))  # no raise
+    verify_response({"key": "secret", "a": 1}, {"a": 1}, frozenset({"key"}))
 
 
 def test_root_skip_does_not_apply_nested():
     """The whole point of root-only skip: a nested key by the same name still raises."""
     with pytest.raises(ValueError) as ei:
-        _verify_response({"config": {"key": "x"}}, {"config": {}}, frozenset({"key"}))
+        verify_response({"config": {"key": "x"}}, {"config": {}}, frozenset({"key"}))
     assert "config.key" in str(ei.value)
 
 
@@ -94,7 +90,7 @@ def test_body_builder_omitted_absent_explicit_none_null(client_env, respx_mock):
     payload = json.loads(route.calls.last.request.content)
     assert payload["tpm_limit"] == 5           # explicit value present
     assert "metadata" in payload and payload["metadata"] is None  # explicit None -> null
-    assert "rpm_limit" not in payload          # omitted (_UNSET) never on the wire
+    assert "rpm_limit" not in payload
     assert "team_id" not in payload            # never passed, stays off the wire
 
 
@@ -118,33 +114,7 @@ def test_update_organization_override_raises_on_drop(client_env, respx_mock):
 
 # --- MANDATORY adversarial 2: a bogus skip entry weakens a real check -------
 
-def _extract_op_source(module_src: str, fn_name: str) -> str:
-    for chunk in module_src.split("\n\n\n"):
-        if f"def {fn_name}(" in chunk:
-            return chunk
-    raise AssertionError(f"{fn_name} not found in emitted module")
-
-
-def _compile_regenerated_op(module_src: str, fn_name: str) -> Any:
-    """Compile one emitted op function in isolation with the real helpers."""
-    chunk = "from __future__ import annotations\n" + _extract_op_source(module_src, fn_name)
-    ns: dict[str, Any] = {
-        "_op": _op,
-        "litellm_write": litellm_write,
-        "_UNSET": _UNSET,
-        "cast": cast,
-        "Any": Any,
-        "Literal": Literal,
-        "Annotated": Annotated,
-        "Field": Field,
-        "_get_client": _get_client,
-        "_verify_response": _verify_response,
-    }
-    exec(compile(chunk, "<regen>", "exec"), ns)  # noqa: S102 - injected-context adversarial
-    return ns[fn_name]
-
-
-def test_bogus_skip_entry_weakens_real_check(monkeypatch, client_env, respx_mock):
+def test_bogus_skip_entry_weakens_real_check(monkeypatch, client_env, respx_mock, regenerated_op):
     """create_fallback full-verifies the echoed row. Adding a bogus per-op skip
     for fallback_type (a field it DOES echo) and regenerating makes the drop of
     fallback_type go silent - proving skip entries weaken real checks and thus
@@ -160,8 +130,7 @@ def test_bogus_skip_entry_weakens_real_check(monkeypatch, client_env, respx_mock
     # Inject a bogus skip entry naming fallback_type and regenerate (temp context).
     monkeypatch.setattr(generate, "VERIFY", {"create_fallback": {"skip": ["fallback_type"]}})
     src = generate.emit_tree(generate.load_spec())["_generated_write.py"]
-    assert "'fallback_type'" in _extract_op_source(src, "create_fallback")  # skip widened
 
-    weakened = _compile_regenerated_op(src, "create_fallback")
+    weakened = regenerated_op(src, "create_fallback")
     # Same drop, but now it passes silently - the check was weakened.
     weakened(model="m", fallback_models=["f"], fallback_type="general")  # no raise

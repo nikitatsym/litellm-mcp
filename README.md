@@ -150,7 +150,7 @@ field-level detail pointing at `operation='schema'`.
   a description bullet per field; the `search` param filters the listing.
 - **`operation='schema'`** returns the full JSON Schema for one op
   (`additionalProperties: false`, descriptions embedded).
-- **Omitted-vs-null.** Optional body params default to an internal `_UNSET`
+- **Omitted-vs-null.** Optional body params default to an internal `UNSET`
   sentinel. Omitting a param drops it from the request; passing an explicit
   `null` survives to the wire as JSON `null` - so a caller can clear a
   nullable field distinctly from leaving it untouched.
@@ -237,6 +237,9 @@ regenerates into a temp dir and fails unless the result is byte-identical
 to the committed tree - so a hand-edit of a generated file, a stale data
 key, or a drifted snapshot all fail the build. To change the surface: edit
 the data (or the snapshot), regenerate, and commit the diff.
+
+Generated parameters cannot shadow imported emitter symbols or the `body`
+and `result` locals. An opaque request body owns its `body` parameter.
 
 ## License
 

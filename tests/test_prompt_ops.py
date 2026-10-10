@@ -50,7 +50,7 @@ def test_create_prompt_body_omits_unset(client_env, respx_mock):
     create_prompt(prompt_id="p1", litellm_params=_PARAMS)
     body = json.loads(route.calls.last.request.content)
     assert body == {"prompt_id": "p1", "litellm_params": _PARAMS}
-    assert "prompt_info" not in body  # _UNSET omitted
+    assert "prompt_info" not in body
 
 
 def test_create_prompt_explicit_null_survives(client_env, respx_mock):
@@ -133,7 +133,7 @@ def test_agent_daily_activity_query(client_env, respx_mock):
     params = route.calls.last.request.url.params
     assert params.get("agent_ids") == "a1,a2"
     assert params.get("exclude_agent_ids") == "a3"
-    assert "model" not in params  # _UNSET omitted
+    assert "model" not in params
 
 
 # --- adversarial (1): truncation the caller cannot miss ---------------------

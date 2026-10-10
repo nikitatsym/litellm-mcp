@@ -2,7 +2,7 @@
 
 Client accessor (request-scoped `client_var` first, module singleton
 fallback), query-param builder, the slim/truncation wrappers for list
-results, and `_verify_response` (the write-echo drop check).
+results, and `verify_response` (the write-echo drop check).
 """
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ from contextvars import ContextVar
 from typing import Any
 
 from ..client import LiteLLMClient
-from ..registry import _UNSET
+from ..registry import UNSET
 
 # Public: a host serving several LiteLLM instances in one process binds the
 # per-request client here, so tools never read credentials from module state.
@@ -19,7 +19,7 @@ client_var: ContextVar[LiteLLMClient | None] = ContextVar("litellm_client", defa
 _client: LiteLLMClient | None = None
 
 
-def _verify_response(
+def verify_response(
     sent: dict[str, Any],
     received: Any,
     skip_root: frozenset[str] = frozenset(),
@@ -47,10 +47,10 @@ def _verify_response(
                 "field may have been ignored (check the value or field name)."
             )
         if isinstance(value, dict) and value:
-            _verify_response(value, received[key], skip_root, full)
+            verify_response(value, received[key], skip_root, full)
 
 
-def _get_client() -> LiteLLMClient:
+def get_client() -> LiteLLMClient:
     """Return the client bound to this request, else the module singleton."""
     global _client
     if (bound := client_var.get()) is not None:
@@ -60,14 +60,14 @@ def _get_client() -> LiteLLMClient:
     return _client
 
 
-def _qp(**params: Any) -> dict[str, Any]:
-    """Build a query-param dict, dropping `_UNSET` and `None` values.
+def query_params(**params: Any) -> dict[str, Any]:
+    """Build a query-param dict, dropping `UNSET` and `None` values.
 
     Explicit values (including `False`, `0`, `""`) are kept; httpx coerces
-    them on the wire. Omitted (`_UNSET`) and null (`None`) params never reach
+    them on the wire. Omitted (`UNSET`) and null (`None`) params never reach
     the query string.
     """
-    return {k: v for k, v in params.items() if v is not _UNSET and v is not None}
+    return {k: v for k, v in params.items() if v is not UNSET and v is not None}
 
 
 def _truncate(items: list[Any], limit: int) -> dict[str, Any]:
@@ -98,7 +98,7 @@ def _slim(row: Any, fields: set[str]) -> Any:
     return {k: v for k, v in row.items() if k in fields}
 
 
-def _slim_list(
+def slim_list(
     result: Any,
     fields: set[str],
     limit: int,

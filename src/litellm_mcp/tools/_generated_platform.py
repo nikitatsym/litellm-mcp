@@ -7,615 +7,615 @@ from typing import Annotated, Any, Literal, cast
 
 from pydantic import Field
 
-from ..registry import _UNSET, _op
+from ..registry import UNSET, op
 from .groups import litellm_delete, litellm_execute, litellm_read, litellm_write
-from .helpers import _get_client, _qp, _slim_list, _verify_response
+from .helpers import get_client, query_params, slim_list, verify_response
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def agent_daily_activity(
-    agent_ids: Annotated[str | None, Field(description='Comma-separated agent IDs to include.')] = cast(str | None, _UNSET),
-    start_date: Annotated[str | None, Field(description='Start of the window, YYYY-MM-DD.')] = cast(str | None, _UNSET),
-    end_date: Annotated[str | None, Field(description='End of the window, YYYY-MM-DD.')] = cast(str | None, _UNSET),
-    model: Annotated[str | None, Field(description='Filter to a single model name.')] = cast(str | None, _UNSET),
-    api_key: Annotated[str | None, Field(description='Filter to a single hashed key token.')] = cast(str | None, _UNSET),
-    page: Annotated[int, Field(description='1-based page number.')] = cast(int, _UNSET),
-    page_size: Annotated[int, Field(description='Rows per page.')] = cast(int, _UNSET),
-    exclude_agent_ids: Annotated[str | None, Field(description='Comma-separated agent IDs to exclude.')] = cast(str | None, _UNSET),
+    agent_ids: Annotated[str | None, Field(description='Comma-separated agent IDs to include.')] = cast(str | None, UNSET),
+    start_date: Annotated[str | None, Field(description='Start of the window, YYYY-MM-DD.')] = cast(str | None, UNSET),
+    end_date: Annotated[str | None, Field(description='End of the window, YYYY-MM-DD.')] = cast(str | None, UNSET),
+    model: Annotated[str | None, Field(description='Filter to a single model name.')] = cast(str | None, UNSET),
+    api_key: Annotated[str | None, Field(description='Filter to a single hashed key token.')] = cast(str | None, UNSET),
+    page: Annotated[int, Field(description='1-based page number.')] = cast(int, UNSET),
+    page_size: Annotated[int, Field(description='Rows per page.')] = cast(int, UNSET),
+    exclude_agent_ids: Annotated[str | None, Field(description='Comma-separated agent IDs to exclude.')] = cast(str | None, UNSET),
 ) -> Any:
     """Per-day A2A agent usage and spend."""
-    return _get_client().get("/agent/daily/activity", params=_qp(agent_ids=agent_ids, start_date=start_date, end_date=end_date, model=model, api_key=api_key, page=page, page_size=page_size, exclude_agent_ids=exclude_agent_ids))
+    return get_client().get("/agent/daily/activity", params=query_params(agent_ids=agent_ids, start_date=start_date, end_date=end_date, model=model, api_key=api_key, page=page, page_size=page_size, exclude_agent_ids=exclude_agent_ids))
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def append_workflow_event(
     run_id: Annotated[str, Field(description='Workflow run ID.')],
     event_type: Annotated[str, Field(description='Event type label.')],
     step_name: Annotated[str, Field(description='Name of the workflow step the event belongs to.')],
-    data: Annotated[dict[str, Any] | None, Field(description='Event payload.')] = cast(dict[str, Any] | None, _UNSET),
+    data: Annotated[dict[str, Any] | None, Field(description='Event payload.')] = cast(dict[str, Any] | None, UNSET),
 ) -> Any:
     """Append an event to a workflow run."""
     body: dict[str, Any] = {}
-    if event_type is not _UNSET:
+    if event_type is not UNSET:
         body["event_type"] = event_type
-    if step_name is not _UNSET:
+    if step_name is not UNSET:
         body["step_name"] = step_name
-    if data is not _UNSET:
+    if data is not UNSET:
         body["data"] = data
-    result = _get_client().post(f"/v1/workflows/runs/{run_id}/events", json=body)
-    _verify_response({k: body[k] for k in ('event_type', 'step_name', 'data',) if k in body}, result)
+    result = get_client().post(f"/v1/workflows/runs/{run_id}/events", json=body)
+    verify_response({k: body[k] for k in ('event_type', 'step_name', 'data',) if k in body}, result)
     return result
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def append_workflow_message(
     run_id: Annotated[str, Field(description='Workflow run ID.')],
     role: Annotated[str, Field(description="Message role, e.g. 'user' or 'assistant'.")],
     content: Annotated[str, Field(description='Message content.')],
-    session_id: Annotated[str | None, Field(description='Session this message belongs to.')] = cast(str | None, _UNSET),
+    session_id: Annotated[str | None, Field(description='Session this message belongs to.')] = cast(str | None, UNSET),
 ) -> Any:
     """Append a message to a workflow run."""
     body: dict[str, Any] = {}
-    if role is not _UNSET:
+    if role is not UNSET:
         body["role"] = role
-    if content is not _UNSET:
+    if content is not UNSET:
         body["content"] = content
-    if session_id is not _UNSET:
+    if session_id is not UNSET:
         body["session_id"] = session_id
-    return _get_client().post(f"/v1/workflows/runs/{run_id}/messages", json=body)
+    return get_client().post(f"/v1/workflows/runs/{run_id}/messages", json=body)
 
 
-@_op(litellm_execute)
+@op(litellm_execute)
 def cancel_eval(
     eval_id: Annotated[str, Field(description='Eval ID.')],
-    custom_llm_provider: Annotated[str | None, Field(description='Provider override for the eval backend; omit to use the configured default.')] = cast(str | None, _UNSET),
+    custom_llm_provider: Annotated[str | None, Field(description='Provider override for the eval backend; omit to use the configured default.')] = cast(str | None, UNSET),
 ) -> Any:
     """Cancel an eval and stop its in-flight runs."""
-    return _get_client().post(f"/v1/evals/{eval_id}/cancel", params=_qp(custom_llm_provider=custom_llm_provider))
+    return get_client().post(f"/v1/evals/{eval_id}/cancel", params=query_params(custom_llm_provider=custom_llm_provider))
 
 
-@_op(litellm_execute)
+@op(litellm_execute)
 def cancel_eval_run(
     eval_id: Annotated[str, Field(description='Eval ID.')],
     run_id: Annotated[str, Field(description='Eval run ID.')],
-    custom_llm_provider: Annotated[str | None, Field(description='Provider override for the eval backend; omit to use the configured default.')] = cast(str | None, _UNSET),
+    custom_llm_provider: Annotated[str | None, Field(description='Provider override for the eval backend; omit to use the configured default.')] = cast(str | None, UNSET),
 ) -> Any:
     """Cancel a single eval run."""
-    return _get_client().post(f"/v1/evals/{eval_id}/runs/{run_id}", params=_qp(custom_llm_provider=custom_llm_provider))
+    return get_client().post(f"/v1/evals/{eval_id}/runs/{run_id}", params=query_params(custom_llm_provider=custom_llm_provider))
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def cloudzero_dry_run(
-    limit: Annotated[int | None, Field(description='Max spend records to export; omit for no cap.')] = cast(int | None, _UNSET),
-    operation: Annotated[Literal['replace_hourly', 'sum'], Field(description="CloudZero write mode: 'replace_hourly' overwrites the hour, 'sum' adds.")] = cast(Literal['replace_hourly', 'sum'], _UNSET),
-    start_time_utc: Annotated[str | None, Field(description='Window start (UTC ISO-8601); omit for the default range.')] = cast(str | None, _UNSET),
-    end_time_utc: Annotated[str | None, Field(description='Window end (UTC ISO-8601); omit for the default range.')] = cast(str | None, _UNSET),
+    limit: Annotated[int | None, Field(description='Max spend records to export; omit for no cap.')] = cast(int | None, UNSET),
+    operation: Annotated[Literal['replace_hourly', 'sum'], Field(description="CloudZero write mode: 'replace_hourly' overwrites the hour, 'sum' adds.")] = cast(Literal['replace_hourly', 'sum'], UNSET),
+    start_time_utc: Annotated[str | None, Field(description='Window start (UTC ISO-8601); omit for the default range.')] = cast(str | None, UNSET),
+    end_time_utc: Annotated[str | None, Field(description='Window end (UTC ISO-8601); omit for the default range.')] = cast(str | None, UNSET),
 ) -> Any:
     """Preview a CloudZero spend export without sending anything.
 
     Read-only: returns exactly what a real export would push, so you can review the payload before running cloudzero_export.
     """
     body: dict[str, Any] = {}
-    if limit is not _UNSET:
+    if limit is not UNSET:
         body["limit"] = limit
-    if operation is not _UNSET:
+    if operation is not UNSET:
         body["operation"] = operation
-    if start_time_utc is not _UNSET:
+    if start_time_utc is not UNSET:
         body["start_time_utc"] = start_time_utc
-    if end_time_utc is not _UNSET:
+    if end_time_utc is not UNSET:
         body["end_time_utc"] = end_time_utc
-    return _get_client().post("/cloudzero/dry-run", json=body)
+    return get_client().post("/cloudzero/dry-run", json=body)
 
 
-@_op(litellm_execute)
+@op(litellm_execute)
 def cloudzero_export(
-    limit: Annotated[int | None, Field(description='Max spend records to export; omit for no cap.')] = cast(int | None, _UNSET),
-    operation: Annotated[Literal['replace_hourly', 'sum'], Field(description="CloudZero write mode: 'replace_hourly' overwrites the hour, 'sum' adds.")] = cast(Literal['replace_hourly', 'sum'], _UNSET),
-    start_time_utc: Annotated[str | None, Field(description='Window start (UTC ISO-8601); omit for the default range.')] = cast(str | None, _UNSET),
-    end_time_utc: Annotated[str | None, Field(description='Window end (UTC ISO-8601); omit for the default range.')] = cast(str | None, _UNSET),
+    limit: Annotated[int | None, Field(description='Max spend records to export; omit for no cap.')] = cast(int | None, UNSET),
+    operation: Annotated[Literal['replace_hourly', 'sum'], Field(description="CloudZero write mode: 'replace_hourly' overwrites the hour, 'sum' adds.")] = cast(Literal['replace_hourly', 'sum'], UNSET),
+    start_time_utc: Annotated[str | None, Field(description='Window start (UTC ISO-8601); omit for the default range.')] = cast(str | None, UNSET),
+    end_time_utc: Annotated[str | None, Field(description='Window end (UTC ISO-8601); omit for the default range.')] = cast(str | None, UNSET),
 ) -> Any:
     """Export spend data to CloudZero.
 
     This PUSHES aggregated spend data to CloudZero, an external SaaS billing platform - the data leaves your infrastructure. Run cloudzero_dry_run first to review exactly what would be sent.
     """
     body: dict[str, Any] = {}
-    if limit is not _UNSET:
+    if limit is not UNSET:
         body["limit"] = limit
-    if operation is not _UNSET:
+    if operation is not UNSET:
         body["operation"] = operation
-    if start_time_utc is not _UNSET:
+    if start_time_utc is not UNSET:
         body["start_time_utc"] = start_time_utc
-    if end_time_utc is not _UNSET:
+    if end_time_utc is not UNSET:
         body["end_time_utc"] = end_time_utc
-    return _get_client().post("/cloudzero/export", json=body)
+    return get_client().post("/cloudzero/export", json=body)
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def cloudzero_settings() -> Any:
     """Get the CloudZero export settings (API key masked)."""
-    return _get_client().get("/cloudzero/settings")
+    return get_client().get("/cloudzero/settings")
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def compare_policy_versions(
     version_a: Annotated[str, Field(description='Policy version ID on the left of the diff.')],
     version_b: Annotated[str, Field(description='Policy version ID on the right of the diff.')],
 ) -> Any:
     """Diff two policy versions field by field."""
-    return _get_client().get("/policies/compare", params=_qp(version_a=version_a, version_b=version_b))
+    return get_client().get("/policies/compare", params=query_params(version_a=version_a, version_b=version_b))
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def create_agent(
     agent_name: Annotated[str, Field(description='Human-readable agent name.')],
     agent_card_params: Annotated[dict[str, Any], Field(description='A2A agent-card fields (name, description, skills, ...) as a dict.')],
-    litellm_params: Annotated[dict[str, Any], Field(description="Provider call config for the agent's backend model, as a dict.")] = cast(dict[str, Any], _UNSET),
-    object_permission: Annotated[dict[str, Any], Field(description='Object-level permission config (models/routes this agent may use).')] = cast(dict[str, Any], _UNSET),
-    tpm_limit: Annotated[int | None, Field(description='Tokens-per-minute cap.')] = cast(int | None, _UNSET),
-    rpm_limit: Annotated[int | None, Field(description='Requests-per-minute cap.')] = cast(int | None, _UNSET),
-    session_tpm_limit: Annotated[int | None, Field(description='Per-session tokens-per-minute cap.')] = cast(int | None, _UNSET),
-    session_rpm_limit: Annotated[int | None, Field(description='Per-session requests-per-minute cap.')] = cast(int | None, _UNSET),
-    static_headers: Annotated[dict[str, Any] | None, Field(description='Fixed headers sent to the agent backend; may carry secrets (write-only).')] = cast(dict[str, Any] | None, _UNSET),
-    extra_headers: Annotated[list[str] | None, Field(description='Additional header names to forward to the agent backend.')] = cast(list[str] | None, _UNSET),
+    litellm_params: Annotated[dict[str, Any], Field(description="Provider call config for the agent's backend model, as a dict.")] = cast(dict[str, Any], UNSET),
+    object_permission: Annotated[dict[str, Any], Field(description='Object-level permission config (models/routes this agent may use).')] = cast(dict[str, Any], UNSET),
+    tpm_limit: Annotated[int | None, Field(description='Tokens-per-minute cap.')] = cast(int | None, UNSET),
+    rpm_limit: Annotated[int | None, Field(description='Requests-per-minute cap.')] = cast(int | None, UNSET),
+    session_tpm_limit: Annotated[int | None, Field(description='Per-session tokens-per-minute cap.')] = cast(int | None, UNSET),
+    session_rpm_limit: Annotated[int | None, Field(description='Per-session requests-per-minute cap.')] = cast(int | None, UNSET),
+    static_headers: Annotated[dict[str, Any] | None, Field(description='Fixed headers sent to the agent backend; may carry secrets (write-only).')] = cast(dict[str, Any] | None, UNSET),
+    extra_headers: Annotated[list[str] | None, Field(description='Additional header names to forward to the agent backend.')] = cast(list[str] | None, UNSET),
 ) -> Any:
     """Register an A2A agent.
 
     static_headers may carry backend credentials; they are write-only and never returned in list output.
     """
     body: dict[str, Any] = {}
-    if agent_name is not _UNSET:
+    if agent_name is not UNSET:
         body["agent_name"] = agent_name
-    if agent_card_params is not _UNSET:
+    if agent_card_params is not UNSET:
         body["agent_card_params"] = agent_card_params
-    if litellm_params is not _UNSET:
+    if litellm_params is not UNSET:
         body["litellm_params"] = litellm_params
-    if object_permission is not _UNSET:
+    if object_permission is not UNSET:
         body["object_permission"] = object_permission
-    if tpm_limit is not _UNSET:
+    if tpm_limit is not UNSET:
         body["tpm_limit"] = tpm_limit
-    if rpm_limit is not _UNSET:
+    if rpm_limit is not UNSET:
         body["rpm_limit"] = rpm_limit
-    if session_tpm_limit is not _UNSET:
+    if session_tpm_limit is not UNSET:
         body["session_tpm_limit"] = session_tpm_limit
-    if session_rpm_limit is not _UNSET:
+    if session_rpm_limit is not UNSET:
         body["session_rpm_limit"] = session_rpm_limit
-    if static_headers is not _UNSET:
+    if static_headers is not UNSET:
         body["static_headers"] = static_headers
-    if extra_headers is not _UNSET:
+    if extra_headers is not UNSET:
         body["extra_headers"] = extra_headers
-    result = _get_client().post("/v1/agents", json=body)
-    _verify_response({k: body[k] for k in ('agent_name', 'tpm_limit', 'rpm_limit', 'session_tpm_limit', 'session_rpm_limit',) if k in body}, result)
+    result = get_client().post("/v1/agents", json=body)
+    verify_response({k: body[k] for k in ('agent_name', 'tpm_limit', 'rpm_limit', 'session_tpm_limit', 'session_rpm_limit',) if k in body}, result)
     return result
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def create_policy(
     policy_name: Annotated[str, Field(description='Unique name for the policy.')],
-    inherit: Annotated[str | None, Field(description='Name of a parent policy to inherit guardrails from.')] = cast(str | None, _UNSET),
-    description: Annotated[str | None, Field(description='Human-readable description of the policy.')] = cast(str | None, _UNSET),
-    guardrails_add: Annotated[list[str] | None, Field(description='Guardrail names to add.')] = cast(list[str] | None, _UNSET),
-    guardrails_remove: Annotated[list[str] | None, Field(description='Guardrail names to remove (from the inherited set).')] = cast(list[str] | None, _UNSET),
-    condition: Annotated[dict[str, Any] | None, Field(description='Condition object controlling when this policy applies.')] = cast(dict[str, Any] | None, _UNSET),
-    pipeline: Annotated[dict[str, Any] | None, Field(description="Guardrail pipeline for ordered execution; contains 'mode' and 'steps'.")] = cast(dict[str, Any] | None, _UNSET),
+    inherit: Annotated[str | None, Field(description='Name of a parent policy to inherit guardrails from.')] = cast(str | None, UNSET),
+    description: Annotated[str | None, Field(description='Human-readable description of the policy.')] = cast(str | None, UNSET),
+    guardrails_add: Annotated[list[str] | None, Field(description='Guardrail names to add.')] = cast(list[str] | None, UNSET),
+    guardrails_remove: Annotated[list[str] | None, Field(description='Guardrail names to remove (from the inherited set).')] = cast(list[str] | None, UNSET),
+    condition: Annotated[dict[str, Any] | None, Field(description='Condition object controlling when this policy applies.')] = cast(dict[str, Any] | None, UNSET),
+    pipeline: Annotated[dict[str, Any] | None, Field(description="Guardrail pipeline for ordered execution; contains 'mode' and 'steps'.")] = cast(dict[str, Any] | None, UNSET),
 ) -> Any:
     """Create a policy (DB-backed policy engine)."""
     body: dict[str, Any] = {}
-    if policy_name is not _UNSET:
+    if policy_name is not UNSET:
         body["policy_name"] = policy_name
-    if inherit is not _UNSET:
+    if inherit is not UNSET:
         body["inherit"] = inherit
-    if description is not _UNSET:
+    if description is not UNSET:
         body["description"] = description
-    if guardrails_add is not _UNSET:
+    if guardrails_add is not UNSET:
         body["guardrails_add"] = guardrails_add
-    if guardrails_remove is not _UNSET:
+    if guardrails_remove is not UNSET:
         body["guardrails_remove"] = guardrails_remove
-    if condition is not _UNSET:
+    if condition is not UNSET:
         body["condition"] = condition
-    if pipeline is not _UNSET:
+    if pipeline is not UNSET:
         body["pipeline"] = pipeline
-    result = _get_client().post("/policies", json=body)
-    _verify_response({k: body[k] for k in ('policy_name', 'inherit', 'description',) if k in body}, result)
+    result = get_client().post("/policies", json=body)
+    verify_response({k: body[k] for k in ('policy_name', 'inherit', 'description',) if k in body}, result)
     return result
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def create_policy_attachment(
     policy_name: Annotated[str, Field(description='Name of the policy to attach.')],
-    scope: Annotated[str | None, Field(description="Attachment scope; use '*' for global (applies to all requests).")] = cast(str | None, _UNSET),
-    teams: Annotated[list[str] | None, Field(description='Team aliases or patterns this attachment applies to.')] = cast(list[str] | None, _UNSET),
-    keys: Annotated[list[str] | None, Field(description='Key aliases or patterns this attachment applies to.')] = cast(list[str] | None, _UNSET),
-    models: Annotated[list[str] | None, Field(description='Model names or patterns this attachment applies to.')] = cast(list[str] | None, _UNSET),
-    tags: Annotated[list[str] | None, Field(description="Tag patterns this attachment applies to; supports wildcards (e.g. 'health-*').")] = cast(list[str] | None, _UNSET),
+    scope: Annotated[str | None, Field(description="Attachment scope; use '*' for global (applies to all requests).")] = cast(str | None, UNSET),
+    teams: Annotated[list[str] | None, Field(description='Team aliases or patterns this attachment applies to.')] = cast(list[str] | None, UNSET),
+    keys: Annotated[list[str] | None, Field(description='Key aliases or patterns this attachment applies to.')] = cast(list[str] | None, UNSET),
+    models: Annotated[list[str] | None, Field(description='Model names or patterns this attachment applies to.')] = cast(list[str] | None, UNSET),
+    tags: Annotated[list[str] | None, Field(description="Tag patterns this attachment applies to; supports wildcards (e.g. 'health-*').")] = cast(list[str] | None, UNSET),
 ) -> Any:
     """Attach a policy to keys, teams, models, or tags.
 
     Binds the named policy to the given scope so its guardrails apply to matching requests. Use estimate_attachment_impact first to preview reach.
     """
     body: dict[str, Any] = {}
-    if policy_name is not _UNSET:
+    if policy_name is not UNSET:
         body["policy_name"] = policy_name
-    if scope is not _UNSET:
+    if scope is not UNSET:
         body["scope"] = scope
-    if teams is not _UNSET:
+    if teams is not UNSET:
         body["teams"] = teams
-    if keys is not _UNSET:
+    if keys is not UNSET:
         body["keys"] = keys
-    if models is not _UNSET:
+    if models is not UNSET:
         body["models"] = models
-    if tags is not _UNSET:
+    if tags is not UNSET:
         body["tags"] = tags
-    result = _get_client().post("/policies/attachments", json=body)
-    _verify_response({k: body[k] for k in ('policy_name', 'scope',) if k in body}, result)
+    result = get_client().post("/policies/attachments", json=body)
+    verify_response({k: body[k] for k in ('policy_name', 'scope',) if k in body}, result)
     return result
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def create_policy_version(
     policy_name: Annotated[str, Field(description='Policy name (addresses the policy across all its versions).')],
-    source_policy_id: Annotated[str | None, Field(description='Policy version ID to clone from; omit to clone the current production version.')] = cast(str | None, _UNSET),
+    source_policy_id: Annotated[str | None, Field(description='Policy version ID to clone from; omit to clone the current production version.')] = cast(str | None, UNSET),
 ) -> Any:
     """Create a new draft version of a policy by cloning an existing one."""
     body: dict[str, Any] = {}
-    if source_policy_id is not _UNSET:
+    if source_policy_id is not UNSET:
         body["source_policy_id"] = source_policy_id
-    return _get_client().post(f"/policies/name/{policy_name}/versions", json=body)
+    return get_client().post(f"/policies/name/{policy_name}/versions", json=body)
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def create_workflow_run(
     workflow_type: Annotated[str, Field(description='Type of workflow to run.')],
-    input: Annotated[dict[str, Any] | None, Field(description='Initial input payload for the run.')] = cast(dict[str, Any] | None, _UNSET),
-    metadata: Annotated[dict[str, Any] | None, Field(description='Free-form JSON metadata stored on the row.')] = cast(dict[str, Any] | None, _UNSET),
+    input: Annotated[dict[str, Any] | None, Field(description='Initial input payload for the run.')] = cast(dict[str, Any] | None, UNSET),
+    metadata: Annotated[dict[str, Any] | None, Field(description='Free-form JSON metadata stored on the row.')] = cast(dict[str, Any] | None, UNSET),
 ) -> Any:
     """Start a new workflow run."""
     body: dict[str, Any] = {}
-    if workflow_type is not _UNSET:
+    if workflow_type is not UNSET:
         body["workflow_type"] = workflow_type
-    if input is not _UNSET:
+    if input is not UNSET:
         body["input"] = input
-    if metadata is not _UNSET:
+    if metadata is not UNSET:
         body["metadata"] = metadata
-    result = _get_client().post("/v1/workflows/runs", json=body)
-    _verify_response({k: body[k] for k in ('workflow_type', 'input',) if k in body}, result)
+    result = get_client().post("/v1/workflows/runs", json=body)
+    verify_response({k: body[k] for k in ('workflow_type', 'input',) if k in body}, result)
     return result
 
 
-@_op(litellm_delete)
+@op(litellm_delete)
 def delete_agent(
     agent_id: Annotated[str, Field(description='Agent ID.')],
 ) -> Any:
     """Remove a registered A2A agent."""
-    return _get_client().delete(f"/v1/agents/{agent_id}")
+    return get_client().delete(f"/v1/agents/{agent_id}")
 
 
-@_op(litellm_delete)
+@op(litellm_delete)
 def delete_cloudzero_settings() -> Any:
     """Delete the CloudZero export settings (irreversible)."""
-    return _get_client().delete("/cloudzero/delete")
+    return get_client().delete("/cloudzero/delete")
 
 
-@_op(litellm_delete)
+@op(litellm_delete)
 def delete_eval(
     eval_id: Annotated[str, Field(description='Eval ID.')],
-    custom_llm_provider: Annotated[str | None, Field(description='Provider override for the eval backend; omit to use the configured default.')] = cast(str | None, _UNSET),
+    custom_llm_provider: Annotated[str | None, Field(description='Provider override for the eval backend; omit to use the configured default.')] = cast(str | None, UNSET),
 ) -> Any:
     """Delete an eval and all its runs (irreversible)."""
-    return _get_client().delete(f"/v1/evals/{eval_id}", params=_qp(custom_llm_provider=custom_llm_provider))
+    return get_client().delete(f"/v1/evals/{eval_id}", params=query_params(custom_llm_provider=custom_llm_provider))
 
 
-@_op(litellm_delete)
+@op(litellm_delete)
 def delete_eval_run(
     eval_id: Annotated[str, Field(description='Eval ID.')],
     run_id: Annotated[str, Field(description='Eval run ID.')],
-    custom_llm_provider: Annotated[str | None, Field(description='Provider override for the eval backend; omit to use the configured default.')] = cast(str | None, _UNSET),
+    custom_llm_provider: Annotated[str | None, Field(description='Provider override for the eval backend; omit to use the configured default.')] = cast(str | None, UNSET),
 ) -> Any:
     """Delete a single eval run (irreversible)."""
-    return _get_client().delete(f"/v1/evals/{eval_id}/runs/{run_id}", params=_qp(custom_llm_provider=custom_llm_provider))
+    return get_client().delete(f"/v1/evals/{eval_id}/runs/{run_id}", params=query_params(custom_llm_provider=custom_llm_provider))
 
 
-@_op(litellm_delete)
+@op(litellm_delete)
 def delete_policy(
     policy_id: Annotated[str, Field(description='Policy ID (one specific version row of a policy).')],
 ) -> Any:
     """Delete one policy version (irreversible)."""
-    return _get_client().delete(f"/policies/{policy_id}")
+    return get_client().delete(f"/policies/{policy_id}")
 
 
-@_op(litellm_delete)
+@op(litellm_delete)
 def delete_policy_all_versions(
     policy_name: Annotated[str, Field(description='Policy name (addresses the policy across all its versions).')],
 ) -> Any:
     """Delete a policy and every one of its versions (irreversible)."""
-    return _get_client().delete(f"/policies/name/{policy_name}/all-versions")
+    return get_client().delete(f"/policies/name/{policy_name}/all-versions")
 
 
-@_op(litellm_delete)
+@op(litellm_delete)
 def delete_policy_attachment(
     attachment_id: Annotated[str, Field(description='Policy attachment ID.')],
 ) -> Any:
     """Remove a policy attachment (irreversible)."""
-    return _get_client().delete(f"/policies/attachments/{attachment_id}")
+    return get_client().delete(f"/policies/attachments/{attachment_id}")
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def estimate_attachment_impact(
     policy_name: Annotated[str, Field(description='Name of the policy to attach.')],
-    scope: Annotated[str | None, Field(description="Attachment scope; use '*' for global (applies to all requests).")] = cast(str | None, _UNSET),
-    teams: Annotated[list[str] | None, Field(description='Team aliases or patterns this attachment applies to.')] = cast(list[str] | None, _UNSET),
-    keys: Annotated[list[str] | None, Field(description='Key aliases or patterns this attachment applies to.')] = cast(list[str] | None, _UNSET),
-    models: Annotated[list[str] | None, Field(description='Model names or patterns this attachment applies to.')] = cast(list[str] | None, _UNSET),
-    tags: Annotated[list[str] | None, Field(description="Tag patterns this attachment applies to; supports wildcards (e.g. 'health-*').")] = cast(list[str] | None, _UNSET),
+    scope: Annotated[str | None, Field(description="Attachment scope; use '*' for global (applies to all requests).")] = cast(str | None, UNSET),
+    teams: Annotated[list[str] | None, Field(description='Team aliases or patterns this attachment applies to.')] = cast(list[str] | None, UNSET),
+    keys: Annotated[list[str] | None, Field(description='Key aliases or patterns this attachment applies to.')] = cast(list[str] | None, UNSET),
+    models: Annotated[list[str] | None, Field(description='Model names or patterns this attachment applies to.')] = cast(list[str] | None, UNSET),
+    tags: Annotated[list[str] | None, Field(description="Tag patterns this attachment applies to; supports wildcards (e.g. 'health-*').")] = cast(list[str] | None, UNSET),
 ) -> Any:
     """Preview how many keys/teams a would-be attachment would affect.
 
     Read-only: estimates the blast radius of the described attachment without creating it.
     """
     body: dict[str, Any] = {}
-    if policy_name is not _UNSET:
+    if policy_name is not UNSET:
         body["policy_name"] = policy_name
-    if scope is not _UNSET:
+    if scope is not UNSET:
         body["scope"] = scope
-    if teams is not _UNSET:
+    if teams is not UNSET:
         body["teams"] = teams
-    if keys is not _UNSET:
+    if keys is not UNSET:
         body["keys"] = keys
-    if models is not _UNSET:
+    if models is not UNSET:
         body["models"] = models
-    if tags is not _UNSET:
+    if tags is not UNSET:
         body["tags"] = tags
-    return _get_client().post("/policies/attachments/estimate-impact", json=body)
+    return get_client().post("/policies/attachments/estimate-impact", json=body)
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def get_agent(
     agent_id: Annotated[str, Field(description='Agent ID.')],
 ) -> Any:
     """Get one registered A2A agent's full config."""
-    return _get_client().get(f"/v1/agents/{agent_id}")
+    return get_client().get(f"/v1/agents/{agent_id}")
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def get_agent_card(
     agent_id: Annotated[str, Field(description='Agent ID.')],
 ) -> Any:
     """Get an agent's public A2A card, as A2A clients discover it."""
-    return _get_client().get(f"/a2a/{agent_id}/.well-known/agent-card.json")
+    return get_client().get(f"/a2a/{agent_id}/.well-known/agent-card.json")
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def get_eval(
     eval_id: Annotated[str, Field(description='Eval ID.')],
-    custom_llm_provider: Annotated[str | None, Field(description='Provider override for the eval backend; omit to use the configured default.')] = cast(str | None, _UNSET),
+    custom_llm_provider: Annotated[str | None, Field(description='Provider override for the eval backend; omit to use the configured default.')] = cast(str | None, UNSET),
 ) -> Any:
     """Get one eval's definition."""
-    return _get_client().get(f"/v1/evals/{eval_id}", params=_qp(custom_llm_provider=custom_llm_provider))
+    return get_client().get(f"/v1/evals/{eval_id}", params=query_params(custom_llm_provider=custom_llm_provider))
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def get_eval_run(
     eval_id: Annotated[str, Field(description='Eval ID.')],
     run_id: Annotated[str, Field(description='Eval run ID.')],
-    custom_llm_provider: Annotated[str | None, Field(description='Provider override for the eval backend; omit to use the configured default.')] = cast(str | None, _UNSET),
+    custom_llm_provider: Annotated[str | None, Field(description='Provider override for the eval backend; omit to use the configured default.')] = cast(str | None, UNSET),
 ) -> Any:
     """Get one eval run's status and results."""
-    return _get_client().get(f"/v1/evals/{eval_id}/runs/{run_id}", params=_qp(custom_llm_provider=custom_llm_provider))
+    return get_client().get(f"/v1/evals/{eval_id}/runs/{run_id}", params=query_params(custom_llm_provider=custom_llm_provider))
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def get_workflow_run(
     run_id: Annotated[str, Field(description='Workflow run ID.')],
 ) -> Any:
     """Get one workflow run's details."""
-    return _get_client().get(f"/v1/workflows/runs/{run_id}")
+    return get_client().get(f"/v1/workflows/runs/{run_id}")
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def init_cloudzero(
     api_key: Annotated[str, Field(description='CloudZero API key (write-only; stored, never returned).')],
     connection_id: Annotated[str, Field(description='CloudZero connection ID for data submission.')],
-    timezone: Annotated[str, Field(description='Timezone for date handling (default: UTC).')] = cast(str, _UNSET),
+    timezone: Annotated[str, Field(description='Timezone for date handling (default: UTC).')] = cast(str, UNSET),
 ) -> Any:
     """Configure CloudZero export credentials."""
     body: dict[str, Any] = {}
-    if api_key is not _UNSET:
+    if api_key is not UNSET:
         body["api_key"] = api_key
-    if connection_id is not _UNSET:
+    if connection_id is not UNSET:
         body["connection_id"] = connection_id
-    if timezone is not _UNSET:
+    if timezone is not UNSET:
         body["timezone"] = timezone
-    return _get_client().post("/cloudzero/init", json=body)
+    return get_client().post("/cloudzero/init", json=body)
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def list_agents(
-    health_check: Annotated[bool, Field(description="true probes each agent's URL and drops unreachable ones (HTTP >= 500); agents without a URL are kept.")] = cast(bool, _UNSET),
+    health_check: Annotated[bool, Field(description="true probes each agent's URL and drops unreachable ones (HTTP >= 500); agents without a URL are kept.")] = cast(bool, UNSET),
     limit: Annotated[int, Field(description='Max rows kept after client-side slimming of the returned page (0 = no cap).')] = 20,
 ) -> Any:
     """List registered A2A agents (rows slimmed; secrets omitted)."""
-    result = _get_client().get("/v1/agents", params=_qp(health_check=health_check))
-    return _slim_list(result, {'agent_id', 'agent_name', 'spend', 'tpm_limit', 'rpm_limit', 'session_tpm_limit', 'session_rpm_limit', 'created_at'}, limit)
+    result = get_client().get("/v1/agents", params=query_params(health_check=health_check))
+    return slim_list(result, {'agent_id', 'agent_name', 'spend', 'tpm_limit', 'rpm_limit', 'session_tpm_limit', 'session_rpm_limit', 'created_at'}, limit)
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def list_eval_runs(
     eval_id: Annotated[str, Field(description='Eval ID.')],
-    limit: Annotated[int | None, Field(description='Page size (cursor pagination).')] = cast(int | None, _UNSET),
-    after: Annotated[str | None, Field(description='Return runs after this run ID.')] = cast(str | None, _UNSET),
-    before: Annotated[str | None, Field(description='Return runs before this run ID.')] = cast(str | None, _UNSET),
-    order: Annotated[str | None, Field(description="Sort direction by created_at: 'asc' or 'desc'.")] = cast(str | None, _UNSET),
-    custom_llm_provider: Annotated[str | None, Field(description='Provider override for the eval backend; omit to use the configured default.')] = cast(str | None, _UNSET),
+    limit: Annotated[int | None, Field(description='Page size (cursor pagination).')] = cast(int | None, UNSET),
+    after: Annotated[str | None, Field(description='Return runs after this run ID.')] = cast(str | None, UNSET),
+    before: Annotated[str | None, Field(description='Return runs before this run ID.')] = cast(str | None, UNSET),
+    order: Annotated[str | None, Field(description="Sort direction by created_at: 'asc' or 'desc'.")] = cast(str | None, UNSET),
+    custom_llm_provider: Annotated[str | None, Field(description='Provider override for the eval backend; omit to use the configured default.')] = cast(str | None, UNSET),
 ) -> Any:
     """List an eval's runs (cursor-paginated)."""
-    return _get_client().get(f"/v1/evals/{eval_id}/runs", params=_qp(limit=limit, after=after, before=before, order=order, custom_llm_provider=custom_llm_provider))
+    return get_client().get(f"/v1/evals/{eval_id}/runs", params=query_params(limit=limit, after=after, before=before, order=order, custom_llm_provider=custom_llm_provider))
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def list_evals(
-    limit: Annotated[int | None, Field(description='Page size (cursor pagination).')] = cast(int | None, _UNSET),
-    after: Annotated[str | None, Field(description='Return items after this eval ID (forward paging).')] = cast(str | None, _UNSET),
-    before: Annotated[str | None, Field(description='Return items before this eval ID (backward paging).')] = cast(str | None, _UNSET),
-    order: Annotated[str | None, Field(description="Sort direction by created_at: 'asc' or 'desc'.")] = cast(str | None, _UNSET),
-    order_by: Annotated[str | None, Field(description="Field to sort by, e.g. 'created_at'.")] = cast(str | None, _UNSET),
-    custom_llm_provider: Annotated[str | None, Field(description='Provider override for the eval backend; omit to use the configured default.')] = cast(str | None, _UNSET),
+    limit: Annotated[int | None, Field(description='Page size (cursor pagination).')] = cast(int | None, UNSET),
+    after: Annotated[str | None, Field(description='Return items after this eval ID (forward paging).')] = cast(str | None, UNSET),
+    before: Annotated[str | None, Field(description='Return items before this eval ID (backward paging).')] = cast(str | None, UNSET),
+    order: Annotated[str | None, Field(description="Sort direction by created_at: 'asc' or 'desc'.")] = cast(str | None, UNSET),
+    order_by: Annotated[str | None, Field(description="Field to sort by, e.g. 'created_at'.")] = cast(str | None, UNSET),
+    custom_llm_provider: Annotated[str | None, Field(description='Provider override for the eval backend; omit to use the configured default.')] = cast(str | None, UNSET),
 ) -> Any:
     """List evals (OpenAI-Evals-compatible; cursor-paginated)."""
-    return _get_client().get("/v1/evals", params=_qp(limit=limit, after=after, before=before, order=order, order_by=order_by, custom_llm_provider=custom_llm_provider))
+    return get_client().get("/v1/evals", params=query_params(limit=limit, after=after, before=before, order=order, order_by=order_by, custom_llm_provider=custom_llm_provider))
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def list_policies(
-    version_status: Annotated[str | None, Field(description='Filter by version status: draft, published, or production.')] = cast(str | None, _UNSET),
+    version_status: Annotated[str | None, Field(description='Filter by version status: draft, published, or production.')] = cast(str | None, UNSET),
     limit: Annotated[int, Field(description='Max rows kept after client-side slimming of the returned page (0 = no cap).')] = 20,
 ) -> Any:
     """List policies (rows slimmed to identity and version status)."""
-    result = _get_client().get("/policies/list", params=_qp(version_status=version_status))
-    return _slim_list(result, {'policy_id', 'policy_name', 'version_number', 'version_status', 'is_latest', 'description', 'updated_at'}, limit, 'policies')
+    result = get_client().get("/policies/list", params=query_params(version_status=version_status))
+    return slim_list(result, {'policy_id', 'policy_name', 'version_number', 'version_status', 'is_latest', 'description', 'updated_at'}, limit, 'policies')
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def list_policy_attachments() -> Any:
     """List policy attachments (which policies bind to which key/team/model/tag)."""
-    return _get_client().get("/policies/attachments/list")
+    return get_client().get("/policies/attachments/list")
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def list_policy_versions(
     policy_name: Annotated[str, Field(description='Policy name (addresses the policy across all its versions).')],
     limit: Annotated[int, Field(description='Max rows kept after client-side slimming of the returned page (0 = no cap).')] = 20,
 ) -> Any:
     """List every version of one policy (slimmed)."""
-    result = _get_client().get(f"/policies/name/{policy_name}/versions")
-    return _slim_list(result, {'policy_id', 'policy_name', 'version_number', 'version_status', 'is_latest', 'description', 'updated_at'}, limit, 'versions')
+    result = get_client().get(f"/policies/name/{policy_name}/versions")
+    return slim_list(result, {'policy_id', 'policy_name', 'version_number', 'version_status', 'is_latest', 'description', 'updated_at'}, limit, 'versions')
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def list_workflow_events(
     run_id: Annotated[str, Field(description='Workflow run ID.')],
-    limit: Annotated[int, Field(description='Max events to return.')] = cast(int, _UNSET),
+    limit: Annotated[int, Field(description='Max events to return.')] = cast(int, UNSET),
 ) -> Any:
     """List a workflow run's events."""
-    return _get_client().get(f"/v1/workflows/runs/{run_id}/events", params=_qp(limit=limit))
+    return get_client().get(f"/v1/workflows/runs/{run_id}/events", params=query_params(limit=limit))
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def list_workflow_messages(
     run_id: Annotated[str, Field(description='Workflow run ID.')],
-    limit: Annotated[int, Field(description='Max messages to return.')] = cast(int, _UNSET),
+    limit: Annotated[int, Field(description='Max messages to return.')] = cast(int, UNSET),
 ) -> Any:
     """List a workflow run's messages."""
-    return _get_client().get(f"/v1/workflows/runs/{run_id}/messages", params=_qp(limit=limit))
+    return get_client().get(f"/v1/workflows/runs/{run_id}/messages", params=query_params(limit=limit))
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def list_workflow_runs(
-    workflow_type: Annotated[str | None, Field(description='Filter by workflow type.')] = cast(str | None, _UNSET),
-    status: Annotated[str | None, Field(description='Filter by run status.')] = cast(str | None, _UNSET),
-    limit: Annotated[int, Field(description='Max runs to return.')] = cast(int, _UNSET),
+    workflow_type: Annotated[str | None, Field(description='Filter by workflow type.')] = cast(str | None, UNSET),
+    status: Annotated[str | None, Field(description='Filter by run status.')] = cast(str | None, UNSET),
+    limit: Annotated[int, Field(description='Max runs to return.')] = cast(int, UNSET),
 ) -> Any:
     """List workflow runs (filter by type/status)."""
-    return _get_client().get("/v1/workflows/runs", params=_qp(workflow_type=workflow_type, status=status, limit=limit))
+    return get_client().get("/v1/workflows/runs", params=query_params(workflow_type=workflow_type, status=status, limit=limit))
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def patch_agent(
     agent_id: Annotated[str, Field(description='Agent ID.')],
-    agent_name: Annotated[str, Field(description='Human-readable agent name.')] = cast(str, _UNSET),
-    agent_card_params: Annotated[dict[str, Any], Field(description='A2A agent-card fields (name, description, skills, ...) as a dict.')] = cast(dict[str, Any], _UNSET),
-    litellm_params: Annotated[dict[str, Any], Field(description="Provider call config for the agent's backend model, as a dict.")] = cast(dict[str, Any], _UNSET),
-    object_permission: Annotated[dict[str, Any], Field(description='Object-level permission config (models/routes this agent may use).')] = cast(dict[str, Any], _UNSET),
-    tpm_limit: Annotated[int | None, Field(description='Tokens-per-minute cap.')] = cast(int | None, _UNSET),
-    rpm_limit: Annotated[int | None, Field(description='Requests-per-minute cap.')] = cast(int | None, _UNSET),
-    session_tpm_limit: Annotated[int | None, Field(description='Per-session tokens-per-minute cap.')] = cast(int | None, _UNSET),
-    session_rpm_limit: Annotated[int | None, Field(description='Per-session requests-per-minute cap.')] = cast(int | None, _UNSET),
-    static_headers: Annotated[dict[str, Any] | None, Field(description='Fixed headers sent to the agent backend; may carry secrets (write-only).')] = cast(dict[str, Any] | None, _UNSET),
-    extra_headers: Annotated[list[str] | None, Field(description='Additional header names to forward to the agent backend.')] = cast(list[str] | None, _UNSET),
+    agent_name: Annotated[str, Field(description='Human-readable agent name.')] = cast(str, UNSET),
+    agent_card_params: Annotated[dict[str, Any], Field(description='A2A agent-card fields (name, description, skills, ...) as a dict.')] = cast(dict[str, Any], UNSET),
+    litellm_params: Annotated[dict[str, Any], Field(description="Provider call config for the agent's backend model, as a dict.")] = cast(dict[str, Any], UNSET),
+    object_permission: Annotated[dict[str, Any], Field(description='Object-level permission config (models/routes this agent may use).')] = cast(dict[str, Any], UNSET),
+    tpm_limit: Annotated[int | None, Field(description='Tokens-per-minute cap.')] = cast(int | None, UNSET),
+    rpm_limit: Annotated[int | None, Field(description='Requests-per-minute cap.')] = cast(int | None, UNSET),
+    session_tpm_limit: Annotated[int | None, Field(description='Per-session tokens-per-minute cap.')] = cast(int | None, UNSET),
+    session_rpm_limit: Annotated[int | None, Field(description='Per-session requests-per-minute cap.')] = cast(int | None, UNSET),
+    static_headers: Annotated[dict[str, Any] | None, Field(description='Fixed headers sent to the agent backend; may carry secrets (write-only).')] = cast(dict[str, Any] | None, UNSET),
+    extra_headers: Annotated[list[str] | None, Field(description='Additional header names to forward to the agent backend.')] = cast(list[str] | None, UNSET),
 ) -> Any:
     """Update some of an A2A agent's fields (partial update)."""
     body: dict[str, Any] = {}
-    if agent_name is not _UNSET:
+    if agent_name is not UNSET:
         body["agent_name"] = agent_name
-    if agent_card_params is not _UNSET:
+    if agent_card_params is not UNSET:
         body["agent_card_params"] = agent_card_params
-    if litellm_params is not _UNSET:
+    if litellm_params is not UNSET:
         body["litellm_params"] = litellm_params
-    if object_permission is not _UNSET:
+    if object_permission is not UNSET:
         body["object_permission"] = object_permission
-    if tpm_limit is not _UNSET:
+    if tpm_limit is not UNSET:
         body["tpm_limit"] = tpm_limit
-    if rpm_limit is not _UNSET:
+    if rpm_limit is not UNSET:
         body["rpm_limit"] = rpm_limit
-    if session_tpm_limit is not _UNSET:
+    if session_tpm_limit is not UNSET:
         body["session_tpm_limit"] = session_tpm_limit
-    if session_rpm_limit is not _UNSET:
+    if session_rpm_limit is not UNSET:
         body["session_rpm_limit"] = session_rpm_limit
-    if static_headers is not _UNSET:
+    if static_headers is not UNSET:
         body["static_headers"] = static_headers
-    if extra_headers is not _UNSET:
+    if extra_headers is not UNSET:
         body["extra_headers"] = extra_headers
-    result = _get_client().patch(f"/v1/agents/{agent_id}", json=body)
-    _verify_response({k: body[k] for k in ('agent_name', 'tpm_limit', 'rpm_limit', 'session_tpm_limit', 'session_rpm_limit',) if k in body}, result)
+    result = get_client().patch(f"/v1/agents/{agent_id}", json=body)
+    verify_response({k: body[k] for k in ('agent_name', 'tpm_limit', 'rpm_limit', 'session_tpm_limit', 'session_rpm_limit',) if k in body}, result)
     return result
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def policies_usage_overview(
-    start_date: Annotated[str | None, Field(description='Start of the window, YYYY-MM-DD.')] = cast(str | None, _UNSET),
-    end_date: Annotated[str | None, Field(description='End of the window, YYYY-MM-DD.')] = cast(str | None, _UNSET),
+    start_date: Annotated[str | None, Field(description='Start of the window, YYYY-MM-DD.')] = cast(str | None, UNSET),
+    end_date: Annotated[str | None, Field(description='End of the window, YYYY-MM-DD.')] = cast(str | None, UNSET),
 ) -> Any:
     """Aggregate policy pass/block counts over a date window."""
-    return _get_client().get("/policies/usage/overview", params=_qp(start_date=start_date, end_date=end_date))
+    return get_client().get("/policies/usage/overview", params=query_params(start_date=start_date, end_date=end_date))
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def policy_attachment_info(
     attachment_id: Annotated[str, Field(description='Policy attachment ID.')],
 ) -> Any:
     """Get one policy attachment's scope."""
-    return _get_client().get(f"/policies/attachments/{attachment_id}")
+    return get_client().get(f"/policies/attachments/{attachment_id}")
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def policy_info(
     policy_id: Annotated[str, Field(description='Policy ID (one specific version row of a policy).')],
 ) -> Any:
     """Get one policy version's full definition."""
-    return _get_client().get(f"/policies/{policy_id}")
+    return get_client().get(f"/policies/{policy_id}")
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def policy_resolved_guardrails(
     policy_id: Annotated[str, Field(description='Policy ID (one specific version row of a policy).')],
 ) -> Any:
     """Show the guardrails a policy resolves to after inheritance."""
-    return _get_client().get(f"/policies/{policy_id}/resolved-guardrails")
+    return get_client().get(f"/policies/{policy_id}/resolved-guardrails")
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def resolve_policies(
-    key_alias: Annotated[str | None, Field(description='Key alias to resolve for.')] = cast(str | None, _UNSET),
-    model: Annotated[str | None, Field(description='Model name to resolve for.')] = cast(str | None, _UNSET),
-    tags: Annotated[list[str] | None, Field(description='Tags to resolve for.')] = cast(list[str] | None, _UNSET),
-    team_alias: Annotated[str | None, Field(description='Team alias to resolve for.')] = cast(str | None, _UNSET),
-    force_sync: Annotated[bool, Field(description='Force a DB sync before resolving; default uses the in-memory cache.')] = cast(bool, _UNSET),
+    key_alias: Annotated[str | None, Field(description='Key alias to resolve for.')] = cast(str | None, UNSET),
+    model: Annotated[str | None, Field(description='Model name to resolve for.')] = cast(str | None, UNSET),
+    tags: Annotated[list[str] | None, Field(description='Tags to resolve for.')] = cast(list[str] | None, UNSET),
+    team_alias: Annotated[str | None, Field(description='Team alias to resolve for.')] = cast(str | None, UNSET),
+    force_sync: Annotated[bool, Field(description='Force a DB sync before resolving; default uses the in-memory cache.')] = cast(bool, UNSET),
 ) -> Any:
     """Resolve which policies and guardrails apply to a given context.
 
     Read-only: returns the effective guardrails for the described request context (key/model/team/tags); it changes nothing.
     """
     body: dict[str, Any] = {}
-    if key_alias is not _UNSET:
+    if key_alias is not UNSET:
         body["key_alias"] = key_alias
-    if model is not _UNSET:
+    if model is not UNSET:
         body["model"] = model
-    if tags is not _UNSET:
+    if tags is not UNSET:
         body["tags"] = tags
-    if team_alias is not _UNSET:
+    if team_alias is not UNSET:
         body["team_alias"] = team_alias
-    return _get_client().post("/policies/resolve", params=_qp(force_sync=force_sync), json=body)
+    return get_client().post("/policies/resolve", params=query_params(force_sync=force_sync), json=body)
 
 
-@_op(litellm_execute)
+@op(litellm_execute)
 def test_policy_pipeline(
     pipeline: Annotated[dict[str, Any], Field(description="Pipeline definition with 'mode' and 'steps'.")],
     test_messages: Annotated[list[dict[str, Any]], Field(description="Messages to run through the pipeline, e.g. [{'role': 'user', 'content': '...'}].")],
@@ -625,104 +625,104 @@ def test_policy_pipeline(
     Evaluation only: nothing is stored; the response is the pipeline's pass/block result for the given messages.
     """
     body: dict[str, Any] = {}
-    if pipeline is not _UNSET:
+    if pipeline is not UNSET:
         body["pipeline"] = pipeline
-    if test_messages is not _UNSET:
+    if test_messages is not UNSET:
         body["test_messages"] = test_messages
-    return _get_client().post("/policies/test-pipeline", json=body)
+    return get_client().post("/policies/test-pipeline", json=body)
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def update_agent(
     agent_id: Annotated[str, Field(description='Agent ID.')],
     agent_name: Annotated[str, Field(description='Human-readable agent name.')],
     agent_card_params: Annotated[dict[str, Any], Field(description='A2A agent-card fields (name, description, skills, ...) as a dict.')],
-    litellm_params: Annotated[dict[str, Any], Field(description="Provider call config for the agent's backend model, as a dict.")] = cast(dict[str, Any], _UNSET),
-    object_permission: Annotated[dict[str, Any], Field(description='Object-level permission config (models/routes this agent may use).')] = cast(dict[str, Any], _UNSET),
-    tpm_limit: Annotated[int | None, Field(description='Tokens-per-minute cap.')] = cast(int | None, _UNSET),
-    rpm_limit: Annotated[int | None, Field(description='Requests-per-minute cap.')] = cast(int | None, _UNSET),
-    session_tpm_limit: Annotated[int | None, Field(description='Per-session tokens-per-minute cap.')] = cast(int | None, _UNSET),
-    session_rpm_limit: Annotated[int | None, Field(description='Per-session requests-per-minute cap.')] = cast(int | None, _UNSET),
-    static_headers: Annotated[dict[str, Any] | None, Field(description='Fixed headers sent to the agent backend; may carry secrets (write-only).')] = cast(dict[str, Any] | None, _UNSET),
-    extra_headers: Annotated[list[str] | None, Field(description='Additional header names to forward to the agent backend.')] = cast(list[str] | None, _UNSET),
+    litellm_params: Annotated[dict[str, Any], Field(description="Provider call config for the agent's backend model, as a dict.")] = cast(dict[str, Any], UNSET),
+    object_permission: Annotated[dict[str, Any], Field(description='Object-level permission config (models/routes this agent may use).')] = cast(dict[str, Any], UNSET),
+    tpm_limit: Annotated[int | None, Field(description='Tokens-per-minute cap.')] = cast(int | None, UNSET),
+    rpm_limit: Annotated[int | None, Field(description='Requests-per-minute cap.')] = cast(int | None, UNSET),
+    session_tpm_limit: Annotated[int | None, Field(description='Per-session tokens-per-minute cap.')] = cast(int | None, UNSET),
+    session_rpm_limit: Annotated[int | None, Field(description='Per-session requests-per-minute cap.')] = cast(int | None, UNSET),
+    static_headers: Annotated[dict[str, Any] | None, Field(description='Fixed headers sent to the agent backend; may carry secrets (write-only).')] = cast(dict[str, Any] | None, UNSET),
+    extra_headers: Annotated[list[str] | None, Field(description='Additional header names to forward to the agent backend.')] = cast(list[str] | None, UNSET),
 ) -> Any:
     """Replace an A2A agent's config (full update)."""
     body: dict[str, Any] = {}
-    if agent_name is not _UNSET:
+    if agent_name is not UNSET:
         body["agent_name"] = agent_name
-    if agent_card_params is not _UNSET:
+    if agent_card_params is not UNSET:
         body["agent_card_params"] = agent_card_params
-    if litellm_params is not _UNSET:
+    if litellm_params is not UNSET:
         body["litellm_params"] = litellm_params
-    if object_permission is not _UNSET:
+    if object_permission is not UNSET:
         body["object_permission"] = object_permission
-    if tpm_limit is not _UNSET:
+    if tpm_limit is not UNSET:
         body["tpm_limit"] = tpm_limit
-    if rpm_limit is not _UNSET:
+    if rpm_limit is not UNSET:
         body["rpm_limit"] = rpm_limit
-    if session_tpm_limit is not _UNSET:
+    if session_tpm_limit is not UNSET:
         body["session_tpm_limit"] = session_tpm_limit
-    if session_rpm_limit is not _UNSET:
+    if session_rpm_limit is not UNSET:
         body["session_rpm_limit"] = session_rpm_limit
-    if static_headers is not _UNSET:
+    if static_headers is not UNSET:
         body["static_headers"] = static_headers
-    if extra_headers is not _UNSET:
+    if extra_headers is not UNSET:
         body["extra_headers"] = extra_headers
-    result = _get_client().put(f"/v1/agents/{agent_id}", json=body)
-    _verify_response({k: body[k] for k in ('agent_name', 'tpm_limit', 'rpm_limit', 'session_tpm_limit', 'session_rpm_limit',) if k in body}, result)
+    result = get_client().put(f"/v1/agents/{agent_id}", json=body)
+    verify_response({k: body[k] for k in ('agent_name', 'tpm_limit', 'rpm_limit', 'session_tpm_limit', 'session_rpm_limit',) if k in body}, result)
     return result
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def update_cloudzero_settings(
-    api_key: Annotated[str | None, Field(description='New CloudZero API key (write-only).')] = cast(str | None, _UNSET),
-    connection_id: Annotated[str | None, Field(description='New CloudZero connection ID.')] = cast(str | None, _UNSET),
-    timezone: Annotated[str | None, Field(description='New timezone for date handling.')] = cast(str | None, _UNSET),
+    api_key: Annotated[str | None, Field(description='New CloudZero API key (write-only).')] = cast(str | None, UNSET),
+    connection_id: Annotated[str | None, Field(description='New CloudZero connection ID.')] = cast(str | None, UNSET),
+    timezone: Annotated[str | None, Field(description='New timezone for date handling.')] = cast(str | None, UNSET),
 ) -> Any:
     """Update the CloudZero export credentials."""
     body: dict[str, Any] = {}
-    if api_key is not _UNSET:
+    if api_key is not UNSET:
         body["api_key"] = api_key
-    if connection_id is not _UNSET:
+    if connection_id is not UNSET:
         body["connection_id"] = connection_id
-    if timezone is not _UNSET:
+    if timezone is not UNSET:
         body["timezone"] = timezone
-    return _get_client().put("/cloudzero/settings", json=body)
+    return get_client().put("/cloudzero/settings", json=body)
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def update_policy(
     policy_id: Annotated[str, Field(description='Policy ID (one specific version row of a policy).')],
-    policy_name: Annotated[str | None, Field(description='New name for the policy.')] = cast(str | None, _UNSET),
-    inherit: Annotated[str | None, Field(description='Name of a parent policy to inherit guardrails from.')] = cast(str | None, _UNSET),
-    description: Annotated[str | None, Field(description='Human-readable description of the policy.')] = cast(str | None, _UNSET),
-    guardrails_add: Annotated[list[str] | None, Field(description='Guardrail names to add.')] = cast(list[str] | None, _UNSET),
-    guardrails_remove: Annotated[list[str] | None, Field(description='Guardrail names to remove (from the inherited set).')] = cast(list[str] | None, _UNSET),
-    condition: Annotated[dict[str, Any] | None, Field(description='Condition object controlling when this policy applies.')] = cast(dict[str, Any] | None, _UNSET),
-    pipeline: Annotated[dict[str, Any] | None, Field(description="Guardrail pipeline for ordered execution; contains 'mode' and 'steps'.")] = cast(dict[str, Any] | None, _UNSET),
+    policy_name: Annotated[str | None, Field(description='New name for the policy.')] = cast(str | None, UNSET),
+    inherit: Annotated[str | None, Field(description='Name of a parent policy to inherit guardrails from.')] = cast(str | None, UNSET),
+    description: Annotated[str | None, Field(description='Human-readable description of the policy.')] = cast(str | None, UNSET),
+    guardrails_add: Annotated[list[str] | None, Field(description='Guardrail names to add.')] = cast(list[str] | None, UNSET),
+    guardrails_remove: Annotated[list[str] | None, Field(description='Guardrail names to remove (from the inherited set).')] = cast(list[str] | None, UNSET),
+    condition: Annotated[dict[str, Any] | None, Field(description='Condition object controlling when this policy applies.')] = cast(dict[str, Any] | None, UNSET),
+    pipeline: Annotated[dict[str, Any] | None, Field(description="Guardrail pipeline for ordered execution; contains 'mode' and 'steps'.")] = cast(dict[str, Any] | None, UNSET),
 ) -> Any:
     """Update a policy version's fields."""
     body: dict[str, Any] = {}
-    if policy_name is not _UNSET:
+    if policy_name is not UNSET:
         body["policy_name"] = policy_name
-    if inherit is not _UNSET:
+    if inherit is not UNSET:
         body["inherit"] = inherit
-    if description is not _UNSET:
+    if description is not UNSET:
         body["description"] = description
-    if guardrails_add is not _UNSET:
+    if guardrails_add is not UNSET:
         body["guardrails_add"] = guardrails_add
-    if guardrails_remove is not _UNSET:
+    if guardrails_remove is not UNSET:
         body["guardrails_remove"] = guardrails_remove
-    if condition is not _UNSET:
+    if condition is not UNSET:
         body["condition"] = condition
-    if pipeline is not _UNSET:
+    if pipeline is not UNSET:
         body["pipeline"] = pipeline
-    result = _get_client().put(f"/policies/{policy_id}", json=body)
-    _verify_response({k: body[k] for k in ('policy_name', 'inherit', 'description',) if k in body}, result)
+    result = get_client().put(f"/policies/{policy_id}", json=body)
+    verify_response({k: body[k] for k in ('policy_name', 'inherit', 'description',) if k in body}, result)
     return result
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def update_policy_version_status(
     policy_id: Annotated[str, Field(description='Policy ID (one specific version row of a policy).')],
     version_status: Annotated[Literal['published', 'production'], Field(description="Target status: 'published' (staged) or 'production' (live).")],
@@ -732,28 +732,28 @@ def update_policy_version_status(
     Moves the addressed version to the given status. 'published' stages it; 'production' makes it the live version. A version starts as a draft and is promoted through this endpoint.
     """
     body: dict[str, Any] = {}
-    if version_status is not _UNSET:
+    if version_status is not UNSET:
         body["version_status"] = version_status
-    result = _get_client().put(f"/policies/{policy_id}/status", json=body)
-    _verify_response({k: body[k] for k in ('version_status',) if k in body}, result)
+    result = get_client().put(f"/policies/{policy_id}/status", json=body)
+    verify_response({k: body[k] for k in ('version_status',) if k in body}, result)
     return result
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def update_workflow_run(
     run_id: Annotated[str, Field(description='Workflow run ID.')],
-    status: Annotated[Literal['pending', 'running', 'paused', 'completed', 'failed'] | None, Field(description='New run status.')] = cast(Literal['pending', 'running', 'paused', 'completed', 'failed'] | None, _UNSET),
-    output: Annotated[dict[str, Any] | None, Field(description='Run output payload.')] = cast(dict[str, Any] | None, _UNSET),
-    metadata: Annotated[dict[str, Any] | None, Field(description='Free-form JSON metadata stored on the row.')] = cast(dict[str, Any] | None, _UNSET),
+    status: Annotated[Literal['pending', 'running', 'paused', 'completed', 'failed'] | None, Field(description='New run status.')] = cast(Literal['pending', 'running', 'paused', 'completed', 'failed'] | None, UNSET),
+    output: Annotated[dict[str, Any] | None, Field(description='Run output payload.')] = cast(dict[str, Any] | None, UNSET),
+    metadata: Annotated[dict[str, Any] | None, Field(description='Free-form JSON metadata stored on the row.')] = cast(dict[str, Any] | None, UNSET),
 ) -> Any:
     """Update a workflow run's status or output."""
     body: dict[str, Any] = {}
-    if status is not _UNSET:
+    if status is not UNSET:
         body["status"] = status
-    if output is not _UNSET:
+    if output is not UNSET:
         body["output"] = output
-    if metadata is not _UNSET:
+    if metadata is not UNSET:
         body["metadata"] = metadata
-    result = _get_client().patch(f"/v1/workflows/runs/{run_id}", json=body)
-    _verify_response({k: body[k] for k in ('status',) if k in body}, result)
+    result = get_client().patch(f"/v1/workflows/runs/{run_id}", json=body)
+    verify_response({k: body[k] for k in ('status',) if k in body}, result)
     return result

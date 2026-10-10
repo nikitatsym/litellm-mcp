@@ -19,37 +19,34 @@ class Group:
 ROOT = Group("root", "")
 
 
-class _Unset:
+class Unset:
     """Sentinel singleton: caller did not pass this field.
 
     Distinct from None. None means "caller explicitly passed null" - the
     LiteLLM API treats null as a clearing operation on some nullable body
-    fields. Optional body params declared with default _UNSET carry the
+    fields. Optional body params declared with default UNSET carry the
     omitted-vs-cleared distinction through Pydantic validation
-    (exclude_unset=True) and on to the wire: body construction drops _UNSET
+    (exclude_unset=True) and on to the wire: body construction drops UNSET
     but keeps an explicit None.
     """
 
-    _instance: _Unset | None = None
+    _instance: Unset | None = None
 
     def __new__(cls) -> Self:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
-        # _instance is typed _Unset (the base, non-generic slot) - Self here
-        # is always exactly _Unset since nothing subclasses this sentinel.
+        # _instance holds the base type; this singleton has no subclasses.
         return cast(Self, cls._instance)
 
     def __repr__(self) -> str:
-        return "_UNSET"
+        return "UNSET"
 
     def __bool__(self) -> bool:
         return False
 
 
-# `Any` by design: tool signatures declare their public type (e.g. `str |
-# None`) and use `_UNSET` as the default. If `_UNSET` were typed as
-# `_Unset`, every `x is _UNSET` gate would trip `comparison-overlap`.
-_UNSET: Any = _Unset()
+# Any permits typed tool parameters to use UNSET defaults and identity checks without comparison-overlap errors.
+UNSET: Any = Unset()
 
 
 # Dispatch metadata used to be read/written with literal getattr/setattr,
@@ -59,7 +56,7 @@ _UNSET: Any = _Unset()
 # ever carry the group tag. The single widening cast lives in _prepare_op,
 # which is what makes the fuller shape true.
 class TaggedFn(Protocol):
-    """Tool function after `_op`: carries only the group tag."""
+    """Tool function after `op`: carries only the group tag."""
 
     __name__: str
     _mcp_group: Group
@@ -78,7 +75,7 @@ class OpFn(TaggedFn, Protocol):
 F = TypeVar("F", bound=Callable[..., Any])
 
 
-def _op(group: Group) -> Callable[[F], F]:
+def op(group: Group) -> Callable[[F], F]:
     """Mark a function as an MCP tool in the given group.
 
     A Pydantic params model is built from the signature at server registration

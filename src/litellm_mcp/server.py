@@ -30,8 +30,8 @@ from pydantic import (
 
 from . import tools as _tools_pkg
 from .client import APIError
-from .registry import _UNSET, ROOT, Group, OpFn, TaggedFn, _Unset
-from .tools.helpers import _get_client
+from .registry import ROOT, UNSET, Group, OpFn, TaggedFn, Unset
+from .tools.helpers import get_client
 
 mcp = MCPServer("litellm")
 
@@ -223,11 +223,11 @@ def _build_params_model(fn: TaggedFn) -> type[BaseModel]:
         ann = hints.get(name, Any)
         if param.default is inspect.Parameter.empty:
             fields[name] = (ann, ...)
-        elif isinstance(param.default, _Unset):
+        elif isinstance(param.default, Unset):
             # default_factory so `model_dump(exclude_unset=True)` in
             # `_coerce_call` keeps the caller's "omitted" state distinct
             # from an explicit None all the way to the body builders.
-            fields[name] = (ann, Field(default_factory=lambda: _UNSET))
+            fields[name] = (ann, Field(default_factory=lambda: UNSET))
         else:
             fields[name] = (ann, param.default)
 
@@ -272,7 +272,7 @@ def _coerce_call(fn: OpFn, params: dict[str, Any]) -> Any:
 
     Field-level type mismatches, missing required fields, and unknown keys
     all raise ValueError pointing at the offending field. Omitted
-    `_UNSET`-defaulted keys never reach fn (`exclude_unset=True`). Async
+    `UNSET`-defaulted keys never reach fn (`exclude_unset=True`). Async
     functions return their coroutine as-is - `_dispatch` awaits it.
     """
     model: type[BaseModel] = fn._mcp_params_model
@@ -291,7 +291,7 @@ def _type_to_str(hint: Any) -> str:
     """Compact human-readable rendering of a type hint for help text.
 
     Unions keep `None` visible (`str | None`) - nullability is part of the
-    caller-facing contract. `_Unset` never renders: it's an internal
+    caller-facing contract. `Unset` never renders: it's an internal
     default sentinel, not part of any parameter's type.
     """
     if hint is type(None):
@@ -303,7 +303,7 @@ def _type_to_str(hint: Any) -> str:
     if origin is typing.Literal:
         return f"Literal[{', '.join(repr(a) for a in args)}]"
     if origin is typing.Union or isinstance(hint, types.UnionType):
-        parts = [_type_to_str(a) for a in args if a is not _Unset]
+        parts = [_type_to_str(a) for a in args if a is not Unset]
         return " | ".join(parts) or "any"
     if origin is list:
         return f"list[{_type_to_str(args[0])}]" if args else "list"
@@ -327,12 +327,12 @@ def _type_to_str(hint: Any) -> str:
 
 
 def _format_param_for_help(name: str, hint: Any, default: Any) -> str:
-    """Render one parameter: `name: T` (required), `name?: T` (_UNSET
+    """Render one parameter: `name: T` (required), `name?: T` (UNSET
     default, may be omitted), or `name: T = default` (real default)."""
     type_str = _type_to_str(hint)
     if default is inspect.Parameter.empty:
         return f"{name}: {type_str}"
-    if isinstance(default, _Unset):
+    if isinstance(default, Unset):
         return f"{name}?: {type_str}"
     return f"{name}: {type_str} = {default!r}"
 
@@ -512,7 +512,7 @@ def _render_group_doc(
 
 
 def _register_tools() -> None:
-    """Discover @_op-decorated functions, build Pydantic models, register MCP tools."""
+    """Discover @op-decorated functions, build Pydantic models, register MCP tools."""
     groups: dict[str, tuple[Group, dict[str, OpFn]]] = {}
 
     for _importer, modname, _ispkg in pkgutil.walk_packages(
@@ -522,7 +522,6 @@ def _register_tools() -> None:
         for attr_name, raw_fn in inspect.getmembers(module, inspect.isfunction):
             if not hasattr(raw_fn, "_mcp_group"):
                 continue
-            # hasattr just confirmed the @_op-attached attribute exists.
             tagged = cast(TaggedFn, raw_fn)
             group: Group = tagged._mcp_group
             if group is ROOT:
@@ -560,7 +559,7 @@ def main() -> None:
 
     # Fail here, not on the first tool call: an unreachable proxy or a rejected
     # key stops startup, stdio and --http alike, with the failing request named.
-    _get_client().check()
+    get_client().check()
 
     if args.http:
         # Stateless: the gateway in front opens a session per call; nothing outlives a request.

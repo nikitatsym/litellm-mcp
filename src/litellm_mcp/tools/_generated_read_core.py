@@ -7,240 +7,240 @@ from typing import Annotated, Any, cast
 
 from pydantic import Field
 
-from ..registry import _UNSET, _op
+from ..registry import UNSET, op
 from .groups import litellm_read
-from .helpers import _get_client, _qp, _slim_list
+from .helpers import get_client, query_params, slim_list
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def budget_info(
     budgets: Annotated[list[str], Field(description='Budget IDs to look up.')],
 ) -> Any:
     """Get details for one or more budgets."""
     body: dict[str, Any] = {}
-    if budgets is not _UNSET:
+    if budgets is not UNSET:
         body["budgets"] = budgets
-    return _get_client().post("/budget/info", json=body)
+    return get_client().post("/budget/info", json=body)
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def budget_settings(
     budget_id: Annotated[str, Field(description='Budget ID whose settings to return.')],
 ) -> Any:
     """Get the settable fields and defaults for a budget."""
-    return _get_client().get("/budget/settings", params=_qp(budget_id=budget_id))
+    return get_client().get("/budget/settings", params=query_params(budget_id=budget_id))
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def customer_daily_activity(
-    end_user_ids: Annotated[str | None, Field(description='Comma-separated customer IDs.')] = cast(str | None, _UNSET),
-    start_date: Annotated[str | None, Field(description='Start of the window, YYYY-MM-DD.')] = cast(str | None, _UNSET),
-    end_date: Annotated[str | None, Field(description='End of the window, YYYY-MM-DD.')] = cast(str | None, _UNSET),
-    model: str | None = cast(str | None, _UNSET),
-    api_key: str | None = cast(str | None, _UNSET),
-    page: Annotated[int, Field(description='1-based page number.')] = cast(int, _UNSET),
-    page_size: Annotated[int, Field(description='Rows per page.')] = cast(int, _UNSET),
-    exclude_end_user_ids: Annotated[str | None, Field(description='Comma-separated customer IDs to exclude.')] = cast(str | None, _UNSET),
+    end_user_ids: Annotated[str | None, Field(description='Comma-separated customer IDs.')] = cast(str | None, UNSET),
+    start_date: Annotated[str | None, Field(description='Start of the window, YYYY-MM-DD.')] = cast(str | None, UNSET),
+    end_date: Annotated[str | None, Field(description='End of the window, YYYY-MM-DD.')] = cast(str | None, UNSET),
+    model: str | None = cast(str | None, UNSET),
+    api_key: str | None = cast(str | None, UNSET),
+    page: Annotated[int, Field(description='1-based page number.')] = cast(int, UNSET),
+    page_size: Annotated[int, Field(description='Rows per page.')] = cast(int, UNSET),
+    exclude_end_user_ids: Annotated[str | None, Field(description='Comma-separated customer IDs to exclude.')] = cast(str | None, UNSET),
 ) -> Any:
     """Per-day customer (end-user) usage and spend."""
-    return _get_client().get("/customer/daily/activity", params=_qp(end_user_ids=end_user_ids, start_date=start_date, end_date=end_date, model=model, api_key=api_key, page=page, page_size=page_size, exclude_end_user_ids=exclude_end_user_ids))
+    return get_client().get("/customer/daily/activity", params=query_params(end_user_ids=end_user_ids, start_date=start_date, end_date=end_date, model=model, api_key=api_key, page=page, page_size=page_size, exclude_end_user_ids=exclude_end_user_ids))
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def customer_info(
     end_user_id: Annotated[str, Field(description='Customer / end-user ID to look up.')],
 ) -> Any:
     """Get one customer's (end user's) details."""
-    return _get_client().get("/customer/info", params=_qp(end_user_id=end_user_id))
+    return get_client().get("/customer/info", params=query_params(end_user_id=end_user_id))
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def key_info(
-    key: Annotated[str | None, Field(description='Key token to look up; prefer the hashed token from list_keys.')] = cast(str | None, _UNSET),
+    key: Annotated[str | None, Field(description='Key token to look up; prefer the hashed token from list_keys.')] = cast(str | None, UNSET),
 ) -> Any:
     """Get one virtual key's full details.
 
     The key rides in the query string (upstream offers no body variant), so prefer passing the hashed token from list_keys rather than a raw secret key.
     """
-    return _get_client().get("/key/info", params=_qp(key=key))
+    return get_client().get("/key/info", params=query_params(key=key))
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def list_budgets() -> Any:
     """List configured budgets."""
-    return _get_client().get("/budget/list")
+    return get_client().get("/budget/list")
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def list_customers(
     limit: Annotated[int, Field(description='Max rows kept after client-side slimming of the returned page (0 = no cap).')] = 20,
 ) -> Any:
     """List customers (end users; rows slimmed to essentials)."""
-    result = _get_client().get("/customer/list")
-    return _slim_list(result, {'user_id', 'alias', 'spend', 'blocked', 'default_model', 'budget_id'}, limit)
+    result = get_client().get("/customer/list")
+    return slim_list(result, {'user_id', 'alias', 'spend', 'blocked', 'default_model', 'budget_id'}, limit)
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def list_keys(
-    page: Annotated[int, Field(description='1-based page number.')] = cast(int, _UNSET),
-    size: Annotated[int, Field(description='Rows per page.')] = cast(int, _UNSET),
-    user_id: str | None = cast(str | None, _UNSET),
-    team_id: str | None = cast(str | None, _UNSET),
-    organization_id: str | None = cast(str | None, _UNSET),
-    key_hash: Annotated[str | None, Field(description='Hashed key token (from a prior list; safe to log).')] = cast(str | None, _UNSET),
-    key_alias: str | None = cast(str | None, _UNSET),
-    return_full_object: Annotated[bool, Field(description='true returns full key objects (slimmed); false (default) returns key-hash strings only.')] = cast(bool, _UNSET),
-    include_team_keys: bool = cast(bool, _UNSET),
-    include_created_by_keys: bool = cast(bool, _UNSET),
-    sort_by: str | None = cast(str | None, _UNSET),
-    sort_order: Annotated[str, Field(description="Sort direction: 'asc' or 'desc'.")] = cast(str, _UNSET),
-    expand: list[str] | None = cast(list[str] | None, _UNSET),
-    status: Annotated[str | None, Field(description="Filter by key status, e.g. 'active' or 'blocked'.")] = cast(str | None, _UNSET),
-    project_id: str | None = cast(str | None, _UNSET),
-    access_group_id: str | None = cast(str | None, _UNSET),
-    agent_id: str | None = cast(str | None, _UNSET),
-    substring_matching: Annotated[bool, Field(description='Match key_alias as a substring instead of exact.')] = cast(bool, _UNSET),
-    expires: str | None = cast(str | None, _UNSET),
+    page: Annotated[int, Field(description='1-based page number.')] = cast(int, UNSET),
+    size: Annotated[int, Field(description='Rows per page.')] = cast(int, UNSET),
+    user_id: str | None = cast(str | None, UNSET),
+    team_id: str | None = cast(str | None, UNSET),
+    organization_id: str | None = cast(str | None, UNSET),
+    key_hash: Annotated[str | None, Field(description='Hashed key token (from a prior list; safe to log).')] = cast(str | None, UNSET),
+    key_alias: str | None = cast(str | None, UNSET),
+    return_full_object: Annotated[bool, Field(description='true returns full key objects (slimmed); false (default) returns key-hash strings only.')] = cast(bool, UNSET),
+    include_team_keys: bool = cast(bool, UNSET),
+    include_created_by_keys: bool = cast(bool, UNSET),
+    sort_by: str | None = cast(str | None, UNSET),
+    sort_order: Annotated[str, Field(description="Sort direction: 'asc' or 'desc'.")] = cast(str, UNSET),
+    expand: list[str] | None = cast(list[str] | None, UNSET),
+    status: Annotated[str | None, Field(description="Filter by key status, e.g. 'active' or 'blocked'.")] = cast(str | None, UNSET),
+    project_id: str | None = cast(str | None, UNSET),
+    access_group_id: str | None = cast(str | None, UNSET),
+    agent_id: str | None = cast(str | None, UNSET),
+    substring_matching: Annotated[bool, Field(description='Match key_alias as a substring instead of exact.')] = cast(bool, UNSET),
+    expires: str | None = cast(str | None, UNSET),
     limit: Annotated[int, Field(description='Max rows kept after client-side slimming of the returned page (0 = no cap).')] = 20,
 ) -> Any:
     """List virtual keys (rows slimmed to essentials).
 
     By default only key-hash strings are returned; pass return_full_object=true to get full objects, which are then slimmed to essential fields.
     """
-    result = _get_client().get("/key/list", params=_qp(page=page, size=size, user_id=user_id, team_id=team_id, organization_id=organization_id, key_hash=key_hash, key_alias=key_alias, return_full_object=return_full_object, include_team_keys=include_team_keys, include_created_by_keys=include_created_by_keys, sort_by=sort_by, sort_order=sort_order, expand=expand, status=status, project_id=project_id, access_group_id=access_group_id, agent_id=agent_id, substring_matching=substring_matching, expires=expires))
-    return _slim_list(result, {'token', 'key_name', 'key_alias', 'user_id', 'team_id', 'spend', 'max_budget', 'models', 'blocked', 'expires', 'created_at'}, limit, 'keys')
+    result = get_client().get("/key/list", params=query_params(page=page, size=size, user_id=user_id, team_id=team_id, organization_id=organization_id, key_hash=key_hash, key_alias=key_alias, return_full_object=return_full_object, include_team_keys=include_team_keys, include_created_by_keys=include_created_by_keys, sort_by=sort_by, sort_order=sort_order, expand=expand, status=status, project_id=project_id, access_group_id=access_group_id, agent_id=agent_id, substring_matching=substring_matching, expires=expires))
+    return slim_list(result, {'token', 'key_name', 'key_alias', 'user_id', 'team_id', 'spend', 'max_budget', 'models', 'blocked', 'expires', 'created_at'}, limit, 'keys')
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def list_organizations(
-    org_id: Annotated[str | None, Field(description='Filter by organization ID.')] = cast(str | None, _UNSET),
-    org_alias: Annotated[str | None, Field(description='Filter by organization alias.')] = cast(str | None, _UNSET),
+    org_id: Annotated[str | None, Field(description='Filter by organization ID.')] = cast(str | None, UNSET),
+    org_alias: Annotated[str | None, Field(description='Filter by organization alias.')] = cast(str | None, UNSET),
     limit: Annotated[int, Field(description='Max rows kept after client-side slimming of the returned page (0 = no cap).')] = 20,
 ) -> Any:
     """List organizations (rows slimmed to essentials)."""
-    result = _get_client().get("/organization/list", params=_qp(org_id=org_id, org_alias=org_alias))
-    return _slim_list(result, {'organization_id', 'organization_alias', 'spend', 'models', 'created_at'}, limit)
+    result = get_client().get("/organization/list", params=query_params(org_id=org_id, org_alias=org_alias))
+    return slim_list(result, {'organization_id', 'organization_alias', 'spend', 'models', 'created_at'}, limit)
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def list_teams(
-    user_id: str | None = cast(str | None, _UNSET),
-    organization_id: str | None = cast(str | None, _UNSET),
-    team_id: str | None = cast(str | None, _UNSET),
-    team_alias: str | None = cast(str | None, _UNSET),
-    search: Annotated[str | None, Field(description='Free-text match on team alias.')] = cast(str | None, _UNSET),
-    page: Annotated[int, Field(description='1-based page number.')] = cast(int, _UNSET),
-    page_size: Annotated[int, Field(description='Rows per page.')] = cast(int, _UNSET),
-    sort_by: str | None = cast(str | None, _UNSET),
-    sort_order: Annotated[str, Field(description="Sort direction: 'asc' or 'desc'.")] = cast(str, _UNSET),
-    status: Annotated[str | None, Field(description='Filter by team status.')] = cast(str | None, _UNSET),
+    user_id: str | None = cast(str | None, UNSET),
+    organization_id: str | None = cast(str | None, UNSET),
+    team_id: str | None = cast(str | None, UNSET),
+    team_alias: str | None = cast(str | None, UNSET),
+    search: Annotated[str | None, Field(description='Free-text match on team alias.')] = cast(str | None, UNSET),
+    page: Annotated[int, Field(description='1-based page number.')] = cast(int, UNSET),
+    page_size: Annotated[int, Field(description='Rows per page.')] = cast(int, UNSET),
+    sort_by: str | None = cast(str | None, UNSET),
+    sort_order: Annotated[str, Field(description="Sort direction: 'asc' or 'desc'.")] = cast(str, UNSET),
+    status: Annotated[str | None, Field(description='Filter by team status.')] = cast(str | None, UNSET),
     limit: Annotated[int, Field(description='Max rows kept after client-side slimming of the returned page (0 = no cap).')] = 20,
 ) -> Any:
     """List teams (paginated; rows slimmed to essentials)."""
-    result = _get_client().get("/v2/team/list", params=_qp(user_id=user_id, organization_id=organization_id, team_id=team_id, team_alias=team_alias, search=search, page=page, page_size=page_size, sort_by=sort_by, sort_order=sort_order, status=status))
-    return _slim_list(result, {'team_id', 'team_alias', 'spend', 'max_budget', 'models', 'tpm_limit', 'rpm_limit', 'blocked', 'organization_id'}, limit, 'teams')
+    result = get_client().get("/v2/team/list", params=query_params(user_id=user_id, organization_id=organization_id, team_id=team_id, team_alias=team_alias, search=search, page=page, page_size=page_size, sort_by=sort_by, sort_order=sort_order, status=status))
+    return slim_list(result, {'team_id', 'team_alias', 'spend', 'max_budget', 'models', 'tpm_limit', 'rpm_limit', 'blocked', 'organization_id'}, limit, 'teams')
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def list_users(
-    role: Annotated[str | None, Field(description='Filter by user role.')] = cast(str | None, _UNSET),
-    user_ids: Annotated[str | None, Field(description='Comma-separated user IDs.')] = cast(str | None, _UNSET),
-    sso_user_ids: Annotated[str | None, Field(description='Comma-separated SSO user IDs.')] = cast(str | None, _UNSET),
-    user_email: Annotated[str | None, Field(description='Filter by exact email.')] = cast(str | None, _UNSET),
-    team: Annotated[str | None, Field(description='Filter by team ID.')] = cast(str | None, _UNSET),
-    page: Annotated[int, Field(description='1-based page number.')] = cast(int, _UNSET),
-    page_size: Annotated[int, Field(description='Rows per page.')] = cast(int, _UNSET),
-    sort_by: str | None = cast(str | None, _UNSET),
-    sort_order: Annotated[str, Field(description="Sort direction: 'asc' or 'desc'.")] = cast(str, _UNSET),
-    organization_ids: Annotated[str | None, Field(description='Comma-separated organization IDs.')] = cast(str | None, _UNSET),
+    role: Annotated[str | None, Field(description='Filter by user role.')] = cast(str | None, UNSET),
+    user_ids: Annotated[str | None, Field(description='Comma-separated user IDs.')] = cast(str | None, UNSET),
+    sso_user_ids: Annotated[str | None, Field(description='Comma-separated SSO user IDs.')] = cast(str | None, UNSET),
+    user_email: Annotated[str | None, Field(description='Filter by exact email.')] = cast(str | None, UNSET),
+    team: Annotated[str | None, Field(description='Filter by team ID.')] = cast(str | None, UNSET),
+    page: Annotated[int, Field(description='1-based page number.')] = cast(int, UNSET),
+    page_size: Annotated[int, Field(description='Rows per page.')] = cast(int, UNSET),
+    sort_by: str | None = cast(str | None, UNSET),
+    sort_order: Annotated[str, Field(description="Sort direction: 'asc' or 'desc'.")] = cast(str, UNSET),
+    organization_ids: Annotated[str | None, Field(description='Comma-separated organization IDs.')] = cast(str | None, UNSET),
     limit: Annotated[int, Field(description='Max rows kept after client-side slimming of the returned page (0 = no cap).')] = 20,
 ) -> Any:
     """List users (paginated; rows slimmed to essentials)."""
-    result = _get_client().get("/user/list", params=_qp(role=role, user_ids=user_ids, sso_user_ids=sso_user_ids, user_email=user_email, team=team, page=page, page_size=page_size, sort_by=sort_by, sort_order=sort_order, organization_ids=organization_ids))
-    return _slim_list(result, {'user_id', 'user_email', 'user_role', 'teams', 'spend', 'max_budget', 'created_at'}, limit, 'users')
+    result = get_client().get("/user/list", params=query_params(role=role, user_ids=user_ids, sso_user_ids=sso_user_ids, user_email=user_email, team=team, page=page, page_size=page_size, sort_by=sort_by, sort_order=sort_order, organization_ids=organization_ids))
+    return slim_list(result, {'user_id', 'user_email', 'user_role', 'teams', 'spend', 'max_budget', 'created_at'}, limit, 'users')
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def organization_daily_activity(
-    organization_ids: Annotated[str | None, Field(description='Comma-separated organization IDs.')] = cast(str | None, _UNSET),
-    start_date: Annotated[str | None, Field(description='Start of the window, YYYY-MM-DD.')] = cast(str | None, _UNSET),
-    end_date: Annotated[str | None, Field(description='End of the window, YYYY-MM-DD.')] = cast(str | None, _UNSET),
-    model: str | None = cast(str | None, _UNSET),
-    api_key: str | None = cast(str | None, _UNSET),
-    page: Annotated[int, Field(description='1-based page number.')] = cast(int, _UNSET),
-    page_size: Annotated[int, Field(description='Rows per page.')] = cast(int, _UNSET),
-    exclude_organization_ids: Annotated[str | None, Field(description='Comma-separated organization IDs to exclude.')] = cast(str | None, _UNSET),
+    organization_ids: Annotated[str | None, Field(description='Comma-separated organization IDs.')] = cast(str | None, UNSET),
+    start_date: Annotated[str | None, Field(description='Start of the window, YYYY-MM-DD.')] = cast(str | None, UNSET),
+    end_date: Annotated[str | None, Field(description='End of the window, YYYY-MM-DD.')] = cast(str | None, UNSET),
+    model: str | None = cast(str | None, UNSET),
+    api_key: str | None = cast(str | None, UNSET),
+    page: Annotated[int, Field(description='1-based page number.')] = cast(int, UNSET),
+    page_size: Annotated[int, Field(description='Rows per page.')] = cast(int, UNSET),
+    exclude_organization_ids: Annotated[str | None, Field(description='Comma-separated organization IDs to exclude.')] = cast(str | None, UNSET),
 ) -> Any:
     """Per-day organization usage and spend."""
-    return _get_client().get("/organization/daily/activity", params=_qp(organization_ids=organization_ids, start_date=start_date, end_date=end_date, model=model, api_key=api_key, page=page, page_size=page_size, exclude_organization_ids=exclude_organization_ids))
+    return get_client().get("/organization/daily/activity", params=query_params(organization_ids=organization_ids, start_date=start_date, end_date=end_date, model=model, api_key=api_key, page=page, page_size=page_size, exclude_organization_ids=exclude_organization_ids))
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def organization_info(
     organization_id: Annotated[str, Field(description='Organization ID to look up.')],
 ) -> Any:
     """Get one organization's details, members, and teams."""
-    return _get_client().get("/organization/info", params=_qp(organization_id=organization_id))
+    return get_client().get("/organization/info", params=query_params(organization_id=organization_id))
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def team_callbacks(
     team_id: Annotated[str, Field(description='Team ID to inspect.')],
 ) -> Any:
     """Get a team's logging/alerting callbacks."""
-    return _get_client().get(f"/team/{team_id}/callback")
+    return get_client().get(f"/team/{team_id}/callback")
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def team_daily_activity(
-    team_ids: Annotated[str | None, Field(description='Comma-separated team IDs.')] = cast(str | None, _UNSET),
-    start_date: Annotated[str | None, Field(description='Start of the window, YYYY-MM-DD.')] = cast(str | None, _UNSET),
-    end_date: Annotated[str | None, Field(description='End of the window, YYYY-MM-DD.')] = cast(str | None, _UNSET),
-    model: str | None = cast(str | None, _UNSET),
-    api_key: str | None = cast(str | None, _UNSET),
-    page: Annotated[int, Field(description='1-based page number.')] = cast(int, _UNSET),
-    page_size: Annotated[int, Field(description='Rows per page.')] = cast(int, _UNSET),
-    exclude_team_ids: Annotated[str | None, Field(description='Comma-separated team IDs to exclude.')] = cast(str | None, _UNSET),
+    team_ids: Annotated[str | None, Field(description='Comma-separated team IDs.')] = cast(str | None, UNSET),
+    start_date: Annotated[str | None, Field(description='Start of the window, YYYY-MM-DD.')] = cast(str | None, UNSET),
+    end_date: Annotated[str | None, Field(description='End of the window, YYYY-MM-DD.')] = cast(str | None, UNSET),
+    model: str | None = cast(str | None, UNSET),
+    api_key: str | None = cast(str | None, UNSET),
+    page: Annotated[int, Field(description='1-based page number.')] = cast(int, UNSET),
+    page_size: Annotated[int, Field(description='Rows per page.')] = cast(int, UNSET),
+    exclude_team_ids: Annotated[str | None, Field(description='Comma-separated team IDs to exclude.')] = cast(str | None, UNSET),
 ) -> Any:
     """Per-day team usage and spend."""
-    return _get_client().get("/team/daily/activity", params=_qp(team_ids=team_ids, start_date=start_date, end_date=end_date, model=model, api_key=api_key, page=page, page_size=page_size, exclude_team_ids=exclude_team_ids))
+    return get_client().get("/team/daily/activity", params=query_params(team_ids=team_ids, start_date=start_date, end_date=end_date, model=model, api_key=api_key, page=page, page_size=page_size, exclude_team_ids=exclude_team_ids))
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def team_info(
-    team_id: Annotated[str, Field(description='Team ID to look up.')] = cast(str, _UNSET),
-    key_limit: Annotated[int | None, Field(description='Cap on the number of team keys included in the response.')] = cast(int | None, _UNSET),
+    team_id: Annotated[str, Field(description='Team ID to look up.')] = cast(str, UNSET),
+    key_limit: Annotated[int | None, Field(description='Cap on the number of team keys included in the response.')] = cast(int | None, UNSET),
 ) -> Any:
     """Get one team's details."""
-    return _get_client().get("/team/info", params=_qp(team_id=team_id, key_limit=key_limit))
+    return get_client().get("/team/info", params=query_params(team_id=team_id, key_limit=key_limit))
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def team_permissions(
-    team_id: Annotated[str, Field(description='Team ID to inspect.')] = cast(str, _UNSET),
+    team_id: Annotated[str, Field(description='Team ID to inspect.')] = cast(str, UNSET),
 ) -> Any:
     """List a team's configured member permissions."""
-    return _get_client().get("/team/permissions_list", params=_qp(team_id=team_id))
+    return get_client().get("/team/permissions_list", params=query_params(team_id=team_id))
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def user_daily_activity(
-    start_date: Annotated[str | None, Field(description='Start of the window, YYYY-MM-DD.')] = cast(str | None, _UNSET),
-    end_date: Annotated[str | None, Field(description='End of the window, YYYY-MM-DD.')] = cast(str | None, _UNSET),
-    model: str | None = cast(str | None, _UNSET),
-    api_key: str | None = cast(str | None, _UNSET),
-    user_id: Annotated[str | None, Field(description='User ID to scope to; omit for the caller.')] = cast(str | None, _UNSET),
-    page: Annotated[int, Field(description='1-based page number.')] = cast(int, _UNSET),
-    page_size: Annotated[int, Field(description='Rows per page.')] = cast(int, _UNSET),
-    timezone: Annotated[int | None, Field(description='UTC offset in hours for day bucketing.')] = cast(int | None, _UNSET),
+    start_date: Annotated[str | None, Field(description='Start of the window, YYYY-MM-DD.')] = cast(str | None, UNSET),
+    end_date: Annotated[str | None, Field(description='End of the window, YYYY-MM-DD.')] = cast(str | None, UNSET),
+    model: str | None = cast(str | None, UNSET),
+    api_key: str | None = cast(str | None, UNSET),
+    user_id: Annotated[str | None, Field(description='User ID to scope to; omit for the caller.')] = cast(str | None, UNSET),
+    page: Annotated[int, Field(description='1-based page number.')] = cast(int, UNSET),
+    page_size: Annotated[int, Field(description='Rows per page.')] = cast(int, UNSET),
+    timezone: Annotated[int | None, Field(description='UTC offset in hours for day bucketing.')] = cast(int | None, UNSET),
 ) -> Any:
     """Per-day user usage and spend."""
-    return _get_client().get("/user/daily/activity", params=_qp(start_date=start_date, end_date=end_date, model=model, api_key=api_key, user_id=user_id, page=page, page_size=page_size, timezone=timezone))
+    return get_client().get("/user/daily/activity", params=query_params(start_date=start_date, end_date=end_date, model=model, api_key=api_key, user_id=user_id, page=page, page_size=page_size, timezone=timezone))
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def user_info(
-    user_id: Annotated[str | None, Field(description='User ID to look up; omit for the caller.')] = cast(str | None, _UNSET),
+    user_id: Annotated[str | None, Field(description='User ID to look up; omit for the caller.')] = cast(str | None, UNSET),
 ) -> Any:
     """Get one user's details; omit user_id for the calling key's user."""
-    return _get_client().get("/user/info", params=_qp(user_id=user_id))
+    return get_client().get("/user/info", params=query_params(user_id=user_id))

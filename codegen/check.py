@@ -130,7 +130,7 @@ def check_sync(compare_dir: Path, emitted: dict[str, str]) -> list[str]:
 
 
 def overrides_impl_names(module: ModuleType, root: Any) -> set[str]:
-    """Names of non-ROOT @_op functions defined in tools/overrides.py."""
+    """Names of non-ROOT @op functions defined in tools/overrides.py."""
     names: set[str] = set()
     for fn_name, fn in inspect.getmembers(module, inspect.isfunction):
         group = getattr(fn, "_mcp_group", None)
@@ -158,11 +158,11 @@ def check_override_dedupe(
                 f"override {name!r} (module {op.module}) is gated but not implemented "
                 "in tools/overrides.py"
             )
-    # Reverse: every non-ROOT @_op in tools/overrides.py must be listed.
+    # Reverse: every non-ROOT @op in tools/overrides.py must be listed.
     for name in sorted(impl_names):
         if name not in overrides:
             problems.append(
-                f"@_op {name!r} in tools/overrides.py is not listed in codegen/overrides.py "
+                f"@op {name!r} in tools/overrides.py is not listed in codegen/overrides.py "
                 "(the generator would emit a duplicate)"
             )
     return problems

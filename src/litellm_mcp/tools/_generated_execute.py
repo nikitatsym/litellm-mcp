@@ -7,241 +7,241 @@ from typing import Annotated, Any, Literal, cast
 
 from pydantic import Field
 
-from ..registry import _UNSET, _op
+from ..registry import UNSET, op
 from .groups import litellm_execute
-from .helpers import _get_client, _verify_response
+from .helpers import get_client, verify_response
 
 
-@_op(litellm_execute)
+@op(litellm_execute)
 def block_customer(
     user_ids: Annotated[list[str], Field(description='Customer IDs to block; every listed ID in one call.')],
 ) -> Any:
     """Block one or more customers (end users)."""
     body: dict[str, Any] = {}
-    if user_ids is not _UNSET:
+    if user_ids is not UNSET:
         body["user_ids"] = user_ids
-    result = _get_client().post("/customer/block", json=body)
-    _verify_response({k: None for k in ('blocked_users',)}, result)
+    result = get_client().post("/customer/block", json=body)
+    verify_response({k: None for k in ('blocked_users',)}, result)
     return result
 
 
-@_op(litellm_execute)
+@op(litellm_execute)
 def block_key(
     key: Annotated[str, Field(description='Virtual key to block; hashed token from list_keys accepted.')],
 ) -> Any:
     """Block a virtual key (reversible via unblock_key)."""
     body: dict[str, Any] = {}
-    if key is not _UNSET:
+    if key is not UNSET:
         body["key"] = key
-    result = _get_client().post("/key/block", json=body)
-    _verify_response({k: None for k in ('blocked',)}, result)
+    result = get_client().post("/key/block", json=body)
+    verify_response({k: None for k in ('blocked',)}, result)
     return result
 
 
-@_op(litellm_execute)
+@op(litellm_execute)
 def block_model(
     model_id: Annotated[str, Field(description='Model deployment ID to block.')],
 ) -> Any:
     """Block a model deployment (reversible via unblock_model)."""
     body: dict[str, Any] = {}
-    if model_id is not _UNSET:
+    if model_id is not UNSET:
         body["model_id"] = model_id
-    result = _get_client().post("/model/block", json=body)
-    _verify_response({k: body[k] for k in ('model_id',) if k in body}, result)
+    result = get_client().post("/model/block", json=body)
+    verify_response({k: body[k] for k in ('model_id',) if k in body}, result)
     return result
 
 
-@_op(litellm_execute)
+@op(litellm_execute)
 def block_team(
     team_id: Annotated[str, Field(description='Team ID to block.')],
 ) -> Any:
     """Block a team (reversible via unblock_team)."""
     body: dict[str, Any] = {}
-    if team_id is not _UNSET:
+    if team_id is not UNSET:
         body["team_id"] = team_id
-    result = _get_client().post("/team/block", json=body)
-    _verify_response({k: None for k in ('blocked',)}, result)
+    result = get_client().post("/team/block", json=body)
+    verify_response({k: None for k in ('blocked',)}, result)
     return result
 
 
-@_op(litellm_execute)
+@op(litellm_execute)
 def disable_team_logging(
     team_id: Annotated[str, Field(description='Team whose logging to disable.')],
 ) -> Any:
     """Turn off a team's configured logging callbacks."""
-    return _get_client().post(f"/team/{team_id}/disable_logging")
+    return get_client().post(f"/team/{team_id}/disable_logging")
 
 
-@_op(litellm_execute)
+@op(litellm_execute)
 def regenerate_key(
-    key_alias: str | None = cast(str | None, _UNSET),
-    duration: Annotated[str | None, Field(description="Key lifetime, e.g. '30d', '24h'; stored as an expiry timestamp.")] = cast(str | None, _UNSET),
-    models: list[Any] | None = cast(list[Any] | None, _UNSET),
-    spend: float | None = cast(float | None, _UNSET),
-    max_budget: float | None = cast(float | None, _UNSET),
-    user_id: str | None = cast(str | None, _UNSET),
-    team_id: str | None = cast(str | None, _UNSET),
-    agent_id: str | None = cast(str | None, _UNSET),
-    max_parallel_requests: int | None = cast(int | None, _UNSET),
-    metadata: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    tpm_limit: int | None = cast(int | None, _UNSET),
-    rpm_limit: int | None = cast(int | None, _UNSET),
-    budget_duration: str | None = cast(str | None, _UNSET),
-    budget_limits: list[dict[str, Any]] | None = cast(list[dict[str, Any]] | None, _UNSET),
-    allowed_cache_controls: list[Any] | None = cast(list[Any] | None, _UNSET),
-    config: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    permissions: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    model_max_budget: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    budget_fallbacks: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    model_rpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    model_tpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    mcp_rpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    tag_rpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    guardrails: list[str] | None = cast(list[str] | None, _UNSET),
-    policies: list[str] | None = cast(list[str] | None, _UNSET),
-    prompts: list[str] | None = cast(list[str] | None, _UNSET),
-    blocked: bool | None = cast(bool | None, _UNSET),
-    aliases: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    object_permission: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    key: Annotated[str | None, Field(description='Existing key to rotate; addressed in the body (never the URL).')] = cast(str | None, _UNSET),
-    budget_id: str | None = cast(str | None, _UNSET),
-    tags: list[str] | None = cast(list[str] | None, _UNSET),
-    disable_global_guardrails: bool | None = cast(bool | None, _UNSET),
-    throttle_on_budget_exceeded: bool | None = cast(bool | None, _UNSET),
-    enforced_params: list[str] | None = cast(list[str] | None, _UNSET),
-    allowed_routes: list[Any] | None = cast(list[Any] | None, _UNSET),
-    allowed_passthrough_routes: list[Any] | None = cast(list[Any] | None, _UNSET),
-    allowed_vector_store_indexes: list[dict[str, Any]] | None = cast(list[dict[str, Any]] | None, _UNSET),
-    rpm_limit_type: Literal['guaranteed_throughput', 'best_effort_throughput', 'dynamic'] | None = cast(Literal['guaranteed_throughput', 'best_effort_throughput', 'dynamic'] | None, _UNSET),
-    tpm_limit_type: Literal['guaranteed_throughput', 'best_effort_throughput', 'dynamic'] | None = cast(Literal['guaranteed_throughput', 'best_effort_throughput', 'dynamic'] | None, _UNSET),
-    router_settings: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    access_group_ids: list[str] | None = cast(list[str] | None, _UNSET),
-    soft_budget: float | None = cast(float | None, _UNSET),
-    send_invite_email: bool | None = cast(bool | None, _UNSET),
-    key_type: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    auto_rotate: bool | None = cast(bool | None, _UNSET),
-    rotation_interval: str | None = cast(str | None, _UNSET),
-    organization_id: str | None = cast(str | None, _UNSET),
-    project_id: str | None = cast(str | None, _UNSET),
-    new_key: str | None = cast(str | None, _UNSET),
-    new_master_key: Annotated[str | None, Field(description='New master-key value (master-key rotation only).')] = cast(str | None, _UNSET),
-    grace_period: str | None = cast(str | None, _UNSET),
+    key_alias: str | None = cast(str | None, UNSET),
+    duration: Annotated[str | None, Field(description="Key lifetime, e.g. '30d', '24h'; stored as an expiry timestamp.")] = cast(str | None, UNSET),
+    models: list[Any] | None = cast(list[Any] | None, UNSET),
+    spend: float | None = cast(float | None, UNSET),
+    max_budget: float | None = cast(float | None, UNSET),
+    user_id: str | None = cast(str | None, UNSET),
+    team_id: str | None = cast(str | None, UNSET),
+    agent_id: str | None = cast(str | None, UNSET),
+    max_parallel_requests: int | None = cast(int | None, UNSET),
+    metadata: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    tpm_limit: int | None = cast(int | None, UNSET),
+    rpm_limit: int | None = cast(int | None, UNSET),
+    budget_duration: str | None = cast(str | None, UNSET),
+    budget_limits: list[dict[str, Any]] | None = cast(list[dict[str, Any]] | None, UNSET),
+    allowed_cache_controls: list[Any] | None = cast(list[Any] | None, UNSET),
+    config: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    permissions: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    model_max_budget: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    budget_fallbacks: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    model_rpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    model_tpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    mcp_rpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    tag_rpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    guardrails: list[str] | None = cast(list[str] | None, UNSET),
+    policies: list[str] | None = cast(list[str] | None, UNSET),
+    prompts: list[str] | None = cast(list[str] | None, UNSET),
+    blocked: bool | None = cast(bool | None, UNSET),
+    aliases: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    object_permission: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    key: Annotated[str | None, Field(description='Existing key to rotate; addressed in the body (never the URL).')] = cast(str | None, UNSET),
+    budget_id: str | None = cast(str | None, UNSET),
+    tags: list[str] | None = cast(list[str] | None, UNSET),
+    disable_global_guardrails: bool | None = cast(bool | None, UNSET),
+    throttle_on_budget_exceeded: bool | None = cast(bool | None, UNSET),
+    enforced_params: list[str] | None = cast(list[str] | None, UNSET),
+    allowed_routes: list[Any] | None = cast(list[Any] | None, UNSET),
+    allowed_passthrough_routes: list[Any] | None = cast(list[Any] | None, UNSET),
+    allowed_vector_store_indexes: list[dict[str, Any]] | None = cast(list[dict[str, Any]] | None, UNSET),
+    rpm_limit_type: Literal['guaranteed_throughput', 'best_effort_throughput', 'dynamic'] | None = cast(Literal['guaranteed_throughput', 'best_effort_throughput', 'dynamic'] | None, UNSET),
+    tpm_limit_type: Literal['guaranteed_throughput', 'best_effort_throughput', 'dynamic'] | None = cast(Literal['guaranteed_throughput', 'best_effort_throughput', 'dynamic'] | None, UNSET),
+    router_settings: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    access_group_ids: list[str] | None = cast(list[str] | None, UNSET),
+    soft_budget: float | None = cast(float | None, UNSET),
+    send_invite_email: bool | None = cast(bool | None, UNSET),
+    key_type: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    auto_rotate: bool | None = cast(bool | None, UNSET),
+    rotation_interval: str | None = cast(str | None, UNSET),
+    organization_id: str | None = cast(str | None, UNSET),
+    project_id: str | None = cast(str | None, UNSET),
+    new_key: str | None = cast(str | None, UNSET),
+    new_master_key: Annotated[str | None, Field(description='New master-key value (master-key rotation only).')] = cast(str | None, UNSET),
+    grace_period: str | None = cast(str | None, UNSET),
 ) -> Any:
     """Rotate a virtual key: invalidate the old secret and mint a new one.
 
     The key is addressed in the request BODY, never the URL path, so the secret never lands in proxy access logs (Decision 9). The NEW secret is returned ONCE in this response's `key` field - store it now; the old secret stops working immediately.
     """
     body: dict[str, Any] = {}
-    if key_alias is not _UNSET:
+    if key_alias is not UNSET:
         body["key_alias"] = key_alias
-    if duration is not _UNSET:
+    if duration is not UNSET:
         body["duration"] = duration
-    if models is not _UNSET:
+    if models is not UNSET:
         body["models"] = models
-    if spend is not _UNSET:
+    if spend is not UNSET:
         body["spend"] = spend
-    if max_budget is not _UNSET:
+    if max_budget is not UNSET:
         body["max_budget"] = max_budget
-    if user_id is not _UNSET:
+    if user_id is not UNSET:
         body["user_id"] = user_id
-    if team_id is not _UNSET:
+    if team_id is not UNSET:
         body["team_id"] = team_id
-    if agent_id is not _UNSET:
+    if agent_id is not UNSET:
         body["agent_id"] = agent_id
-    if max_parallel_requests is not _UNSET:
+    if max_parallel_requests is not UNSET:
         body["max_parallel_requests"] = max_parallel_requests
-    if metadata is not _UNSET:
+    if metadata is not UNSET:
         body["metadata"] = metadata
-    if tpm_limit is not _UNSET:
+    if tpm_limit is not UNSET:
         body["tpm_limit"] = tpm_limit
-    if rpm_limit is not _UNSET:
+    if rpm_limit is not UNSET:
         body["rpm_limit"] = rpm_limit
-    if budget_duration is not _UNSET:
+    if budget_duration is not UNSET:
         body["budget_duration"] = budget_duration
-    if budget_limits is not _UNSET:
+    if budget_limits is not UNSET:
         body["budget_limits"] = budget_limits
-    if allowed_cache_controls is not _UNSET:
+    if allowed_cache_controls is not UNSET:
         body["allowed_cache_controls"] = allowed_cache_controls
-    if config is not _UNSET:
+    if config is not UNSET:
         body["config"] = config
-    if permissions is not _UNSET:
+    if permissions is not UNSET:
         body["permissions"] = permissions
-    if model_max_budget is not _UNSET:
+    if model_max_budget is not UNSET:
         body["model_max_budget"] = model_max_budget
-    if budget_fallbacks is not _UNSET:
+    if budget_fallbacks is not UNSET:
         body["budget_fallbacks"] = budget_fallbacks
-    if model_rpm_limit is not _UNSET:
+    if model_rpm_limit is not UNSET:
         body["model_rpm_limit"] = model_rpm_limit
-    if model_tpm_limit is not _UNSET:
+    if model_tpm_limit is not UNSET:
         body["model_tpm_limit"] = model_tpm_limit
-    if mcp_rpm_limit is not _UNSET:
+    if mcp_rpm_limit is not UNSET:
         body["mcp_rpm_limit"] = mcp_rpm_limit
-    if tag_rpm_limit is not _UNSET:
+    if tag_rpm_limit is not UNSET:
         body["tag_rpm_limit"] = tag_rpm_limit
-    if guardrails is not _UNSET:
+    if guardrails is not UNSET:
         body["guardrails"] = guardrails
-    if policies is not _UNSET:
+    if policies is not UNSET:
         body["policies"] = policies
-    if prompts is not _UNSET:
+    if prompts is not UNSET:
         body["prompts"] = prompts
-    if blocked is not _UNSET:
+    if blocked is not UNSET:
         body["blocked"] = blocked
-    if aliases is not _UNSET:
+    if aliases is not UNSET:
         body["aliases"] = aliases
-    if object_permission is not _UNSET:
+    if object_permission is not UNSET:
         body["object_permission"] = object_permission
-    if key is not _UNSET:
+    if key is not UNSET:
         body["key"] = key
-    if budget_id is not _UNSET:
+    if budget_id is not UNSET:
         body["budget_id"] = budget_id
-    if tags is not _UNSET:
+    if tags is not UNSET:
         body["tags"] = tags
-    if disable_global_guardrails is not _UNSET:
+    if disable_global_guardrails is not UNSET:
         body["disable_global_guardrails"] = disable_global_guardrails
-    if throttle_on_budget_exceeded is not _UNSET:
+    if throttle_on_budget_exceeded is not UNSET:
         body["throttle_on_budget_exceeded"] = throttle_on_budget_exceeded
-    if enforced_params is not _UNSET:
+    if enforced_params is not UNSET:
         body["enforced_params"] = enforced_params
-    if allowed_routes is not _UNSET:
+    if allowed_routes is not UNSET:
         body["allowed_routes"] = allowed_routes
-    if allowed_passthrough_routes is not _UNSET:
+    if allowed_passthrough_routes is not UNSET:
         body["allowed_passthrough_routes"] = allowed_passthrough_routes
-    if allowed_vector_store_indexes is not _UNSET:
+    if allowed_vector_store_indexes is not UNSET:
         body["allowed_vector_store_indexes"] = allowed_vector_store_indexes
-    if rpm_limit_type is not _UNSET:
+    if rpm_limit_type is not UNSET:
         body["rpm_limit_type"] = rpm_limit_type
-    if tpm_limit_type is not _UNSET:
+    if tpm_limit_type is not UNSET:
         body["tpm_limit_type"] = tpm_limit_type
-    if router_settings is not _UNSET:
+    if router_settings is not UNSET:
         body["router_settings"] = router_settings
-    if access_group_ids is not _UNSET:
+    if access_group_ids is not UNSET:
         body["access_group_ids"] = access_group_ids
-    if soft_budget is not _UNSET:
+    if soft_budget is not UNSET:
         body["soft_budget"] = soft_budget
-    if send_invite_email is not _UNSET:
+    if send_invite_email is not UNSET:
         body["send_invite_email"] = send_invite_email
-    if key_type is not _UNSET:
+    if key_type is not UNSET:
         body["key_type"] = key_type
-    if auto_rotate is not _UNSET:
+    if auto_rotate is not UNSET:
         body["auto_rotate"] = auto_rotate
-    if rotation_interval is not _UNSET:
+    if rotation_interval is not UNSET:
         body["rotation_interval"] = rotation_interval
-    if organization_id is not _UNSET:
+    if organization_id is not UNSET:
         body["organization_id"] = organization_id
-    if project_id is not _UNSET:
+    if project_id is not UNSET:
         body["project_id"] = project_id
-    if new_key is not _UNSET:
+    if new_key is not UNSET:
         body["new_key"] = new_key
-    if new_master_key is not _UNSET:
+    if new_master_key is not UNSET:
         body["new_master_key"] = new_master_key
-    if grace_period is not _UNSET:
+    if grace_period is not UNSET:
         body["grace_period"] = grace_period
-    result = _get_client().post("/key/regenerate", json=body)
-    _verify_response({k: body[k] for k in ('key_alias', 'user_id', 'team_id', 'max_budget', 'tpm_limit', 'rpm_limit',) if k in body}, result)
+    result = get_client().post("/key/regenerate", json=body)
+    verify_response({k: body[k] for k in ('key_alias', 'user_id', 'team_id', 'max_budget', 'tpm_limit', 'rpm_limit',) if k in body}, result)
     return result
 
 
-@_op(litellm_execute)
+@op(litellm_execute)
 def reset_key_spend(
     key: Annotated[str, Field(description='Key whose spend to reset (in the URL path).')],
     reset_to: Annotated[float, Field(description='New spend value in USD (e.g. 0 to zero it).')],
@@ -251,358 +251,358 @@ def reset_key_spend(
     Upstream offers only the path variant here, so the key rides in the URL path (Decision 9 exception); prefer the hashed token. `reset_to` sets the new spend value.
     """
     body: dict[str, Any] = {}
-    if reset_to is not _UNSET:
+    if reset_to is not UNSET:
         body["reset_to"] = reset_to
-    return _get_client().post(f"/key/{key}/reset_spend", json=body)
+    return get_client().post(f"/key/{key}/reset_spend", json=body)
 
 
-@_op(litellm_execute)
+@op(litellm_execute)
 def test_cache_connection(
     cache_settings: Annotated[dict[str, Any], Field(description='Cache config to test as a dict (host, port, type, ...).')],
 ) -> Any:
     """Probe the given cache settings for connectivity (mutates nothing)."""
     body: dict[str, Any] = {}
-    if cache_settings is not _UNSET:
+    if cache_settings is not UNSET:
         body["cache_settings"] = cache_settings
-    return _get_client().post("/cache/settings/test", json=body)
+    return get_client().post("/cache/settings/test", json=body)
 
 
-@_op(litellm_execute)
+@op(litellm_execute)
 def test_mcp_connection(
-    server_id: str | None = cast(str | None, _UNSET),
-    server_name: str | None = cast(str | None, _UNSET),
-    alias: str | None = cast(str | None, _UNSET),
-    description: str | None = cast(str | None, _UNSET),
-    transport: Annotated[Literal['sse', 'http', 'stdio'], Field(description='Transport protocol the server speaks.')] = cast(Literal['sse', 'http', 'stdio'], _UNSET),
-    auth_type: Literal['none', 'api_key', 'bearer_token', 'basic', 'authorization', 'oauth2', 'aws_sigv4', 'token', 'oauth2_token_exchange', 'true_passthrough', 'oauth_delegate'] | None = cast(Literal['none', 'api_key', 'bearer_token', 'basic', 'authorization', 'oauth2', 'aws_sigv4', 'token', 'oauth2_token_exchange', 'true_passthrough', 'oauth_delegate'] | None, _UNSET),
-    credentials: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    url: Annotated[str | None, Field(description='Server URL to probe (http/sse transports).')] = cast(str | None, _UNSET),
-    spec_path: str | None = cast(str | None, _UNSET),
-    mcp_info: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    mcp_access_groups: list[str] = cast(list[str], _UNSET),
-    allowed_tools: list[str] | None = cast(list[str] | None, _UNSET),
-    tool_name_to_display_name: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    tool_name_to_description: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    extra_headers: list[str] | None = cast(list[str] | None, _UNSET),
-    static_headers: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    env_vars: list[dict[str, Any]] | None = cast(list[dict[str, Any]] | None, _UNSET),
-    instructions: str | None = cast(str | None, _UNSET),
-    command: Annotated[str | None, Field(description='Executable to launch (stdio transport).')] = cast(str | None, _UNSET),
-    args: list[str] = cast(list[str], _UNSET),
-    env: dict[str, Any] = cast(dict[str, Any], _UNSET),
-    authorization_url: str | None = cast(str | None, _UNSET),
-    token_url: str | None = cast(str | None, _UNSET),
-    registration_url: str | None = cast(str | None, _UNSET),
-    oauth2_flow: Literal['client_credentials', 'authorization_code'] | None = cast(Literal['client_credentials', 'authorization_code'] | None, _UNSET),
-    token_exchange_endpoint: str | None = cast(str | None, _UNSET),
-    audience: str | None = cast(str | None, _UNSET),
-    subject_token_type: str | None = cast(str | None, _UNSET),
-    token_exchange_profile: str | None = cast(str | None, _UNSET),
-    allow_all_keys: bool = cast(bool, _UNSET),
-    available_on_public_internet: bool = cast(bool, _UNSET),
-    delegate_auth_to_upstream: bool = cast(bool, _UNSET),
-    oauth_passthrough: bool = cast(bool, _UNSET),
-    dcr_bridge: bool | None = cast(bool | None, _UNSET),
-    is_byok: bool = cast(bool, _UNSET),
-    byok_description: list[str] = cast(list[str], _UNSET),
-    byok_api_key_help_url: str | None = cast(str | None, _UNSET),
-    source_url: str | None = cast(str | None, _UNSET),
-    timeout: float | None = cast(float | None, _UNSET),
-    max_concurrent_requests: int | None = cast(int | None, _UNSET),
-    approval_status: str | None = cast(str | None, _UNSET),
-    submitted_by: str | None = cast(str | None, _UNSET),
-    submitted_at: str | None = cast(str | None, _UNSET),
+    server_id: str | None = cast(str | None, UNSET),
+    server_name: str | None = cast(str | None, UNSET),
+    alias: str | None = cast(str | None, UNSET),
+    description: str | None = cast(str | None, UNSET),
+    transport: Annotated[Literal['sse', 'http', 'stdio'], Field(description='Transport protocol the server speaks.')] = cast(Literal['sse', 'http', 'stdio'], UNSET),
+    auth_type: Literal['none', 'api_key', 'bearer_token', 'basic', 'authorization', 'oauth2', 'aws_sigv4', 'token', 'oauth2_token_exchange', 'true_passthrough', 'oauth_delegate'] | None = cast(Literal['none', 'api_key', 'bearer_token', 'basic', 'authorization', 'oauth2', 'aws_sigv4', 'token', 'oauth2_token_exchange', 'true_passthrough', 'oauth_delegate'] | None, UNSET),
+    credentials: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    url: Annotated[str | None, Field(description='Server URL to probe (http/sse transports).')] = cast(str | None, UNSET),
+    spec_path: str | None = cast(str | None, UNSET),
+    mcp_info: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    mcp_access_groups: list[str] = cast(list[str], UNSET),
+    allowed_tools: list[str] | None = cast(list[str] | None, UNSET),
+    tool_name_to_display_name: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    tool_name_to_description: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    extra_headers: list[str] | None = cast(list[str] | None, UNSET),
+    static_headers: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    env_vars: list[dict[str, Any]] | None = cast(list[dict[str, Any]] | None, UNSET),
+    instructions: str | None = cast(str | None, UNSET),
+    command: Annotated[str | None, Field(description='Executable to launch (stdio transport).')] = cast(str | None, UNSET),
+    args: list[str] = cast(list[str], UNSET),
+    env: dict[str, Any] = cast(dict[str, Any], UNSET),
+    authorization_url: str | None = cast(str | None, UNSET),
+    token_url: str | None = cast(str | None, UNSET),
+    registration_url: str | None = cast(str | None, UNSET),
+    oauth2_flow: Literal['client_credentials', 'authorization_code'] | None = cast(Literal['client_credentials', 'authorization_code'] | None, UNSET),
+    token_exchange_endpoint: str | None = cast(str | None, UNSET),
+    audience: str | None = cast(str | None, UNSET),
+    subject_token_type: str | None = cast(str | None, UNSET),
+    token_exchange_profile: str | None = cast(str | None, UNSET),
+    allow_all_keys: bool = cast(bool, UNSET),
+    available_on_public_internet: bool = cast(bool, UNSET),
+    delegate_auth_to_upstream: bool = cast(bool, UNSET),
+    oauth_passthrough: bool = cast(bool, UNSET),
+    dcr_bridge: bool | None = cast(bool | None, UNSET),
+    is_byok: bool = cast(bool, UNSET),
+    byok_description: list[str] = cast(list[str], UNSET),
+    byok_api_key_help_url: str | None = cast(str | None, UNSET),
+    source_url: str | None = cast(str | None, UNSET),
+    timeout: float | None = cast(float | None, UNSET),
+    max_concurrent_requests: int | None = cast(int | None, UNSET),
+    approval_status: str | None = cast(str | None, UNSET),
+    submitted_by: str | None = cast(str | None, UNSET),
+    submitted_at: str | None = cast(str | None, UNSET),
 ) -> Any:
     """Probe an MCP server config before registering it (mutates nothing)."""
     body: dict[str, Any] = {}
-    if server_id is not _UNSET:
+    if server_id is not UNSET:
         body["server_id"] = server_id
-    if server_name is not _UNSET:
+    if server_name is not UNSET:
         body["server_name"] = server_name
-    if alias is not _UNSET:
+    if alias is not UNSET:
         body["alias"] = alias
-    if description is not _UNSET:
+    if description is not UNSET:
         body["description"] = description
-    if transport is not _UNSET:
+    if transport is not UNSET:
         body["transport"] = transport
-    if auth_type is not _UNSET:
+    if auth_type is not UNSET:
         body["auth_type"] = auth_type
-    if credentials is not _UNSET:
+    if credentials is not UNSET:
         body["credentials"] = credentials
-    if url is not _UNSET:
+    if url is not UNSET:
         body["url"] = url
-    if spec_path is not _UNSET:
+    if spec_path is not UNSET:
         body["spec_path"] = spec_path
-    if mcp_info is not _UNSET:
+    if mcp_info is not UNSET:
         body["mcp_info"] = mcp_info
-    if mcp_access_groups is not _UNSET:
+    if mcp_access_groups is not UNSET:
         body["mcp_access_groups"] = mcp_access_groups
-    if allowed_tools is not _UNSET:
+    if allowed_tools is not UNSET:
         body["allowed_tools"] = allowed_tools
-    if tool_name_to_display_name is not _UNSET:
+    if tool_name_to_display_name is not UNSET:
         body["tool_name_to_display_name"] = tool_name_to_display_name
-    if tool_name_to_description is not _UNSET:
+    if tool_name_to_description is not UNSET:
         body["tool_name_to_description"] = tool_name_to_description
-    if extra_headers is not _UNSET:
+    if extra_headers is not UNSET:
         body["extra_headers"] = extra_headers
-    if static_headers is not _UNSET:
+    if static_headers is not UNSET:
         body["static_headers"] = static_headers
-    if env_vars is not _UNSET:
+    if env_vars is not UNSET:
         body["env_vars"] = env_vars
-    if instructions is not _UNSET:
+    if instructions is not UNSET:
         body["instructions"] = instructions
-    if command is not _UNSET:
+    if command is not UNSET:
         body["command"] = command
-    if args is not _UNSET:
+    if args is not UNSET:
         body["args"] = args
-    if env is not _UNSET:
+    if env is not UNSET:
         body["env"] = env
-    if authorization_url is not _UNSET:
+    if authorization_url is not UNSET:
         body["authorization_url"] = authorization_url
-    if token_url is not _UNSET:
+    if token_url is not UNSET:
         body["token_url"] = token_url
-    if registration_url is not _UNSET:
+    if registration_url is not UNSET:
         body["registration_url"] = registration_url
-    if oauth2_flow is not _UNSET:
+    if oauth2_flow is not UNSET:
         body["oauth2_flow"] = oauth2_flow
-    if token_exchange_endpoint is not _UNSET:
+    if token_exchange_endpoint is not UNSET:
         body["token_exchange_endpoint"] = token_exchange_endpoint
-    if audience is not _UNSET:
+    if audience is not UNSET:
         body["audience"] = audience
-    if subject_token_type is not _UNSET:
+    if subject_token_type is not UNSET:
         body["subject_token_type"] = subject_token_type
-    if token_exchange_profile is not _UNSET:
+    if token_exchange_profile is not UNSET:
         body["token_exchange_profile"] = token_exchange_profile
-    if allow_all_keys is not _UNSET:
+    if allow_all_keys is not UNSET:
         body["allow_all_keys"] = allow_all_keys
-    if available_on_public_internet is not _UNSET:
+    if available_on_public_internet is not UNSET:
         body["available_on_public_internet"] = available_on_public_internet
-    if delegate_auth_to_upstream is not _UNSET:
+    if delegate_auth_to_upstream is not UNSET:
         body["delegate_auth_to_upstream"] = delegate_auth_to_upstream
-    if oauth_passthrough is not _UNSET:
+    if oauth_passthrough is not UNSET:
         body["oauth_passthrough"] = oauth_passthrough
-    if dcr_bridge is not _UNSET:
+    if dcr_bridge is not UNSET:
         body["dcr_bridge"] = dcr_bridge
-    if is_byok is not _UNSET:
+    if is_byok is not UNSET:
         body["is_byok"] = is_byok
-    if byok_description is not _UNSET:
+    if byok_description is not UNSET:
         body["byok_description"] = byok_description
-    if byok_api_key_help_url is not _UNSET:
+    if byok_api_key_help_url is not UNSET:
         body["byok_api_key_help_url"] = byok_api_key_help_url
-    if source_url is not _UNSET:
+    if source_url is not UNSET:
         body["source_url"] = source_url
-    if timeout is not _UNSET:
+    if timeout is not UNSET:
         body["timeout"] = timeout
-    if max_concurrent_requests is not _UNSET:
+    if max_concurrent_requests is not UNSET:
         body["max_concurrent_requests"] = max_concurrent_requests
-    if approval_status is not _UNSET:
+    if approval_status is not UNSET:
         body["approval_status"] = approval_status
-    if submitted_by is not _UNSET:
+    if submitted_by is not UNSET:
         body["submitted_by"] = submitted_by
-    if submitted_at is not _UNSET:
+    if submitted_at is not UNSET:
         body["submitted_at"] = submitted_at
-    return _get_client().post("/mcp-rest/test/connection", json=body)
+    return get_client().post("/mcp-rest/test/connection", json=body)
 
 
-@_op(litellm_execute)
+@op(litellm_execute)
 def test_mcp_tools_list(
-    server_id: str | None = cast(str | None, _UNSET),
-    server_name: str | None = cast(str | None, _UNSET),
-    alias: str | None = cast(str | None, _UNSET),
-    description: str | None = cast(str | None, _UNSET),
-    transport: Annotated[Literal['sse', 'http', 'stdio'], Field(description='Transport protocol the server speaks.')] = cast(Literal['sse', 'http', 'stdio'], _UNSET),
-    auth_type: Literal['none', 'api_key', 'bearer_token', 'basic', 'authorization', 'oauth2', 'aws_sigv4', 'token', 'oauth2_token_exchange', 'true_passthrough', 'oauth_delegate'] | None = cast(Literal['none', 'api_key', 'bearer_token', 'basic', 'authorization', 'oauth2', 'aws_sigv4', 'token', 'oauth2_token_exchange', 'true_passthrough', 'oauth_delegate'] | None, _UNSET),
-    credentials: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    url: Annotated[str | None, Field(description='Server URL to probe (http/sse transports).')] = cast(str | None, _UNSET),
-    spec_path: str | None = cast(str | None, _UNSET),
-    mcp_info: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    mcp_access_groups: list[str] = cast(list[str], _UNSET),
-    allowed_tools: list[str] | None = cast(list[str] | None, _UNSET),
-    tool_name_to_display_name: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    tool_name_to_description: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    extra_headers: list[str] | None = cast(list[str] | None, _UNSET),
-    static_headers: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    env_vars: list[dict[str, Any]] | None = cast(list[dict[str, Any]] | None, _UNSET),
-    instructions: str | None = cast(str | None, _UNSET),
-    command: str | None = cast(str | None, _UNSET),
-    args: list[str] = cast(list[str], _UNSET),
-    env: dict[str, Any] = cast(dict[str, Any], _UNSET),
-    authorization_url: str | None = cast(str | None, _UNSET),
-    token_url: str | None = cast(str | None, _UNSET),
-    registration_url: str | None = cast(str | None, _UNSET),
-    oauth2_flow: Literal['client_credentials', 'authorization_code'] | None = cast(Literal['client_credentials', 'authorization_code'] | None, _UNSET),
-    token_exchange_endpoint: str | None = cast(str | None, _UNSET),
-    audience: str | None = cast(str | None, _UNSET),
-    subject_token_type: str | None = cast(str | None, _UNSET),
-    token_exchange_profile: str | None = cast(str | None, _UNSET),
-    allow_all_keys: bool = cast(bool, _UNSET),
-    available_on_public_internet: bool = cast(bool, _UNSET),
-    delegate_auth_to_upstream: bool = cast(bool, _UNSET),
-    oauth_passthrough: bool = cast(bool, _UNSET),
-    dcr_bridge: bool | None = cast(bool | None, _UNSET),
-    is_byok: bool = cast(bool, _UNSET),
-    byok_description: list[str] = cast(list[str], _UNSET),
-    byok_api_key_help_url: str | None = cast(str | None, _UNSET),
-    source_url: str | None = cast(str | None, _UNSET),
-    timeout: float | None = cast(float | None, _UNSET),
-    max_concurrent_requests: int | None = cast(int | None, _UNSET),
-    approval_status: str | None = cast(str | None, _UNSET),
-    submitted_by: str | None = cast(str | None, _UNSET),
-    submitted_at: str | None = cast(str | None, _UNSET),
+    server_id: str | None = cast(str | None, UNSET),
+    server_name: str | None = cast(str | None, UNSET),
+    alias: str | None = cast(str | None, UNSET),
+    description: str | None = cast(str | None, UNSET),
+    transport: Annotated[Literal['sse', 'http', 'stdio'], Field(description='Transport protocol the server speaks.')] = cast(Literal['sse', 'http', 'stdio'], UNSET),
+    auth_type: Literal['none', 'api_key', 'bearer_token', 'basic', 'authorization', 'oauth2', 'aws_sigv4', 'token', 'oauth2_token_exchange', 'true_passthrough', 'oauth_delegate'] | None = cast(Literal['none', 'api_key', 'bearer_token', 'basic', 'authorization', 'oauth2', 'aws_sigv4', 'token', 'oauth2_token_exchange', 'true_passthrough', 'oauth_delegate'] | None, UNSET),
+    credentials: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    url: Annotated[str | None, Field(description='Server URL to probe (http/sse transports).')] = cast(str | None, UNSET),
+    spec_path: str | None = cast(str | None, UNSET),
+    mcp_info: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    mcp_access_groups: list[str] = cast(list[str], UNSET),
+    allowed_tools: list[str] | None = cast(list[str] | None, UNSET),
+    tool_name_to_display_name: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    tool_name_to_description: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    extra_headers: list[str] | None = cast(list[str] | None, UNSET),
+    static_headers: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    env_vars: list[dict[str, Any]] | None = cast(list[dict[str, Any]] | None, UNSET),
+    instructions: str | None = cast(str | None, UNSET),
+    command: str | None = cast(str | None, UNSET),
+    args: list[str] = cast(list[str], UNSET),
+    env: dict[str, Any] = cast(dict[str, Any], UNSET),
+    authorization_url: str | None = cast(str | None, UNSET),
+    token_url: str | None = cast(str | None, UNSET),
+    registration_url: str | None = cast(str | None, UNSET),
+    oauth2_flow: Literal['client_credentials', 'authorization_code'] | None = cast(Literal['client_credentials', 'authorization_code'] | None, UNSET),
+    token_exchange_endpoint: str | None = cast(str | None, UNSET),
+    audience: str | None = cast(str | None, UNSET),
+    subject_token_type: str | None = cast(str | None, UNSET),
+    token_exchange_profile: str | None = cast(str | None, UNSET),
+    allow_all_keys: bool = cast(bool, UNSET),
+    available_on_public_internet: bool = cast(bool, UNSET),
+    delegate_auth_to_upstream: bool = cast(bool, UNSET),
+    oauth_passthrough: bool = cast(bool, UNSET),
+    dcr_bridge: bool | None = cast(bool | None, UNSET),
+    is_byok: bool = cast(bool, UNSET),
+    byok_description: list[str] = cast(list[str], UNSET),
+    byok_api_key_help_url: str | None = cast(str | None, UNSET),
+    source_url: str | None = cast(str | None, UNSET),
+    timeout: float | None = cast(float | None, UNSET),
+    max_concurrent_requests: int | None = cast(int | None, UNSET),
+    approval_status: str | None = cast(str | None, UNSET),
+    submitted_by: str | None = cast(str | None, UNSET),
+    submitted_at: str | None = cast(str | None, UNSET),
 ) -> Any:
     """List the tools an unregistered MCP server config exposes (mutates nothing)."""
     body: dict[str, Any] = {}
-    if server_id is not _UNSET:
+    if server_id is not UNSET:
         body["server_id"] = server_id
-    if server_name is not _UNSET:
+    if server_name is not UNSET:
         body["server_name"] = server_name
-    if alias is not _UNSET:
+    if alias is not UNSET:
         body["alias"] = alias
-    if description is not _UNSET:
+    if description is not UNSET:
         body["description"] = description
-    if transport is not _UNSET:
+    if transport is not UNSET:
         body["transport"] = transport
-    if auth_type is not _UNSET:
+    if auth_type is not UNSET:
         body["auth_type"] = auth_type
-    if credentials is not _UNSET:
+    if credentials is not UNSET:
         body["credentials"] = credentials
-    if url is not _UNSET:
+    if url is not UNSET:
         body["url"] = url
-    if spec_path is not _UNSET:
+    if spec_path is not UNSET:
         body["spec_path"] = spec_path
-    if mcp_info is not _UNSET:
+    if mcp_info is not UNSET:
         body["mcp_info"] = mcp_info
-    if mcp_access_groups is not _UNSET:
+    if mcp_access_groups is not UNSET:
         body["mcp_access_groups"] = mcp_access_groups
-    if allowed_tools is not _UNSET:
+    if allowed_tools is not UNSET:
         body["allowed_tools"] = allowed_tools
-    if tool_name_to_display_name is not _UNSET:
+    if tool_name_to_display_name is not UNSET:
         body["tool_name_to_display_name"] = tool_name_to_display_name
-    if tool_name_to_description is not _UNSET:
+    if tool_name_to_description is not UNSET:
         body["tool_name_to_description"] = tool_name_to_description
-    if extra_headers is not _UNSET:
+    if extra_headers is not UNSET:
         body["extra_headers"] = extra_headers
-    if static_headers is not _UNSET:
+    if static_headers is not UNSET:
         body["static_headers"] = static_headers
-    if env_vars is not _UNSET:
+    if env_vars is not UNSET:
         body["env_vars"] = env_vars
-    if instructions is not _UNSET:
+    if instructions is not UNSET:
         body["instructions"] = instructions
-    if command is not _UNSET:
+    if command is not UNSET:
         body["command"] = command
-    if args is not _UNSET:
+    if args is not UNSET:
         body["args"] = args
-    if env is not _UNSET:
+    if env is not UNSET:
         body["env"] = env
-    if authorization_url is not _UNSET:
+    if authorization_url is not UNSET:
         body["authorization_url"] = authorization_url
-    if token_url is not _UNSET:
+    if token_url is not UNSET:
         body["token_url"] = token_url
-    if registration_url is not _UNSET:
+    if registration_url is not UNSET:
         body["registration_url"] = registration_url
-    if oauth2_flow is not _UNSET:
+    if oauth2_flow is not UNSET:
         body["oauth2_flow"] = oauth2_flow
-    if token_exchange_endpoint is not _UNSET:
+    if token_exchange_endpoint is not UNSET:
         body["token_exchange_endpoint"] = token_exchange_endpoint
-    if audience is not _UNSET:
+    if audience is not UNSET:
         body["audience"] = audience
-    if subject_token_type is not _UNSET:
+    if subject_token_type is not UNSET:
         body["subject_token_type"] = subject_token_type
-    if token_exchange_profile is not _UNSET:
+    if token_exchange_profile is not UNSET:
         body["token_exchange_profile"] = token_exchange_profile
-    if allow_all_keys is not _UNSET:
+    if allow_all_keys is not UNSET:
         body["allow_all_keys"] = allow_all_keys
-    if available_on_public_internet is not _UNSET:
+    if available_on_public_internet is not UNSET:
         body["available_on_public_internet"] = available_on_public_internet
-    if delegate_auth_to_upstream is not _UNSET:
+    if delegate_auth_to_upstream is not UNSET:
         body["delegate_auth_to_upstream"] = delegate_auth_to_upstream
-    if oauth_passthrough is not _UNSET:
+    if oauth_passthrough is not UNSET:
         body["oauth_passthrough"] = oauth_passthrough
-    if dcr_bridge is not _UNSET:
+    if dcr_bridge is not UNSET:
         body["dcr_bridge"] = dcr_bridge
-    if is_byok is not _UNSET:
+    if is_byok is not UNSET:
         body["is_byok"] = is_byok
-    if byok_description is not _UNSET:
+    if byok_description is not UNSET:
         body["byok_description"] = byok_description
-    if byok_api_key_help_url is not _UNSET:
+    if byok_api_key_help_url is not UNSET:
         body["byok_api_key_help_url"] = byok_api_key_help_url
-    if source_url is not _UNSET:
+    if source_url is not UNSET:
         body["source_url"] = source_url
-    if timeout is not _UNSET:
+    if timeout is not UNSET:
         body["timeout"] = timeout
-    if max_concurrent_requests is not _UNSET:
+    if max_concurrent_requests is not UNSET:
         body["max_concurrent_requests"] = max_concurrent_requests
-    if approval_status is not _UNSET:
+    if approval_status is not UNSET:
         body["approval_status"] = approval_status
-    if submitted_by is not _UNSET:
+    if submitted_by is not UNSET:
         body["submitted_by"] = submitted_by
-    if submitted_at is not _UNSET:
+    if submitted_at is not UNSET:
         body["submitted_at"] = submitted_at
-    return _get_client().post("/mcp-rest/test/tools/list", json=body)
+    return get_client().post("/mcp-rest/test/tools/list", json=body)
 
 
-@_op(litellm_execute)
+@op(litellm_execute)
 def test_model_connection(
-    mode: Annotated[Literal['chat', 'completion', 'embedding', 'audio_speech', 'audio_transcription', 'image_generation', 'video_generation', 'batch', 'rerank', 'realtime', 'responses', 'ocr'] | None, Field(description="Operation to test the model for, e.g. 'chat' or 'embedding'.")] = cast(Literal['chat', 'completion', 'embedding', 'audio_speech', 'audio_transcription', 'image_generation', 'video_generation', 'batch', 'rerank', 'realtime', 'responses', 'ocr'] | None, _UNSET),
-    litellm_params: Annotated[dict[str, Any], Field(description="Provider call config as a dict, e.g. {'model': 'openai/gpt-4o', 'api_key': 'os.environ/OPENAI_API_KEY'}. Keys are provider-specific (genuinely dynamic), so this stays an opaque dict - see LiteLLM docs.")] = cast(dict[str, Any], _UNSET),
-    model_info: Annotated[dict[str, Any], Field(description='Optional metadata dict for the candidate deployment.')] = cast(dict[str, Any], _UNSET),
+    mode: Annotated[Literal['chat', 'completion', 'embedding', 'audio_speech', 'audio_transcription', 'image_generation', 'video_generation', 'batch', 'rerank', 'realtime', 'responses', 'ocr'] | None, Field(description="Operation to test the model for, e.g. 'chat' or 'embedding'.")] = cast(Literal['chat', 'completion', 'embedding', 'audio_speech', 'audio_transcription', 'image_generation', 'video_generation', 'batch', 'rerank', 'realtime', 'responses', 'ocr'] | None, UNSET),
+    litellm_params: Annotated[dict[str, Any], Field(description="Provider call config as a dict, e.g. {'model': 'openai/gpt-4o', 'api_key': 'os.environ/OPENAI_API_KEY'}. Keys are provider-specific (genuinely dynamic), so this stays an opaque dict - see LiteLLM docs.")] = cast(dict[str, Any], UNSET),
+    model_info: Annotated[dict[str, Any], Field(description='Optional metadata dict for the candidate deployment.')] = cast(dict[str, Any], UNSET),
 ) -> Any:
     """Probe a model deployment config before adding it (mutates nothing)."""
     body: dict[str, Any] = {}
-    if mode is not _UNSET:
+    if mode is not UNSET:
         body["mode"] = mode
-    if litellm_params is not _UNSET:
+    if litellm_params is not UNSET:
         body["litellm_params"] = litellm_params
-    if model_info is not _UNSET:
+    if model_info is not UNSET:
         body["model_info"] = model_info
-    return _get_client().post("/health/test_connection", json=body)
+    return get_client().post("/health/test_connection", json=body)
 
 
-@_op(litellm_execute)
+@op(litellm_execute)
 def unblock_customer(
     user_ids: Annotated[list[str], Field(description='Customer IDs to unblock; every listed ID in one call.')],
 ) -> Any:
     """Unblock one or more customers (end users)."""
     body: dict[str, Any] = {}
-    if user_ids is not _UNSET:
+    if user_ids is not UNSET:
         body["user_ids"] = user_ids
-    result = _get_client().post("/customer/unblock", json=body)
-    _verify_response({k: None for k in ('blocked_users',)}, result)
+    result = get_client().post("/customer/unblock", json=body)
+    verify_response({k: None for k in ('blocked_users',)}, result)
     return result
 
 
-@_op(litellm_execute)
+@op(litellm_execute)
 def unblock_key(
     key: Annotated[str, Field(description='Virtual key to unblock; hashed token from list_keys accepted.')],
 ) -> Any:
     """Unblock a previously blocked virtual key."""
     body: dict[str, Any] = {}
-    if key is not _UNSET:
+    if key is not UNSET:
         body["key"] = key
-    return _get_client().post("/key/unblock", json=body)
+    return get_client().post("/key/unblock", json=body)
 
 
-@_op(litellm_execute)
+@op(litellm_execute)
 def unblock_model(
     model_id: Annotated[str, Field(description='Model deployment ID to unblock.')],
 ) -> Any:
     """Unblock a previously blocked model deployment."""
     body: dict[str, Any] = {}
-    if model_id is not _UNSET:
+    if model_id is not UNSET:
         body["model_id"] = model_id
-    result = _get_client().post("/model/unblock", json=body)
-    _verify_response({k: body[k] for k in ('model_id',) if k in body}, result)
+    result = get_client().post("/model/unblock", json=body)
+    verify_response({k: body[k] for k in ('model_id',) if k in body}, result)
     return result
 
 
-@_op(litellm_execute)
+@op(litellm_execute)
 def unblock_team(
     team_id: Annotated[str, Field(description='Team ID to unblock.')],
 ) -> Any:
     """Unblock a previously blocked team."""
     body: dict[str, Any] = {}
-    if team_id is not _UNSET:
+    if team_id is not UNSET:
         body["team_id"] = team_id
-    result = _get_client().post("/team/unblock", json=body)
-    _verify_response({k: None for k in ('blocked',)}, result)
+    result = get_client().post("/team/unblock", json=body)
+    verify_response({k: None for k in ('blocked',)}, result)
     return result

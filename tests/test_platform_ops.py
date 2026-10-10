@@ -77,7 +77,7 @@ def test_cloudzero_dry_run_wire(client_env, respx_mock):
 # --- adversarial (a): attachment echo drops the sent scope -> verify raises --
 
 def test_attachment_scope_drop_raises(client_env, respx_mock):
-    # Echo omits `scope` although it was sent -> _verify_response must name it.
+    # Echo omits `scope` although it was sent -> verify_response must name it.
     respx_mock.post("/policies/attachments").respond(
         200, json={"attachment_id": "att-1", "policy_name": "p1"}
     )

@@ -43,7 +43,7 @@ def test_delete_keys_sends_list_payload(client_env, respx_mock):
     delete_keys(keys=["sk-1", "sk-2"])
     payload = json.loads(route.calls.last.request.content)
     assert payload["keys"] == ["sk-1", "sk-2"]
-    assert "key_aliases" not in payload           # omitted (_UNSET) never sent
+    assert "key_aliases" not in payload
 
 
 # --- global_spend_reset: bodyless admin POST, no verify ----------------------

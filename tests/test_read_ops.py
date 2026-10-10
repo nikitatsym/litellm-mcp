@@ -18,14 +18,14 @@ from litellm_mcp.tools._generated_read_core import (
 from litellm_mcp.tools._generated_read_infra import list_guardrails, model_info
 from litellm_mcp.tools.overrides import health, key_health, model_cost_map
 
-# --- query construction: _UNSET omitted, explicit values present -----------
+# --- query construction: UNSET omitted, explicit values present -----------
 
 def test_query_construction_drops_unset(client_env, respx_mock):
     route = respx_mock.get("/organization/list").respond(200, json=[])
     list_organizations(org_id="org-1")
     params = route.calls.last.request.url.params
     assert params.get("org_id") == "org-1"
-    assert "org_alias" not in params  # omitted (_UNSET) never hits the wire
+    assert "org_alias" not in params
 
 
 # --- bare-array slim: projects rows, truncates, reports counts -------------

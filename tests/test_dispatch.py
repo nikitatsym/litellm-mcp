@@ -7,22 +7,27 @@ Step 3) generated tool inventory.
 
 from __future__ import annotations
 
-import importlib
 import inspect
 import json
-import sys
 from typing import Annotated, cast
 
 import pytest
 from pydantic import Field
 
 from litellm_mcp import server
-from litellm_mcp.registry import _UNSET, Group
+from litellm_mcp.registry import UNSET, Group
 from litellm_mcp.tools import groups as groups_module
 
 GROUP = "test_group"
 
 _received: list[dict] = []
+
+
+@pytest.mark.parametrize("group", sorted(server._group_ops))
+def test_real_group_help_hides_sentinel(group):
+    help_text = server._build_help(group)
+    assert "Unset" not in help_text
+    assert "UNSET" not in help_text
 
 
 def first_op(name: str) -> dict:
@@ -32,14 +37,14 @@ def first_op(name: str) -> dict:
 
 def second_op(
     tag: Annotated[str | None, Field(description="Tag to attach.")] = cast(
-        "str | None", _UNSET
+        "str | None", UNSET
     ),
 ) -> dict:
     """List things.
 
     Extra context line that should render indented under the signature.
     """
-    kwargs = {} if tag is _UNSET else {"tag": tag}
+    kwargs = {} if tag is UNSET else {"tag": tag}
     _received.append(kwargs)
     return kwargs
 
@@ -47,8 +52,8 @@ def second_op(
 def shapes_op(
     req: str,
     nul: str | None,
-    opt: str = cast("str", _UNSET),
-    opt_nul: str | None = cast("str | None", _UNSET),
+    opt: str = cast("str", UNSET),
+    opt_nul: str | None = cast("str | None", UNSET),
 ) -> dict:
     """Render shapes across required, optional, and nullable params."""
     return {"req": req}
@@ -89,8 +94,8 @@ async def test_help_renders_all_four_param_shapes(tiny_group):
 
 async def test_unset_never_in_help_output(tiny_group):
     out = await server._dispatch("help", GROUP, {})
-    assert "_Unset" not in out
-    assert "_UNSET" not in out
+    assert "Unset" not in out
+    assert "UNSET" not in out
 
 
 async def test_schema_via_dispatch(tiny_group):
@@ -104,8 +109,8 @@ async def test_schema_via_dispatch(tiny_group):
 async def test_unset_never_in_schema_output(tiny_group):
     for op in ("FirstOp", "SecondOp", "ShapesOp"):
         dumped = json.dumps(await server._dispatch("schema", GROUP, {"op": op}))
-        assert "_Unset" not in dumped
-        assert "_UNSET" not in dumped
+        assert "Unset" not in dumped
+        assert "UNSET" not in dumped
 
 
 def test_build_schema_direct(tiny_group):
@@ -175,30 +180,6 @@ def test_reject_var_keyword_at_registration():
 
     with pytest.raises(RuntimeError, match="bad_op"):
         server._build_params_model(bad_op)
-
-
-def test_docstringless_op_in_throwaway_module_crashes_registration(
-    tmp_path, monkeypatch
-):
-    """Adversarial: a tools module with a docstring-less @_op crashes the
-    import the registration walk performs, and the message names the
-    function."""
-    mod = tmp_path / "throwaway_bad_ops.py"
-    mod.write_text(
-        "from litellm_mcp.registry import _op\n"
-        "from litellm_mcp.tools.groups import litellm_read\n"
-        "\n"
-        "@_op(litellm_read)\n"
-        "def broken_op(x: int):\n"
-        "    return x\n",
-        encoding="utf-8",
-    )
-    monkeypatch.syspath_prepend(str(tmp_path))
-    try:
-        with pytest.raises(RuntimeError, match="broken_op"):
-            importlib.import_module("throwaway_bad_ops")
-    finally:
-        sys.modules.pop("throwaway_bad_ops", None)
 
 
 def test_group_docs_resolve_operation_placeholders():

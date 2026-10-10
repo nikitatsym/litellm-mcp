@@ -1,7 +1,4 @@
-"""Config contract: empty-string defaults so nothing crashes at import;
-the client crashes on first use when env is missing; `_reset_settings`
-isolates the cache between tests; a host-bound client beats the singleton.
-"""
+"""Settings load lazily and stay cached; request-bound clients override the singleton."""
 
 from __future__ import annotations
 
@@ -23,7 +20,6 @@ def test_import_does_not_require_env():
 def test_missing_env_crashes_on_client_use_not_import(monkeypatch):
     monkeypatch.delenv("LITELLM_URL", raising=False)
     monkeypatch.delenv("LITELLM_API_KEY", raising=False)
-    config_mod._reset_settings()
     # Empty defaults load fine; the crash is on first client construction, and
     # names the setting - a startup traceback has to say what is unset.
     assert get_settings().litellm_url == ""
@@ -37,18 +33,17 @@ def test_bound_client_wins_over_singleton(client_env):
     bound = LiteLLMClient(base_url="https://bound.test", api_key="sk-bound")
     token = helpers.client_var.set(bound)
     try:
-        assert helpers._get_client() is bound
+        assert helpers.get_client() is bound
     finally:
         helpers.client_var.reset(token)
-    assert helpers._get_client() is not bound
+    assert helpers.get_client() is not bound
 
 
-def test_reset_settings_isolates(monkeypatch):
+def test_settings_stay_cached(monkeypatch):
     monkeypatch.delenv("LITELLM_URL", raising=False)
-    config_mod._reset_settings()
     assert get_settings().litellm_url == ""
     # A new env value is invisible until the cache is dropped.
     monkeypatch.setenv("LITELLM_URL", "https://a.test")
     assert get_settings().litellm_url == ""
-    config_mod._reset_settings()
+    monkeypatch.setattr(config_mod, "_settings", None)
     assert get_settings().litellm_url == "https://a.test"

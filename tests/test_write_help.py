@@ -48,9 +48,3 @@ def test_update_organization_override_present_with_bullets():
     h = _help()
     assert "UpdateOrganization(organization_id: str" in h
     assert "organization_alias: Human-readable organization name." in h
-
-
-def test_unset_never_leaks_into_help():
-    h = _help()
-    assert "_Unset" not in h
-    assert "_UNSET" not in h

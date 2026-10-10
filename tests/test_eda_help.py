@@ -85,8 +85,3 @@ def test_search_matches_within_execute():
     assert "BlockKey(" not in h
 
 
-def test_unset_never_leaks_into_help():
-    for group in ("litellm_execute", "litellm_delete", "litellm_admin"):
-        h = _help(group)
-        assert "_Unset" not in h
-        assert "_UNSET" not in h

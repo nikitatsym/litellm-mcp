@@ -7,203 +7,203 @@ from typing import Annotated, Any, Literal, cast
 
 from pydantic import Field
 
-from ..registry import _UNSET, _op
+from ..registry import UNSET, op
 from .groups import litellm_admin
-from .helpers import _get_client
+from .helpers import get_client
 
 
-@_op(litellm_admin)
+@op(litellm_admin)
 def add_allowed_ip(
     ip: Annotated[str, Field(description='IPv4/IPv6 address or CIDR to allow.')],
 ) -> Any:
     """Add an IP to the proxy allow-list."""
     body: dict[str, Any] = {}
-    if ip is not _UNSET:
+    if ip is not UNSET:
         body["ip"] = ip
-    return _get_client().post("/add/allowed_ip", json=body)
+    return get_client().post("/add/allowed_ip", json=body)
 
 
-@_op(litellm_admin)
+@op(litellm_admin)
 def bulk_update_users(
-    users: Annotated[list[dict[str, Any]] | None, Field(description='Per-user update dicts to apply.')] = cast(list[dict[str, Any]] | None, _UNSET),
-    all_users: Annotated[bool | None, Field(description='true applies user_updates to every user (mass edit).')] = cast(bool | None, _UNSET),
-    user_updates: Annotated[dict[str, Any] | None, Field(description='Shared field patch applied when all_users is true.')] = cast(dict[str, Any] | None, _UNSET),
+    users: Annotated[list[dict[str, Any]] | None, Field(description='Per-user update dicts to apply.')] = cast(list[dict[str, Any]] | None, UNSET),
+    all_users: Annotated[bool | None, Field(description='true applies user_updates to every user (mass edit).')] = cast(bool | None, UNSET),
+    user_updates: Annotated[dict[str, Any] | None, Field(description='Shared field patch applied when all_users is true.')] = cast(dict[str, Any] | None, UNSET),
 ) -> Any:
     """Update many users in one sanctioned bulk call.
 
     Either target specific `users` or set all_users=true with a shared `user_updates` patch. Applies to every matched user at once.
     """
     body: dict[str, Any] = {}
-    if users is not _UNSET:
+    if users is not UNSET:
         body["users"] = users
-    if all_users is not _UNSET:
+    if all_users is not UNSET:
         body["all_users"] = all_users
-    if user_updates is not _UNSET:
+    if user_updates is not UNSET:
         body["user_updates"] = user_updates
-    return _get_client().post("/user/bulk_update", json=body)
+    return get_client().post("/user/bulk_update", json=body)
 
 
-@_op(litellm_admin)
+@op(litellm_admin)
 def delete_allowed_ip(
     ip: Annotated[str, Field(description='IPv4/IPv6 address or CIDR to remove.')],
 ) -> Any:
     """Remove an IP from the proxy allow-list."""
     body: dict[str, Any] = {}
-    if ip is not _UNSET:
+    if ip is not UNSET:
         body["ip"] = ip
-    return _get_client().post("/delete/allowed_ip", json=body)
+    return get_client().post("/delete/allowed_ip", json=body)
 
 
-@_op(litellm_admin)
+@op(litellm_admin)
 def global_spend_reset() -> Any:
     """Reset ALL global spend counters to zero.
 
     Irreversible and proxy-wide: zeroes the aggregated spend for every key, team, user, and model at once. Historical spend logs are not deleted, but the running totals cannot be restored.
     """
-    return _get_client().post("/global/spend/reset")
+    return get_client().post("/global/spend/reset")
 
 
-@_op(litellm_admin)
+@op(litellm_admin)
 def reset_email_event_settings() -> Any:
     """Reset email-event settings to defaults."""
-    return _get_client().post("/email/event_settings/reset")
+    return get_client().post("/email/event_settings/reset")
 
 
-@_op(litellm_admin)
+@op(litellm_admin)
 def update_cache_settings(
     cache_settings: Annotated[dict[str, Any], Field(description='Cache config as a dict (type, host, ttl, ...).')],
 ) -> Any:
     """Update the proxy cache configuration."""
     body: dict[str, Any] = {}
-    if cache_settings is not _UNSET:
+    if cache_settings is not UNSET:
         body["cache_settings"] = cache_settings
-    return _get_client().post("/cache/settings", json=body)
+    return get_client().post("/cache/settings", json=body)
 
 
-@_op(litellm_admin)
+@op(litellm_admin)
 def update_cost_discount_config(
     body: Annotated[dict[str, Any], Field(description='Cost-discount config as a dict; shape per LiteLLM docs.')],
 ) -> Any:
     """Set the global cost-discount config (discount applied to model costs)."""
-    return _get_client().patch("/config/cost_discount_config", json=body)
+    return get_client().patch("/config/cost_discount_config", json=body)
 
 
-@_op(litellm_admin)
+@op(litellm_admin)
 def update_cost_margin_config(
     body: Annotated[dict[str, Any], Field(description='Cost-margin config as a dict; shape per LiteLLM docs.')],
 ) -> Any:
     """Set the global cost-margin config (markup applied to model costs)."""
-    return _get_client().patch("/config/cost_margin_config", json=body)
+    return get_client().patch("/config/cost_margin_config", json=body)
 
 
-@_op(litellm_admin)
+@op(litellm_admin)
 def update_default_team_settings(
-    models: Annotated[list[str], Field(description='Default models new teams may access.')] = cast(list[str], _UNSET),
-    max_budget: Annotated[float | None, Field(description='Hard USD budget cap; use blocks once exceeded.')] = cast(float | None, _UNSET),
-    budget_duration: Annotated[str | None, Field(description="Budget reset window, e.g. '30d', '1mo'.")] = cast(str | None, _UNSET),
-    tpm_limit: int | None = cast(int | None, _UNSET),
-    rpm_limit: int | None = cast(int | None, _UNSET),
-    team_member_permissions: list[dict[str, Any]] | None = cast(list[dict[str, Any]] | None, _UNSET),
+    models: Annotated[list[str], Field(description='Default models new teams may access.')] = cast(list[str], UNSET),
+    max_budget: Annotated[float | None, Field(description='Hard USD budget cap; use blocks once exceeded.')] = cast(float | None, UNSET),
+    budget_duration: Annotated[str | None, Field(description="Budget reset window, e.g. '30d', '1mo'.")] = cast(str | None, UNSET),
+    tpm_limit: int | None = cast(int | None, UNSET),
+    rpm_limit: int | None = cast(int | None, UNSET),
+    team_member_permissions: list[dict[str, Any]] | None = cast(list[dict[str, Any]] | None, UNSET),
 ) -> Any:
     """Update the defaults applied to newly SSO-provisioned teams."""
     body: dict[str, Any] = {}
-    if models is not _UNSET:
+    if models is not UNSET:
         body["models"] = models
-    if max_budget is not _UNSET:
+    if max_budget is not UNSET:
         body["max_budget"] = max_budget
-    if budget_duration is not _UNSET:
+    if budget_duration is not UNSET:
         body["budget_duration"] = budget_duration
-    if tpm_limit is not _UNSET:
+    if tpm_limit is not UNSET:
         body["tpm_limit"] = tpm_limit
-    if rpm_limit is not _UNSET:
+    if rpm_limit is not UNSET:
         body["rpm_limit"] = rpm_limit
-    if team_member_permissions is not _UNSET:
+    if team_member_permissions is not UNSET:
         body["team_member_permissions"] = team_member_permissions
-    return _get_client().patch("/update/default_team_settings", json=body)
+    return get_client().patch("/update/default_team_settings", json=body)
 
 
-@_op(litellm_admin)
+@op(litellm_admin)
 def update_email_event_settings(
     settings: Annotated[list[dict[str, Any]], Field(description='Per-event on/off settings as a list of dicts.')],
 ) -> Any:
     """Configure which events trigger notification emails."""
     body: dict[str, Any] = {}
-    if settings is not _UNSET:
+    if settings is not UNSET:
         body["settings"] = settings
-    return _get_client().patch("/email/event_settings", json=body)
+    return get_client().patch("/email/event_settings", json=body)
 
 
-@_op(litellm_admin)
+@op(litellm_admin)
 def update_internal_user_settings(
-    user_role: Annotated[Literal['internal_user', 'internal_user_viewer', 'proxy_admin', 'proxy_admin_viewer'] | None, Field(description='Default proxy role for new users.')] = cast(Literal['internal_user', 'internal_user_viewer', 'proxy_admin', 'proxy_admin_viewer'] | None, _UNSET),
-    max_budget: Annotated[float | None, Field(description='Hard USD budget cap; use blocks once exceeded.')] = cast(float | None, _UNSET),
-    budget_duration: str | None = cast(str | None, _UNSET),
-    models: Annotated[list[str] | None, Field(description='Default models new users may access.')] = cast(list[str] | None, _UNSET),
-    teams: list[str] | list[dict[str, Any]] | None = cast(list[str] | list[dict[str, Any]] | None, _UNSET),
+    user_role: Annotated[Literal['internal_user', 'internal_user_viewer', 'proxy_admin', 'proxy_admin_viewer'] | None, Field(description='Default proxy role for new users.')] = cast(Literal['internal_user', 'internal_user_viewer', 'proxy_admin', 'proxy_admin_viewer'] | None, UNSET),
+    max_budget: Annotated[float | None, Field(description='Hard USD budget cap; use blocks once exceeded.')] = cast(float | None, UNSET),
+    budget_duration: str | None = cast(str | None, UNSET),
+    models: Annotated[list[str] | None, Field(description='Default models new users may access.')] = cast(list[str] | None, UNSET),
+    teams: list[str] | list[dict[str, Any]] | None = cast(list[str] | list[dict[str, Any]] | None, UNSET),
 ) -> Any:
     """Update the defaults applied to newly provisioned internal users."""
     body: dict[str, Any] = {}
-    if user_role is not _UNSET:
+    if user_role is not UNSET:
         body["user_role"] = user_role
-    if max_budget is not _UNSET:
+    if max_budget is not UNSET:
         body["max_budget"] = max_budget
-    if budget_duration is not _UNSET:
+    if budget_duration is not UNSET:
         body["budget_duration"] = budget_duration
-    if models is not _UNSET:
+    if models is not UNSET:
         body["models"] = models
-    if teams is not _UNSET:
+    if teams is not UNSET:
         body["teams"] = teams
-    return _get_client().patch("/update/internal_user_settings", json=body)
+    return get_client().patch("/update/internal_user_settings", json=body)
 
 
-@_op(litellm_admin)
+@op(litellm_admin)
 def update_sso_settings(
-    google_client_id: str | None = cast(str | None, _UNSET),
-    google_client_secret: str | None = cast(str | None, _UNSET),
-    microsoft_client_id: str | None = cast(str | None, _UNSET),
-    microsoft_client_secret: str | None = cast(str | None, _UNSET),
-    microsoft_tenant: str | None = cast(str | None, _UNSET),
-    generic_client_id: str | None = cast(str | None, _UNSET),
-    generic_client_secret: str | None = cast(str | None, _UNSET),
-    generic_authorization_endpoint: str | None = cast(str | None, _UNSET),
-    generic_token_endpoint: str | None = cast(str | None, _UNSET),
-    generic_userinfo_endpoint: str | None = cast(str | None, _UNSET),
-    proxy_base_url: str | None = cast(str | None, _UNSET),
-    user_email: str | None = cast(str | None, _UNSET),
-    ui_access_mode: Annotated[dict[str, Any] | str | None, Field(description='Who may reach the admin UI (mode name or a rule dict).')] = cast(dict[str, Any] | str | None, _UNSET),
-    role_mappings: Annotated[dict[str, Any] | None, Field(description='Map IdP groups/roles to proxy roles as a dict.')] = cast(dict[str, Any] | None, _UNSET),
-    team_mappings: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
+    google_client_id: str | None = cast(str | None, UNSET),
+    google_client_secret: str | None = cast(str | None, UNSET),
+    microsoft_client_id: str | None = cast(str | None, UNSET),
+    microsoft_client_secret: str | None = cast(str | None, UNSET),
+    microsoft_tenant: str | None = cast(str | None, UNSET),
+    generic_client_id: str | None = cast(str | None, UNSET),
+    generic_client_secret: str | None = cast(str | None, UNSET),
+    generic_authorization_endpoint: str | None = cast(str | None, UNSET),
+    generic_token_endpoint: str | None = cast(str | None, UNSET),
+    generic_userinfo_endpoint: str | None = cast(str | None, UNSET),
+    proxy_base_url: str | None = cast(str | None, UNSET),
+    user_email: str | None = cast(str | None, UNSET),
+    ui_access_mode: Annotated[dict[str, Any] | str | None, Field(description='Who may reach the admin UI (mode name or a rule dict).')] = cast(dict[str, Any] | str | None, UNSET),
+    role_mappings: Annotated[dict[str, Any] | None, Field(description='Map IdP groups/roles to proxy roles as a dict.')] = cast(dict[str, Any] | None, UNSET),
+    team_mappings: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
 ) -> Any:
     """Update proxy-wide SSO configuration."""
     body: dict[str, Any] = {}
-    if google_client_id is not _UNSET:
+    if google_client_id is not UNSET:
         body["google_client_id"] = google_client_id
-    if google_client_secret is not _UNSET:
+    if google_client_secret is not UNSET:
         body["google_client_secret"] = google_client_secret
-    if microsoft_client_id is not _UNSET:
+    if microsoft_client_id is not UNSET:
         body["microsoft_client_id"] = microsoft_client_id
-    if microsoft_client_secret is not _UNSET:
+    if microsoft_client_secret is not UNSET:
         body["microsoft_client_secret"] = microsoft_client_secret
-    if microsoft_tenant is not _UNSET:
+    if microsoft_tenant is not UNSET:
         body["microsoft_tenant"] = microsoft_tenant
-    if generic_client_id is not _UNSET:
+    if generic_client_id is not UNSET:
         body["generic_client_id"] = generic_client_id
-    if generic_client_secret is not _UNSET:
+    if generic_client_secret is not UNSET:
         body["generic_client_secret"] = generic_client_secret
-    if generic_authorization_endpoint is not _UNSET:
+    if generic_authorization_endpoint is not UNSET:
         body["generic_authorization_endpoint"] = generic_authorization_endpoint
-    if generic_token_endpoint is not _UNSET:
+    if generic_token_endpoint is not UNSET:
         body["generic_token_endpoint"] = generic_token_endpoint
-    if generic_userinfo_endpoint is not _UNSET:
+    if generic_userinfo_endpoint is not UNSET:
         body["generic_userinfo_endpoint"] = generic_userinfo_endpoint
-    if proxy_base_url is not _UNSET:
+    if proxy_base_url is not UNSET:
         body["proxy_base_url"] = proxy_base_url
-    if user_email is not _UNSET:
+    if user_email is not UNSET:
         body["user_email"] = user_email
-    if ui_access_mode is not _UNSET:
+    if ui_access_mode is not UNSET:
         body["ui_access_mode"] = ui_access_mode
-    if role_mappings is not _UNSET:
+    if role_mappings is not UNSET:
         body["role_mappings"] = role_mappings
-    if team_mappings is not _UNSET:
+    if team_mappings is not UNSET:
         body["team_mappings"] = team_mappings
-    return _get_client().patch("/update/sso_settings", json=body)
+    return get_client().patch("/update/sso_settings", json=body)

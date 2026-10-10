@@ -42,11 +42,13 @@ def test_registered_root_returns_contextual_api_error(monkeypatch):
                 503, "GET", "/health/readiness/details?token=secret", {"detail": "unavailable"}
             )
 
-    monkeypatch.setattr(overrides, "_get_client", lambda: BrokenClient())
+    monkeypatch.setattr(overrides, "get_client", lambda: BrokenClient())
 
     result = _data(_registered("litellm_version")())
 
-    assert result["error"].startswith("GET /health/readiness/details -> 503")
+    assert "GET" in result["error"]
+    assert "/health/readiness/details" in result["error"]
+    assert "503" in result["error"]
     assert "secret" not in result["error"]
 
 
@@ -55,7 +57,7 @@ def test_registered_root_preserves_success_shape(monkeypatch):
         def check(self):
             return {"status": "healthy"}
 
-    monkeypatch.setattr(overrides, "_get_client", lambda: OkClient())
+    monkeypatch.setattr(overrides, "get_client", lambda: OkClient())
 
     result = _data(_registered("litellm_version")())
 

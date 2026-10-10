@@ -214,9 +214,9 @@ def emit_op_source(spec: dict[str, Any], op: Op) -> tuple[str, set[str]]:
     _validate_hook(op.name, slim, ver)
     slim_active = bool(slim) and "no_slim" not in slim
     ver_active = bool(ver) and "no_verify" not in ver
-    used: set[str] = {"Any", "_op", "_get_client", GROUP_VARS[op.group]}
+    used: set[str] = {"Any", "op", "get_client", GROUP_VARS[op.group]}
 
-    # signature: required params first, then optional (_UNSET default).
+    # signature: required params first, then optional (UNSET default).
     def render(p: Param) -> str:
         ts = _apply_type_override(op.name, p, ann)
         if "Literal[" in ts:
@@ -226,7 +226,7 @@ def emit_op_source(spec: dict[str, Any], op: Op) -> tuple[str, set[str]]:
     def annotate(name: str, ts: str) -> str:
         """Wrap the type in Annotated[..., Field(description=...)] when the op
         carries a description for this param; the caller sees it in help and
-        schema, the runtime default stays `_UNSET`."""
+        schema, the runtime default stays `UNSET`."""
         desc = param_descs.get(name)
         if not desc:
             return ts
@@ -241,8 +241,8 @@ def emit_op_source(spec: dict[str, Any], op: Op) -> tuple[str, set[str]]:
         if p.required:
             sig_lines.append(f"    {p.name}: {ann_ts},")
         else:
-            used.update({"cast", "_UNSET"})
-            sig_lines.append(f"    {p.name}: {ann_ts} = cast({ts}, _UNSET),")
+            used.update({"cast", "UNSET"})
+            sig_lines.append(f"    {p.name}: {ann_ts} = cast({ts}, UNSET),")
 
     # Slimmed list ops get a caller-facing `limit` (default 20) that caps the
     # returned page client-side, on top of any spec pagination params.
@@ -254,7 +254,7 @@ def emit_op_source(spec: dict[str, Any], op: Op) -> tuple[str, set[str]]:
             f"    limit: Annotated[int, Field(description={_LIMIT_DESC!r})] = {slim.get('limit', 20)},"
         )
 
-    lines: list[str] = [f"@_op({GROUP_VARS[op.group]})"]
+    lines: list[str] = [f"@op({GROUP_VARS[op.group]})"]
     if sig_lines:
         lines.append(f"def {op.name}(")
         lines.extend(sig_lines)
@@ -276,16 +276,12 @@ def emit_op_source(spec: dict[str, Any], op: Op) -> tuple[str, set[str]]:
     query_params = [p for p in params if p.kind == "query"]
     opaque = next((p for p in params if p.kind == "opaque"), None)
 
-    # `skip`/`subset` verify emit `_verify_response(body, ...)`, so those forms
-    # require a named request body; a bodyless (or opaque-body) op carrying one is
-    # a data error. `no_verify` emits nothing and `present` checks response keys
-    # only (no body local), so both are allowed on bodyless ops - the Step-7
-    # status-envelope and block/unblock cases need exactly that.
+    # skip/subset verification needs a request body; present/no_verify also support bodyless operations.
     references_body = ver_active and ("skip" in ver or "subset" in ver)
     if references_body and not body_params:
         raise GenError(
             f"{op.name}: has a body-referencing verify entry (skip/subset) but "
-            "emits no request body (the _verify_response call would reference an "
+            "emits no request body (the verify_response call would reference an "
             "absent body local)"
         )
     if ver_active and "subset" in ver:
@@ -298,20 +294,20 @@ def emit_op_source(spec: dict[str, Any], op: Op) -> tuple[str, set[str]]:
     if body_params:
         body_stmts.append("    body: dict[str, Any] = {}")
         for p in body_params:
-            body_stmts.append(f"    if {p.name} is not _UNSET:")
+            body_stmts.append(f"    if {p.name} is not UNSET:")
             body_stmts.append(f'        body["{p.name}"] = {p.name}')
 
     url = f'f"{op.path}"' if "{" in op.path else f'"{op.path}"'
     call_args: list[str] = []
     if query_params:
-        used.add("_qp")
+        used.add("query_params")
         kw = ", ".join(f"{p.name}={p.name}" for p in query_params)
-        call_args.append(f"params=_qp({kw})")
+        call_args.append(f"params=query_params({kw})")
     if body_params or opaque is not None:
         call_args.append("json=body")
 
     verb = _VERB[op.method]
-    call = f"_get_client().{verb}({url}"
+    call = f"get_client().{verb}({url}"
     if call_args:
         call += ", " + ", ".join(call_args)
     call += ")"
@@ -329,7 +325,7 @@ def emit_op_source(spec: dict[str, Any], op: Op) -> tuple[str, set[str]]:
                 # transport fields).
                 keys = ", ".join(repr(f) for f in ver["subset"])
                 lines.append(
-                    f"    _verify_response({{k: body[k] for k in ({keys},) if k in body}}, result)"
+                    f"    verify_response({{k: body[k] for k in ({keys},) if k in body}}, result)"
                 )
             elif "present" in ver:
                 # Presence form: assert the typed response echoes these keys
@@ -337,23 +333,30 @@ def emit_op_source(spec: dict[str, Any], op: Op) -> tuple[str, set[str]]:
                 # or a result field, not the addressing key we posted).
                 keys = ", ".join(repr(f) for f in ver["present"])
                 lines.append(
-                    f"    _verify_response({{k: None for k in ({keys},)}}, result)"
+                    f"    verify_response({{k: None for k in ({keys},)}}, result)"
                 )
             else:
                 skip = sorted(set(ROOT_SKIP) | set(ver.get("skip", [])))
                 skip_lit = (
                     "frozenset({" + ", ".join(repr(s) for s in skip) + "})" if skip else "frozenset()"
                 )
-                lines.append(f"    _verify_response(body, result, {skip_lit})")
-            used.add("_verify_response")
+                lines.append(f"    verify_response(body, result, {skip_lit})")
+            used.add("verify_response")
         if slim_active:
             fields = ", ".join(repr(f) for f in slim["fields"])
             container = slim.get("container")
             tail = f", {container!r}" if container else ""
-            lines.append(f"    return _slim_list(result, {{{fields}}}, limit{tail})")
-            used.add("_slim_list")
+            lines.append(f"    return slim_list(result, {{{fields}}}, limit{tail})")
+            used.add("slim_list")
         else:
             lines.append("    return result")
+
+    reserved = used | {"result"}
+    if opaque is None:
+        reserved.add("body")
+    collisions = sorted(p.name for p in params if p.name in reserved)
+    if collisions:
+        raise GenError(f"{op.name}: parameters shadow emitted symbols: {collisions}")
 
     return "\n".join(lines), used
 
@@ -453,9 +456,9 @@ def _validate_keys() -> None:
 def _module_header(module: str, ops_used: set[str]) -> str:
     typing_syms = [s for s in ("Annotated", "Any", "Literal", "cast") if s in ops_used]
     groups = sorted(s for s in ops_used if s.startswith("litellm_"))
-    helpers = [s for s in ("_get_client", "_qp", "_slim_list", "_verify_response")
+    helpers = [s for s in ("get_client", "query_params", "slim_list", "verify_response")
                if s in ops_used]
-    registry = [s for s in ("_UNSET", "_op") if s in ops_used]
+    registry = [s for s in ("UNSET", "op") if s in ops_used]
 
     out = [
         "# Generated by codegen/generate.py from openapi-v1.93.0.json. Do not edit.",
@@ -510,10 +513,10 @@ def main() -> None:
     spec = load_spec()
     files = emit_tree(spec)
     write_tree(files, _TOOLS_DIR)
-    total = sum(len(f.split("\n@_op(")) - 1 for f in files.values())
+    total = sum(len(f.split("\n@op(")) - 1 for f in files.values())
     print(f"generated {len(files)} modules, {total} ops -> {_TOOLS_DIR}")
     for filename in sorted(files):
-        count = len(files[filename].split("\n@_op(")) - 1
+        count = len(files[filename].split("\n@op(")) - 1
         print(f"  {filename}: {count} ops")
     print(f"overrides not emitted (hand-written in tools/overrides.py): {sorted(OVERRIDES)}")
 

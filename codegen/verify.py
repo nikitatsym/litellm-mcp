@@ -60,7 +60,7 @@ _DEL_MSG = (
     "live: returns a {message} confirmation string, not a row echoing the sent id."
 )
 _DEL_COUNT = (
-    "live: returns a bare integer count of deleted rows; _verify_response no-ops "
+    "live: returns a bare integer count of deleted rows; verify_response no-ops "
     "on a non-dict response."
 )
 
@@ -79,7 +79,7 @@ _OPAQUE_BODY = (
     "response; nothing named to echo-check."
 )
 _LIST_RESP = (
-    "returns a list of deleted rows; _verify_response no-ops on a non-dict "
+    "returns a list of deleted rows; verify_response no-ops on a non-dict "
     "(list) response, so there is nothing to check."
 )
 _SECRET_ONLY = (

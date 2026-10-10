@@ -1,11 +1,8 @@
-"""Hand-written ops, outside the generated inventory.
+"""Hand-written operations, including the ROOT version operation.
 
-ROOT `litellm_version` plus the ops listed in `codegen/overrides.py` that need
-bespoke logic the emitter cannot express. Every non-ROOT op here MUST be listed
-in `codegen/overrides.py` (else the generator would also emit it - the reverse
-dedupe gate catches that). Overrides follow the same rules generated ops get:
-`_UNSET` semantics, `Annotated[..., Field(description=...)]`, slims where they
-apply. The write/execute/eval overrides land in Steps 6-8.
+See codegen/overrides.py for the non-ROOT inventory and generator constraints.
+Overrides use the same parameter, response projection, and verification
+contracts as generated operations.
 """
 
 from __future__ import annotations
@@ -17,9 +14,9 @@ from typing import Annotated, Any, cast
 
 from pydantic import Field
 
-from ..registry import _UNSET, ROOT, _op
+from ..registry import ROOT, UNSET, op
 from .groups import litellm_execute, litellm_read, litellm_write
-from .helpers import _get_client, _qp, _verify_response
+from .helpers import get_client, query_params, verify_response
 
 # Shared execute-output caps: accumulated SSE text (test_prompt) / any single
 # string in a bounded A2A result (invoke_agent); kept A2A Task history entries;
@@ -29,7 +26,7 @@ _EXEC_HISTORY_KEEP = 5
 _EXEC_RESULT_CAP = 100_000
 
 
-@_op(ROOT)
+@op(ROOT)
 def litellm_version() -> dict[str, Any]:
     """Get the MCP server version and the LiteLLM service readiness.
 
@@ -41,11 +38,11 @@ def litellm_version() -> dict[str, Any]:
     """
     return {
         "mcp": importlib.metadata.version("litellm-mcp"),
-        "service": _get_client().check(),
+        "service": get_client().check(),
     }
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def key_health(
     key: Annotated[
         str, Field(description="Virtual key to probe; sent as the bearer for this one call.")
@@ -57,17 +54,17 @@ def key_health(
     given key is sent as the Authorization bearer for this one call only; every
     other call still uses the server-configured admin key.
     """
-    return _get_client().post("/key/health", auth=key)
+    return get_client().post("/key/health", auth=key)
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def health(
     model: Annotated[
         str | None, Field(description="Probe only this public model name; omit to probe all.")
-    ] = cast(str | None, _UNSET),
+    ] = cast(str | None, UNSET),
     model_id: Annotated[
         str | None, Field(description="Probe only this deployment ID.")
-    ] = cast(str | None, _UNSET),
+    ] = cast(str | None, UNSET),
     timeout: Annotated[
         float,
         Field(description="Per-call HTTP timeout in seconds; the probe reaches every deployment and can be slow."),
@@ -78,17 +75,17 @@ def health(
     This is the one slow management call (it reaches out to every deployment),
     so `timeout` defaults to 120s and is routed to httpx for this call only.
     """
-    return _get_client().get(
-        "/health", params=_qp(model=model, model_id=model_id), timeout=timeout
+    return get_client().get(
+        "/health", params=query_params(model=model, model_id=model_id), timeout=timeout
     )
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def model_cost_map(
     filter: Annotated[
         str | None,
         Field(description="Case-insensitive substring; keep only model names containing it."),
-    ] = cast(str | None, _UNSET),
+    ] = cast(str | None, UNSET),
     limit: Annotated[
         int, Field(description="Max models returned after filtering.")
     ] = 20,
@@ -99,7 +96,7 @@ def model_cost_map(
     truncated slice keyed by model name, with counts so the caller cannot miss
     that data was cut. Pass `filter` to narrow by model-name substring.
     """
-    cost_map = _get_client().get("/public/litellm_model_cost_map")
+    cost_map = get_client().get("/public/litellm_model_cost_map")
     if filter:
         needle = filter.lower()
         cost_map = {k: v for k, v in cost_map.items() if needle in k.lower()}
@@ -113,39 +110,39 @@ def model_cost_map(
     }
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def update_organization(
     organization_id: Annotated[
         str, Field(description="ID of the organization to update (addressing field).")
     ],
     organization_alias: Annotated[
         str | None, Field(description="Human-readable organization name.")
-    ] = cast(str | None, _UNSET),
+    ] = cast(str | None, UNSET),
     budget_id: Annotated[
         str | None, Field(description="ID of the budget object governing this org.")
-    ] = cast(str | None, _UNSET),
-    metadata: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
+    ] = cast(str | None, UNSET),
+    metadata: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
     models: Annotated[
         list[str] | None, Field(description="Model names this org may access.")
-    ] = cast(list[str] | None, _UNSET),
+    ] = cast(list[str] | None, UNSET),
     max_budget: Annotated[
         float | None, Field(description="Hard USD budget cap for the org.")
-    ] = cast(float | None, _UNSET),
+    ] = cast(float | None, UNSET),
     soft_budget: Annotated[
         float | None, Field(description="USD spend that triggers an alert (no block).")
-    ] = cast(float | None, _UNSET),
+    ] = cast(float | None, UNSET),
     tpm_limit: Annotated[
         int | None, Field(description="Org-wide tokens-per-minute cap.")
-    ] = cast(int | None, _UNSET),
+    ] = cast(int | None, UNSET),
     rpm_limit: Annotated[
         int | None, Field(description="Org-wide requests-per-minute cap.")
-    ] = cast(int | None, _UNSET),
-    max_parallel_requests: int | None = cast(int | None, _UNSET),
+    ] = cast(int | None, UNSET),
+    max_parallel_requests: int | None = cast(int | None, UNSET),
     budget_duration: Annotated[
         str | None, Field(description="Budget reset window, e.g. '30d', '1mo'.")
-    ] = cast(str | None, _UNSET),
-    model_max_budget: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    updated_by: str | None = cast(str | None, _UNSET),
+    ] = cast(str | None, UNSET),
+    model_max_budget: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    updated_by: str | None = cast(str | None, UNSET),
 ) -> Any:
     """Update an existing organization's settings.
 
@@ -155,43 +152,43 @@ def update_organization(
     and is required. Field names verified live in Step 9.
     """
     body: dict[str, Any] = {}
-    if organization_id is not _UNSET:
+    if organization_id is not UNSET:
         body["organization_id"] = organization_id
-    if organization_alias is not _UNSET:
+    if organization_alias is not UNSET:
         body["organization_alias"] = organization_alias
-    if budget_id is not _UNSET:
+    if budget_id is not UNSET:
         body["budget_id"] = budget_id
-    if metadata is not _UNSET:
+    if metadata is not UNSET:
         body["metadata"] = metadata
-    if models is not _UNSET:
+    if models is not UNSET:
         body["models"] = models
-    if max_budget is not _UNSET:
+    if max_budget is not UNSET:
         body["max_budget"] = max_budget
-    if soft_budget is not _UNSET:
+    if soft_budget is not UNSET:
         body["soft_budget"] = soft_budget
-    if tpm_limit is not _UNSET:
+    if tpm_limit is not UNSET:
         body["tpm_limit"] = tpm_limit
-    if rpm_limit is not _UNSET:
+    if rpm_limit is not UNSET:
         body["rpm_limit"] = rpm_limit
-    if max_parallel_requests is not _UNSET:
+    if max_parallel_requests is not UNSET:
         body["max_parallel_requests"] = max_parallel_requests
-    if budget_duration is not _UNSET:
+    if budget_duration is not UNSET:
         body["budget_duration"] = budget_duration
-    if model_max_budget is not _UNSET:
+    if model_max_budget is not UNSET:
         body["model_max_budget"] = model_max_budget
-    if updated_by is not _UNSET:
+    if updated_by is not UNSET:
         body["updated_by"] = updated_by
-    result = _get_client().patch("/organization/update", json=body)
+    result = get_client().patch("/organization/update", json=body)
     # LiteLLM_OrganizationTableWithMembers echoes these row fields; budget/limit
     # knobs land in the budget table, so verify only the org-row scalars/list.
-    _verify_response(
+    verify_response(
         {k: body[k] for k in ("organization_id", "organization_alias", "models") if k in body},
         result,
     )
     return result
 
 
-@_op(litellm_execute)
+@op(litellm_execute)
 def cache_delete(
     keys: Annotated[
         list[str],
@@ -211,7 +208,7 @@ def cache_delete(
     """
     if not keys:
         raise ValueError("cache_delete requires a non-empty 'keys' list")
-    return _get_client().post("/cache/delete", json={"keys": keys})
+    return get_client().post("/cache/delete", json={"keys": keys})
 
 
 # --- eval writes (spec-gap: endpoints carry no requestBody in the snapshot) ---
@@ -223,12 +220,12 @@ def cache_delete(
 # `_post_eval` (extracting it keeps the three bodies DUP-free).
 
 def _post_eval(path: str, body: dict[str, Any]) -> Any:
-    result = _get_client().post(path, json=body)
-    _verify_response({k: body[k] for k in ("name",) if k in body}, result)
+    result = get_client().post(path, json=body)
+    verify_response({k: body[k] for k in ("name",) if k in body}, result)
     return result
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def create_eval(
     data_source_config: Annotated[
         dict[str, Any],
@@ -239,9 +236,9 @@ def create_eval(
         Field(description="Graders that score each sample (OpenAI testing_criteria)."),
     ],
     name: Annotated[str | None, Field(description="Human-readable eval name.")] = cast(
-        str | None, _UNSET
+        str | None, UNSET
     ),
-    metadata: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
+    metadata: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
 ) -> Any:
     """Create an eval (OpenAI-Evals-compatible).
 
@@ -252,22 +249,22 @@ def create_eval(
     just a definition - it consumes no inference until you start a run.
     """
     body: dict[str, Any] = {}
-    if data_source_config is not _UNSET:
+    if data_source_config is not UNSET:
         body["data_source_config"] = data_source_config
-    if testing_criteria is not _UNSET:
+    if testing_criteria is not UNSET:
         body["testing_criteria"] = testing_criteria
-    if name is not _UNSET:
+    if name is not UNSET:
         body["name"] = name
-    if metadata is not _UNSET:
+    if metadata is not UNSET:
         body["metadata"] = metadata
     return _post_eval("/v1/evals", body)
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def update_eval(
     eval_id: Annotated[str, Field(description="ID of the eval to update.")],
-    name: Annotated[str | None, Field(description="New eval name.")] = cast(str | None, _UNSET),
-    metadata: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
+    name: Annotated[str | None, Field(description="New eval name.")] = cast(str | None, UNSET),
+    metadata: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
 ) -> Any:
     """Update an eval's name or metadata (partial update).
 
@@ -277,14 +274,14 @@ def update_eval(
     you pass are changed.
     """
     body: dict[str, Any] = {}
-    if name is not _UNSET:
+    if name is not UNSET:
         body["name"] = name
-    if metadata is not _UNSET:
+    if metadata is not UNSET:
         body["metadata"] = metadata
     return _post_eval(f"/v1/evals/{eval_id}", body)
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def create_eval_run(
     eval_id: Annotated[str, Field(description="ID of the eval to run.")],
     data_source: Annotated[
@@ -292,9 +289,9 @@ def create_eval_run(
         Field(description="Where the run pulls samples from (OpenAI data_source)."),
     ],
     name: Annotated[str | None, Field(description="Human-readable run name.")] = cast(
-        str | None, _UNSET
+        str | None, UNSET
     ),
-    metadata: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
+    metadata: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
 ) -> Any:
     """Start an eval run - THIS CONSUMES MODEL INFERENCE (real cost).
 
@@ -305,16 +302,16 @@ def create_eval_run(
     sample - it bills real tokens and can be slow. Use get_eval_run to poll status.
     """
     body: dict[str, Any] = {}
-    if data_source is not _UNSET:
+    if data_source is not UNSET:
         body["data_source"] = data_source
-    if name is not _UNSET:
+    if name is not UNSET:
         body["name"] = name
-    if metadata is not _UNSET:
+    if metadata is not UNSET:
         body["metadata"] = metadata
     return _post_eval(f"/v1/evals/{eval_id}/runs", body)
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def update_prompt(
     prompt_id: Annotated[
         str,
@@ -337,7 +334,7 @@ def update_prompt(
             description="Prompt metadata (PromptInfo) as a dict; its 'environment' "
             "selects the new version's environment (default 'development')."
         ),
-    ] = cast(dict[str, Any] | None, _UNSET),
+    ] = cast(dict[str, Any] | None, UNSET),
 ) -> Any:
     """Update a prompt: PUT creates a NEW version (not an in-place edit).
 
@@ -351,16 +348,16 @@ def update_prompt(
     'development'). This is the version arrow of the prompt loop.
     """
     body: dict[str, Any] = {"prompt_id": prompt_id, "litellm_params": litellm_params}
-    if prompt_info is not _UNSET:
+    if prompt_info is not UNSET:
         body["prompt_info"] = prompt_info
-    result = _get_client().put(f"/prompts/{prompt_id}", json=body)
+    result = get_client().put(f"/prompts/{prompt_id}", json=body)
     # live (Step 4): PUT echoes the new version's stored row with prompt_id at root
     # (suffixed with the version); presence-only, so the suffix is irrelevant.
-    _verify_response({"prompt_id": prompt_id}, result)
+    verify_response({"prompt_id": prompt_id}, result)
     return result
 
 
-@_op(litellm_execute)
+@op(litellm_execute)
 def test_prompt(
     dotprompt_content: Annotated[
         str,
@@ -373,11 +370,11 @@ def test_prompt(
     prompt_variables: Annotated[
         dict[str, Any] | None,
         Field(description="Values substituted into the dotprompt template placeholders."),
-    ] = cast(dict[str, Any] | None, _UNSET),
+    ] = cast(dict[str, Any] | None, UNSET),
     conversation_history: Annotated[
         list[dict[str, str]] | None,
         Field(description="Prior chat turns (each a {role, content} dict) prepended before the rendered prompt."),
-    ] = cast(list[dict[str, str]] | None, _UNSET),
+    ] = cast(list[dict[str, str]] | None, UNSET),
 ) -> dict[str, Any]:
     """Render a dotprompt and RUN it through the model - THIS SPENDS INFERENCE.
 
@@ -391,9 +388,9 @@ def test_prompt(
     a silent empty answer).
     """
     body: dict[str, Any] = {"dotprompt_content": dotprompt_content}
-    if prompt_variables is not _UNSET:
+    if prompt_variables is not UNSET:
         body["prompt_variables"] = prompt_variables
-    if conversation_history is not _UNSET:
+    if conversation_history is not UNSET:
         body["conversation_history"] = conversation_history
 
     model: str | None = None
@@ -403,7 +400,7 @@ def test_prompt(
     usage: dict[str, Any] | None = None
     truncated = False
 
-    with _get_client().post_sse("/prompts/test", json=body) as events:
+    with get_client().post_sse("/prompts/test", json=body) as events:
         for event in events:
             if "error" in event:
                 raise ValueError(
@@ -514,13 +511,13 @@ def _a2a_result_stub(result: Any) -> dict[str, Any]:
     }
 
 
-@_op(litellm_execute)
+@op(litellm_execute)
 def invoke_agent(
     agent_id: Annotated[str, Field(description="Registered agent id to send the message to.")],
     text: Annotated[
         str | None,
         Field(description="Convenience: a plain user-text turn. Mutually exclusive with 'message'."),
-    ] = cast(str | None, _UNSET),
+    ] = cast(str | None, UNSET),
     message: Annotated[
         dict[str, Any] | None,
         Field(
@@ -528,14 +525,14 @@ def invoke_agent(
             "text/file/data, contextId/taskId for session continuity). Mutually "
             "exclusive with 'text'."
         ),
-    ] = cast(dict[str, Any] | None, _UNSET),
+    ] = cast(dict[str, Any] | None, UNSET),
     configuration: Annotated[
         dict[str, Any] | None,
         Field(description="A2A MessageSendConfiguration dict; blocking is forced true (see below)."),
-    ] = cast(dict[str, Any] | None, _UNSET),
+    ] = cast(dict[str, Any] | None, UNSET),
     metadata: Annotated[
         dict[str, Any] | None, Field(description="Arbitrary JSON-RPC params metadata, forwarded verbatim.")
-    ] = cast(dict[str, Any] | None, _UNSET),
+    ] = cast(dict[str, Any] | None, UNSET),
     guardrails: Annotated[
         list[str] | None,
         Field(
@@ -545,7 +542,7 @@ def invoke_agent(
             "SILENTLY SKIPPED on this path (no error, unlike apply_guardrail's 404) - "
             "check a name with list_guardrails or apply_guardrail first."
         ),
-    ] = cast(list[str] | None, _UNSET),
+    ] = cast(list[str] | None, UNSET),
     message_id: Annotated[
         str | None,
         Field(
@@ -553,7 +550,7 @@ def invoke_agent(
             "with a uuid4 if omitted). Rejected with 'message': put the messageId "
             "inside the message dict there."
         ),
-    ] = cast(str | None, _UNSET),
+    ] = cast(str | None, UNSET),
     timeout: Annotated[
         float,
         Field(description="Per-call HTTP timeout in seconds; the agent behind the proxy may run its own LLM chain."),
@@ -576,18 +573,18 @@ def invoke_agent(
     a name matching no initialized guardrail is silently skipped here (unlike
     apply_guardrail, which 404s) - verify names with list_guardrails first.
     """
-    has_text = text is not _UNSET
-    has_message = message is not _UNSET
+    has_text = text is not UNSET
+    has_message = message is not UNSET
     if has_text == has_message:
         raise ValueError("invoke_agent requires exactly one of 'text' or 'message'")
-    if has_message and message_id is not _UNSET:
+    if has_message and message_id is not UNSET:
         raise ValueError(
             "invoke_agent: message_id is text-form only; with the full 'message' form "
             "put the messageId inside the message dict"
         )
 
     config: dict[str, Any] = {}
-    if configuration is not _UNSET and configuration is not None:
+    if configuration is not UNSET and configuration is not None:
         config = dict(configuration)
     if config.get("blocking") is False:
         raise ValueError(
@@ -597,7 +594,7 @@ def invoke_agent(
     config["blocking"] = True
 
     if has_text:
-        mid = message_id if message_id is not _UNSET else str(uuid.uuid4())
+        mid = message_id if message_id is not UNSET else str(uuid.uuid4())
         message_value: Any = {
             "role": "user",
             "parts": [{"kind": "text", "text": text}],
@@ -607,9 +604,9 @@ def invoke_agent(
         message_value = message
 
     params: dict[str, Any] = {"message": message_value, "configuration": config}
-    if metadata is not _UNSET:
+    if metadata is not UNSET:
         params["metadata"] = metadata
-    if guardrails is not _UNSET:
+    if guardrails is not UNSET:
         params["guardrails"] = guardrails
 
     envelope = {
@@ -618,7 +615,7 @@ def invoke_agent(
         "method": "message/send",
         "params": params,
     }
-    response = _get_client().post(
+    response = get_client().post(
         f"/v1/a2a/{agent_id}/message/send", json=envelope, timeout=timeout
     )
 
@@ -640,7 +637,7 @@ def invoke_agent(
     return {"result": bounded, "truncated": truncated}
 
 
-@_op(litellm_execute)
+@op(litellm_execute)
 def apply_guardrail(
     guardrail_name: Annotated[
         str,
@@ -660,7 +657,7 @@ def apply_guardrail(
     messages: Annotated[
         list[dict[str, Any]] | None,
         Field(description="Optional chat context (role/content dicts) some guardrail types inspect."),
-    ] = cast(list[dict[str, Any]] | None, _UNSET),
+    ] = cast(list[dict[str, Any]] | None, UNSET),
 ) -> Any:
     """Run a named guardrail over text and return the processed result - MAY SPEND MONEY.
 
@@ -679,6 +676,6 @@ def apply_guardrail(
         "text": text,
         "input_type": input_type,
     }
-    if messages is not _UNSET:
+    if messages is not UNSET:
         body["messages"] = messages
-    return _get_client().post("/guardrails/apply_guardrail", json=body)
+    return get_client().post("/guardrails/apply_guardrail", json=body)

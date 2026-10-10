@@ -7,12 +7,12 @@ from typing import Annotated, Any, Literal, cast
 
 from pydantic import Field
 
-from ..registry import _UNSET, _op
+from ..registry import UNSET, op
 from .groups import litellm_write
-from .helpers import _get_client, _verify_response
+from .helpers import get_client, verify_response
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def add_model(
     model_name: Annotated[str, Field(description="Public model name callers request (e.g. 'gpt-4o').")],
     litellm_params: Annotated[dict[str, Any], Field(description="Provider call config as a dict, e.g. {'model': 'openai/gpt-4o', 'api_key': 'os.environ/OPENAI_API_KEY'}. Keys are provider-specific (genuinely dynamic), so this stays an opaque dict - see LiteLLM docs.")],
@@ -20,1119 +20,1119 @@ def add_model(
 ) -> Any:
     """Register a new model deployment on the proxy."""
     body: dict[str, Any] = {}
-    if model_name is not _UNSET:
+    if model_name is not UNSET:
         body["model_name"] = model_name
-    if litellm_params is not _UNSET:
+    if litellm_params is not UNSET:
         body["litellm_params"] = litellm_params
-    if model_info is not _UNSET:
+    if model_info is not UNSET:
         body["model_info"] = model_info
-    result = _get_client().post("/model/new", json=body)
-    _verify_response({k: body[k] for k in ('model_name',) if k in body}, result)
+    result = get_client().post("/model/new", json=body)
+    verify_response({k: body[k] for k in ('model_name',) if k in body}, result)
     return result
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def add_team_callback(
     team_id: Annotated[str, Field(description='Team to attach the callback to.')],
     callback_name: Annotated[str, Field(description="Callback integration name, e.g. 'langfuse', 'slack'.")],
     callback_vars: Annotated[dict[str, Any], Field(description='Callback config as a dict (endpoints, keys, ...).')],
-    callback_type: Annotated[Literal['success', 'failure', 'success_and_failure'] | None, Field(description='When the callback fires.')] = cast(Literal['success', 'failure', 'success_and_failure'] | None, _UNSET),
+    callback_type: Annotated[Literal['success', 'failure', 'success_and_failure'] | None, Field(description='When the callback fires.')] = cast(Literal['success', 'failure', 'success_and_failure'] | None, UNSET),
 ) -> Any:
     """Register a logging/alerting callback on a team."""
     body: dict[str, Any] = {}
-    if callback_name is not _UNSET:
+    if callback_name is not UNSET:
         body["callback_name"] = callback_name
-    if callback_type is not _UNSET:
+    if callback_type is not UNSET:
         body["callback_type"] = callback_type
-    if callback_vars is not _UNSET:
+    if callback_vars is not UNSET:
         body["callback_vars"] = callback_vars
-    return _get_client().post(f"/team/{team_id}/callback", json=body)
+    return get_client().post(f"/team/{team_id}/callback", json=body)
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def create_access_group(
     access_group_name: Annotated[str, Field(description='Unique name for the access group.')],
-    access_agent_ids: list[str] | None = cast(list[str] | None, _UNSET),
-    access_mcp_server_ids: Annotated[list[str] | None, Field(description='MCP server IDs the group grants.')] = cast(list[str] | None, _UNSET),
-    access_model_names: Annotated[list[str] | None, Field(description='Model names the group grants.')] = cast(list[str] | None, _UNSET),
-    assigned_key_ids: list[str] | None = cast(list[str] | None, _UNSET),
-    assigned_team_ids: Annotated[list[str] | None, Field(description='Teams the group is assigned to.')] = cast(list[str] | None, _UNSET),
-    description: str | None = cast(str | None, _UNSET),
+    access_agent_ids: list[str] | None = cast(list[str] | None, UNSET),
+    access_mcp_server_ids: Annotated[list[str] | None, Field(description='MCP server IDs the group grants.')] = cast(list[str] | None, UNSET),
+    access_model_names: Annotated[list[str] | None, Field(description='Model names the group grants.')] = cast(list[str] | None, UNSET),
+    assigned_key_ids: list[str] | None = cast(list[str] | None, UNSET),
+    assigned_team_ids: Annotated[list[str] | None, Field(description='Teams the group is assigned to.')] = cast(list[str] | None, UNSET),
+    description: str | None = cast(str | None, UNSET),
 ) -> Any:
     """Create a unified access group (gates models and MCP servers)."""
     body: dict[str, Any] = {}
-    if access_agent_ids is not _UNSET:
+    if access_agent_ids is not UNSET:
         body["access_agent_ids"] = access_agent_ids
-    if access_group_name is not _UNSET:
+    if access_group_name is not UNSET:
         body["access_group_name"] = access_group_name
-    if access_mcp_server_ids is not _UNSET:
+    if access_mcp_server_ids is not UNSET:
         body["access_mcp_server_ids"] = access_mcp_server_ids
-    if access_model_names is not _UNSET:
+    if access_model_names is not UNSET:
         body["access_model_names"] = access_model_names
-    if assigned_key_ids is not _UNSET:
+    if assigned_key_ids is not UNSET:
         body["assigned_key_ids"] = assigned_key_ids
-    if assigned_team_ids is not _UNSET:
+    if assigned_team_ids is not UNSET:
         body["assigned_team_ids"] = assigned_team_ids
-    if description is not _UNSET:
+    if description is not UNSET:
         body["description"] = description
-    result = _get_client().post("/v1/access_group", json=body)
-    _verify_response({k: body[k] for k in ('access_group_name', 'access_mcp_server_ids', 'access_model_names',) if k in body}, result)
+    result = get_client().post("/v1/access_group", json=body)
+    verify_response({k: body[k] for k in ('access_group_name', 'access_mcp_server_ids', 'access_model_names',) if k in body}, result)
     return result
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def create_credential(
     credential_name: Annotated[str, Field(description='Unique name to reference the credential by.')],
     credential_info: Annotated[dict[str, Any], Field(description='Non-secret descriptive metadata as a dict.')],
-    credential_values: Annotated[dict[str, Any] | None, Field(description='Secret key/value pairs (write-only) as a dict.')] = cast(dict[str, Any] | None, _UNSET),
-    model_id: Annotated[str | None, Field(description='Bind the credential to a specific model deployment.')] = cast(str | None, _UNSET),
+    credential_values: Annotated[dict[str, Any] | None, Field(description='Secret key/value pairs (write-only) as a dict.')] = cast(dict[str, Any] | None, UNSET),
+    model_id: Annotated[str | None, Field(description='Bind the credential to a specific model deployment.')] = cast(str | None, UNSET),
 ) -> Any:
     """Store a named provider credential."""
     body: dict[str, Any] = {}
-    if credential_name is not _UNSET:
+    if credential_name is not UNSET:
         body["credential_name"] = credential_name
-    if credential_info is not _UNSET:
+    if credential_info is not UNSET:
         body["credential_info"] = credential_info
-    if credential_values is not _UNSET:
+    if credential_values is not UNSET:
         body["credential_values"] = credential_values
-    if model_id is not _UNSET:
+    if model_id is not UNSET:
         body["model_id"] = model_id
-    return _get_client().post("/credentials", json=body)
+    return get_client().post("/credentials", json=body)
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def create_fallback(
     model: Annotated[str, Field(description='Primary model the fallback applies to.')],
     fallback_models: Annotated[list[str], Field(description='Ordered models tried when the primary fails.')],
-    fallback_type: Annotated[Literal['general', 'context_window', 'content_policy'], Field(description='Which failure class triggers this chain.')] = cast(Literal['general', 'context_window', 'content_policy'], _UNSET),
+    fallback_type: Annotated[Literal['general', 'context_window', 'content_policy'], Field(description='Which failure class triggers this chain.')] = cast(Literal['general', 'context_window', 'content_policy'], UNSET),
 ) -> Any:
     """Define a fallback chain for a model."""
     body: dict[str, Any] = {}
-    if model is not _UNSET:
+    if model is not UNSET:
         body["model"] = model
-    if fallback_models is not _UNSET:
+    if fallback_models is not UNSET:
         body["fallback_models"] = fallback_models
-    if fallback_type is not _UNSET:
+    if fallback_type is not UNSET:
         body["fallback_type"] = fallback_type
-    result = _get_client().post("/fallback", json=body)
-    _verify_response(body, result, frozenset({'auto_create_key', 'budget_duration', 'duration', 'key', 'send_invite_email'}))
+    result = get_client().post("/fallback", json=body)
+    verify_response(body, result, frozenset({'auto_create_key', 'budget_duration', 'duration', 'key', 'send_invite_email'}))
     return result
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def create_guardrail(
     guardrail: Annotated[dict[str, Any], Field(description="Guardrail spec as a dict: {'guardrail_name', 'litellm_params': {'guardrail': <provider>, 'mode': <when>, ...}}. Shape is provider-specific - see LiteLLM guardrail docs.")],
 ) -> Any:
     """Create a guardrail."""
     body: dict[str, Any] = {}
-    if guardrail is not _UNSET:
+    if guardrail is not UNSET:
         body["guardrail"] = guardrail
-    result = _get_client().post("/guardrails", json=body)
-    _verify_response({k: None for k in ('guardrail_id', 'guardrail_name',)}, result)
+    result = get_client().post("/guardrails", json=body)
+    verify_response({k: None for k in ('guardrail_id', 'guardrail_name',)}, result)
     return result
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def create_mcp_server(
-    server_id: str | None = cast(str | None, _UNSET),
-    server_name: str | None = cast(str | None, _UNSET),
-    alias: str | None = cast(str | None, _UNSET),
-    description: str | None = cast(str | None, _UNSET),
-    transport: Annotated[Literal['sse', 'http', 'stdio'], Field(description='Transport protocol the server speaks.')] = cast(Literal['sse', 'http', 'stdio'], _UNSET),
-    auth_type: Annotated[Literal['none', 'api_key', 'bearer_token', 'basic', 'authorization', 'oauth2', 'aws_sigv4', 'token', 'oauth2_token_exchange', 'true_passthrough', 'oauth_delegate'] | None, Field(description='Authentication scheme for reaching the server.')] = cast(Literal['none', 'api_key', 'bearer_token', 'basic', 'authorization', 'oauth2', 'aws_sigv4', 'token', 'oauth2_token_exchange', 'true_passthrough', 'oauth_delegate'] | None, _UNSET),
-    credentials: Annotated[dict[str, Any] | None, Field(description='Write-only auth material as a dict.')] = cast(dict[str, Any] | None, _UNSET),
-    url: Annotated[str | None, Field(description='Server URL (for http/sse transports).')] = cast(str | None, _UNSET),
-    spec_path: str | None = cast(str | None, _UNSET),
-    mcp_info: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    mcp_access_groups: Annotated[list[str], Field(description='Access-group names that may reach this server.')] = cast(list[str], _UNSET),
-    allowed_tools: list[str] | None = cast(list[str] | None, _UNSET),
-    tool_name_to_display_name: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    tool_name_to_description: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    extra_headers: list[str] | None = cast(list[str] | None, _UNSET),
-    static_headers: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    env_vars: list[dict[str, Any]] | None = cast(list[dict[str, Any]] | None, _UNSET),
-    instructions: str | None = cast(str | None, _UNSET),
-    command: Annotated[str | None, Field(description='Executable to launch (stdio transport).')] = cast(str | None, _UNSET),
-    args: list[str] = cast(list[str], _UNSET),
-    env: dict[str, Any] = cast(dict[str, Any], _UNSET),
-    authorization_url: str | None = cast(str | None, _UNSET),
-    token_url: str | None = cast(str | None, _UNSET),
-    registration_url: str | None = cast(str | None, _UNSET),
-    oauth2_flow: Literal['client_credentials', 'authorization_code'] | None = cast(Literal['client_credentials', 'authorization_code'] | None, _UNSET),
-    token_exchange_endpoint: str | None = cast(str | None, _UNSET),
-    audience: str | None = cast(str | None, _UNSET),
-    subject_token_type: str | None = cast(str | None, _UNSET),
-    token_exchange_profile: str | None = cast(str | None, _UNSET),
-    allow_all_keys: bool = cast(bool, _UNSET),
-    available_on_public_internet: bool = cast(bool, _UNSET),
-    delegate_auth_to_upstream: bool = cast(bool, _UNSET),
-    oauth_passthrough: bool = cast(bool, _UNSET),
-    dcr_bridge: bool | None = cast(bool | None, _UNSET),
-    is_byok: bool = cast(bool, _UNSET),
-    byok_description: list[str] = cast(list[str], _UNSET),
-    byok_api_key_help_url: str | None = cast(str | None, _UNSET),
-    source_url: str | None = cast(str | None, _UNSET),
-    timeout: float | None = cast(float | None, _UNSET),
-    max_concurrent_requests: int | None = cast(int | None, _UNSET),
-    approval_status: str | None = cast(str | None, _UNSET),
-    submitted_by: str | None = cast(str | None, _UNSET),
-    submitted_at: str | None = cast(str | None, _UNSET),
+    server_id: str | None = cast(str | None, UNSET),
+    server_name: str | None = cast(str | None, UNSET),
+    alias: str | None = cast(str | None, UNSET),
+    description: str | None = cast(str | None, UNSET),
+    transport: Annotated[Literal['sse', 'http', 'stdio'], Field(description='Transport protocol the server speaks.')] = cast(Literal['sse', 'http', 'stdio'], UNSET),
+    auth_type: Annotated[Literal['none', 'api_key', 'bearer_token', 'basic', 'authorization', 'oauth2', 'aws_sigv4', 'token', 'oauth2_token_exchange', 'true_passthrough', 'oauth_delegate'] | None, Field(description='Authentication scheme for reaching the server.')] = cast(Literal['none', 'api_key', 'bearer_token', 'basic', 'authorization', 'oauth2', 'aws_sigv4', 'token', 'oauth2_token_exchange', 'true_passthrough', 'oauth_delegate'] | None, UNSET),
+    credentials: Annotated[dict[str, Any] | None, Field(description='Write-only auth material as a dict.')] = cast(dict[str, Any] | None, UNSET),
+    url: Annotated[str | None, Field(description='Server URL (for http/sse transports).')] = cast(str | None, UNSET),
+    spec_path: str | None = cast(str | None, UNSET),
+    mcp_info: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    mcp_access_groups: Annotated[list[str], Field(description='Access-group names that may reach this server.')] = cast(list[str], UNSET),
+    allowed_tools: list[str] | None = cast(list[str] | None, UNSET),
+    tool_name_to_display_name: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    tool_name_to_description: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    extra_headers: list[str] | None = cast(list[str] | None, UNSET),
+    static_headers: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    env_vars: list[dict[str, Any]] | None = cast(list[dict[str, Any]] | None, UNSET),
+    instructions: str | None = cast(str | None, UNSET),
+    command: Annotated[str | None, Field(description='Executable to launch (stdio transport).')] = cast(str | None, UNSET),
+    args: list[str] = cast(list[str], UNSET),
+    env: dict[str, Any] = cast(dict[str, Any], UNSET),
+    authorization_url: str | None = cast(str | None, UNSET),
+    token_url: str | None = cast(str | None, UNSET),
+    registration_url: str | None = cast(str | None, UNSET),
+    oauth2_flow: Literal['client_credentials', 'authorization_code'] | None = cast(Literal['client_credentials', 'authorization_code'] | None, UNSET),
+    token_exchange_endpoint: str | None = cast(str | None, UNSET),
+    audience: str | None = cast(str | None, UNSET),
+    subject_token_type: str | None = cast(str | None, UNSET),
+    token_exchange_profile: str | None = cast(str | None, UNSET),
+    allow_all_keys: bool = cast(bool, UNSET),
+    available_on_public_internet: bool = cast(bool, UNSET),
+    delegate_auth_to_upstream: bool = cast(bool, UNSET),
+    oauth_passthrough: bool = cast(bool, UNSET),
+    dcr_bridge: bool | None = cast(bool | None, UNSET),
+    is_byok: bool = cast(bool, UNSET),
+    byok_description: list[str] = cast(list[str], UNSET),
+    byok_api_key_help_url: str | None = cast(str | None, UNSET),
+    source_url: str | None = cast(str | None, UNSET),
+    timeout: float | None = cast(float | None, UNSET),
+    max_concurrent_requests: int | None = cast(int | None, UNSET),
+    approval_status: str | None = cast(str | None, UNSET),
+    submitted_by: str | None = cast(str | None, UNSET),
+    submitted_at: str | None = cast(str | None, UNSET),
 ) -> Any:
     """Register a backend MCP server in the gateway.
 
     Credential fields (credentials, static_headers, env_vars) are write-only: they are stored but never returned by the read ops. Supply them here; they cannot be read back afterwards.
     """
     body: dict[str, Any] = {}
-    if server_id is not _UNSET:
+    if server_id is not UNSET:
         body["server_id"] = server_id
-    if server_name is not _UNSET:
+    if server_name is not UNSET:
         body["server_name"] = server_name
-    if alias is not _UNSET:
+    if alias is not UNSET:
         body["alias"] = alias
-    if description is not _UNSET:
+    if description is not UNSET:
         body["description"] = description
-    if transport is not _UNSET:
+    if transport is not UNSET:
         body["transport"] = transport
-    if auth_type is not _UNSET:
+    if auth_type is not UNSET:
         body["auth_type"] = auth_type
-    if credentials is not _UNSET:
+    if credentials is not UNSET:
         body["credentials"] = credentials
-    if url is not _UNSET:
+    if url is not UNSET:
         body["url"] = url
-    if spec_path is not _UNSET:
+    if spec_path is not UNSET:
         body["spec_path"] = spec_path
-    if mcp_info is not _UNSET:
+    if mcp_info is not UNSET:
         body["mcp_info"] = mcp_info
-    if mcp_access_groups is not _UNSET:
+    if mcp_access_groups is not UNSET:
         body["mcp_access_groups"] = mcp_access_groups
-    if allowed_tools is not _UNSET:
+    if allowed_tools is not UNSET:
         body["allowed_tools"] = allowed_tools
-    if tool_name_to_display_name is not _UNSET:
+    if tool_name_to_display_name is not UNSET:
         body["tool_name_to_display_name"] = tool_name_to_display_name
-    if tool_name_to_description is not _UNSET:
+    if tool_name_to_description is not UNSET:
         body["tool_name_to_description"] = tool_name_to_description
-    if extra_headers is not _UNSET:
+    if extra_headers is not UNSET:
         body["extra_headers"] = extra_headers
-    if static_headers is not _UNSET:
+    if static_headers is not UNSET:
         body["static_headers"] = static_headers
-    if env_vars is not _UNSET:
+    if env_vars is not UNSET:
         body["env_vars"] = env_vars
-    if instructions is not _UNSET:
+    if instructions is not UNSET:
         body["instructions"] = instructions
-    if command is not _UNSET:
+    if command is not UNSET:
         body["command"] = command
-    if args is not _UNSET:
+    if args is not UNSET:
         body["args"] = args
-    if env is not _UNSET:
+    if env is not UNSET:
         body["env"] = env
-    if authorization_url is not _UNSET:
+    if authorization_url is not UNSET:
         body["authorization_url"] = authorization_url
-    if token_url is not _UNSET:
+    if token_url is not UNSET:
         body["token_url"] = token_url
-    if registration_url is not _UNSET:
+    if registration_url is not UNSET:
         body["registration_url"] = registration_url
-    if oauth2_flow is not _UNSET:
+    if oauth2_flow is not UNSET:
         body["oauth2_flow"] = oauth2_flow
-    if token_exchange_endpoint is not _UNSET:
+    if token_exchange_endpoint is not UNSET:
         body["token_exchange_endpoint"] = token_exchange_endpoint
-    if audience is not _UNSET:
+    if audience is not UNSET:
         body["audience"] = audience
-    if subject_token_type is not _UNSET:
+    if subject_token_type is not UNSET:
         body["subject_token_type"] = subject_token_type
-    if token_exchange_profile is not _UNSET:
+    if token_exchange_profile is not UNSET:
         body["token_exchange_profile"] = token_exchange_profile
-    if allow_all_keys is not _UNSET:
+    if allow_all_keys is not UNSET:
         body["allow_all_keys"] = allow_all_keys
-    if available_on_public_internet is not _UNSET:
+    if available_on_public_internet is not UNSET:
         body["available_on_public_internet"] = available_on_public_internet
-    if delegate_auth_to_upstream is not _UNSET:
+    if delegate_auth_to_upstream is not UNSET:
         body["delegate_auth_to_upstream"] = delegate_auth_to_upstream
-    if oauth_passthrough is not _UNSET:
+    if oauth_passthrough is not UNSET:
         body["oauth_passthrough"] = oauth_passthrough
-    if dcr_bridge is not _UNSET:
+    if dcr_bridge is not UNSET:
         body["dcr_bridge"] = dcr_bridge
-    if is_byok is not _UNSET:
+    if is_byok is not UNSET:
         body["is_byok"] = is_byok
-    if byok_description is not _UNSET:
+    if byok_description is not UNSET:
         body["byok_description"] = byok_description
-    if byok_api_key_help_url is not _UNSET:
+    if byok_api_key_help_url is not UNSET:
         body["byok_api_key_help_url"] = byok_api_key_help_url
-    if source_url is not _UNSET:
+    if source_url is not UNSET:
         body["source_url"] = source_url
-    if timeout is not _UNSET:
+    if timeout is not UNSET:
         body["timeout"] = timeout
-    if max_concurrent_requests is not _UNSET:
+    if max_concurrent_requests is not UNSET:
         body["max_concurrent_requests"] = max_concurrent_requests
-    if approval_status is not _UNSET:
+    if approval_status is not UNSET:
         body["approval_status"] = approval_status
-    if submitted_by is not _UNSET:
+    if submitted_by is not UNSET:
         body["submitted_by"] = submitted_by
-    if submitted_at is not _UNSET:
+    if submitted_at is not UNSET:
         body["submitted_at"] = submitted_at
-    result = _get_client().post("/v1/mcp/server", json=body)
-    _verify_response({k: body[k] for k in ('server_name', 'url', 'transport', 'auth_type',) if k in body}, result)
+    result = get_client().post("/v1/mcp/server", json=body)
+    verify_response({k: body[k] for k in ('server_name', 'url', 'transport', 'auth_type',) if k in body}, result)
     return result
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def create_toolset(
     toolset_name: Annotated[str, Field(description='Unique name for the toolset.')],
-    description: str | None = cast(str | None, _UNSET),
-    tools: Annotated[list[dict[str, Any]], Field(description='Tool descriptors as a list of dicts.')] = cast(list[dict[str, Any]], _UNSET),
+    description: str | None = cast(str | None, UNSET),
+    tools: Annotated[list[dict[str, Any]], Field(description='Tool descriptors as a list of dicts.')] = cast(list[dict[str, Any]], UNSET),
 ) -> Any:
     """Create an MCP toolset (a named bundle of tools)."""
     body: dict[str, Any] = {}
-    if toolset_name is not _UNSET:
+    if toolset_name is not UNSET:
         body["toolset_name"] = toolset_name
-    if description is not _UNSET:
+    if description is not UNSET:
         body["description"] = description
-    if tools is not _UNSET:
+    if tools is not UNSET:
         body["tools"] = tools
-    return _get_client().post("/v1/mcp/toolset", json=body)
+    return get_client().post("/v1/mcp/toolset", json=body)
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def generate_key(
-    key_alias: Annotated[str | None, Field(description='Human-readable label for the key.')] = cast(str | None, _UNSET),
-    duration: Annotated[str | None, Field(description="Key lifetime, e.g. '30d', '24h'; stored as an expiry timestamp.")] = cast(str | None, _UNSET),
-    models: Annotated[list[Any] | None, Field(description='Model names this resource may access; empty means all.')] = cast(list[Any] | None, _UNSET),
-    spend: float | None = cast(float | None, _UNSET),
-    max_budget: Annotated[float | None, Field(description='Hard USD budget cap; use blocks once exceeded.')] = cast(float | None, _UNSET),
-    user_id: Annotated[str | None, Field(description='Owning user; omit to leave unassigned.')] = cast(str | None, _UNSET),
-    team_id: Annotated[str | None, Field(description="Owning team; scopes the key's model access and budget.")] = cast(str | None, _UNSET),
-    agent_id: str | None = cast(str | None, _UNSET),
-    max_parallel_requests: int | None = cast(int | None, _UNSET),
-    metadata: Annotated[dict[str, Any] | None, Field(description='Free-form JSON metadata stored on the row.')] = cast(dict[str, Any] | None, _UNSET),
-    tpm_limit: Annotated[int | None, Field(description='Tokens-per-minute cap.')] = cast(int | None, _UNSET),
-    rpm_limit: Annotated[int | None, Field(description='Requests-per-minute cap.')] = cast(int | None, _UNSET),
-    budget_duration: Annotated[str | None, Field(description="Budget reset window, e.g. '30d', '1mo'.")] = cast(str | None, _UNSET),
-    budget_limits: list[dict[str, Any]] | None = cast(list[dict[str, Any]] | None, _UNSET),
-    allowed_cache_controls: list[Any] | None = cast(list[Any] | None, _UNSET),
-    config: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    permissions: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    model_max_budget: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    budget_fallbacks: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    model_rpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    model_tpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    mcp_rpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    tag_rpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    guardrails: list[str] | None = cast(list[str] | None, _UNSET),
-    policies: list[str] | None = cast(list[str] | None, _UNSET),
-    prompts: list[str] | None = cast(list[str] | None, _UNSET),
-    blocked: Annotated[bool | None, Field(description='true blocks all use immediately.')] = cast(bool | None, _UNSET),
-    aliases: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    object_permission: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    key: Annotated[str | None, Field(description='Provide a custom key string instead of a generated one.')] = cast(str | None, _UNSET),
-    budget_id: str | None = cast(str | None, _UNSET),
-    tags: list[str] | None = cast(list[str] | None, _UNSET),
-    disable_global_guardrails: bool | None = cast(bool | None, _UNSET),
-    throttle_on_budget_exceeded: bool | None = cast(bool | None, _UNSET),
-    enforced_params: list[str] | None = cast(list[str] | None, _UNSET),
-    allowed_routes: list[Any] | None = cast(list[Any] | None, _UNSET),
-    allowed_passthrough_routes: list[Any] | None = cast(list[Any] | None, _UNSET),
-    allowed_vector_store_indexes: list[dict[str, Any]] | None = cast(list[dict[str, Any]] | None, _UNSET),
-    rpm_limit_type: Literal['guaranteed_throughput', 'best_effort_throughput', 'dynamic'] | None = cast(Literal['guaranteed_throughput', 'best_effort_throughput', 'dynamic'] | None, _UNSET),
-    tpm_limit_type: Literal['guaranteed_throughput', 'best_effort_throughput', 'dynamic'] | None = cast(Literal['guaranteed_throughput', 'best_effort_throughput', 'dynamic'] | None, _UNSET),
-    router_settings: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    access_group_ids: list[str] | None = cast(list[str] | None, _UNSET),
-    soft_budget: Annotated[float | None, Field(description='USD spend that raises an alert; does not block.')] = cast(float | None, _UNSET),
-    send_invite_email: bool | None = cast(bool | None, _UNSET),
-    key_type: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    auto_rotate: bool | None = cast(bool | None, _UNSET),
-    rotation_interval: str | None = cast(str | None, _UNSET),
-    organization_id: str | None = cast(str | None, _UNSET),
-    project_id: str | None = cast(str | None, _UNSET),
+    key_alias: Annotated[str | None, Field(description='Human-readable label for the key.')] = cast(str | None, UNSET),
+    duration: Annotated[str | None, Field(description="Key lifetime, e.g. '30d', '24h'; stored as an expiry timestamp.")] = cast(str | None, UNSET),
+    models: Annotated[list[Any] | None, Field(description='Model names this resource may access; empty means all.')] = cast(list[Any] | None, UNSET),
+    spend: float | None = cast(float | None, UNSET),
+    max_budget: Annotated[float | None, Field(description='Hard USD budget cap; use blocks once exceeded.')] = cast(float | None, UNSET),
+    user_id: Annotated[str | None, Field(description='Owning user; omit to leave unassigned.')] = cast(str | None, UNSET),
+    team_id: Annotated[str | None, Field(description="Owning team; scopes the key's model access and budget.")] = cast(str | None, UNSET),
+    agent_id: str | None = cast(str | None, UNSET),
+    max_parallel_requests: int | None = cast(int | None, UNSET),
+    metadata: Annotated[dict[str, Any] | None, Field(description='Free-form JSON metadata stored on the row.')] = cast(dict[str, Any] | None, UNSET),
+    tpm_limit: Annotated[int | None, Field(description='Tokens-per-minute cap.')] = cast(int | None, UNSET),
+    rpm_limit: Annotated[int | None, Field(description='Requests-per-minute cap.')] = cast(int | None, UNSET),
+    budget_duration: Annotated[str | None, Field(description="Budget reset window, e.g. '30d', '1mo'.")] = cast(str | None, UNSET),
+    budget_limits: list[dict[str, Any]] | None = cast(list[dict[str, Any]] | None, UNSET),
+    allowed_cache_controls: list[Any] | None = cast(list[Any] | None, UNSET),
+    config: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    permissions: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    model_max_budget: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    budget_fallbacks: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    model_rpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    model_tpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    mcp_rpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    tag_rpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    guardrails: list[str] | None = cast(list[str] | None, UNSET),
+    policies: list[str] | None = cast(list[str] | None, UNSET),
+    prompts: list[str] | None = cast(list[str] | None, UNSET),
+    blocked: Annotated[bool | None, Field(description='true blocks all use immediately.')] = cast(bool | None, UNSET),
+    aliases: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    object_permission: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    key: Annotated[str | None, Field(description='Provide a custom key string instead of a generated one.')] = cast(str | None, UNSET),
+    budget_id: str | None = cast(str | None, UNSET),
+    tags: list[str] | None = cast(list[str] | None, UNSET),
+    disable_global_guardrails: bool | None = cast(bool | None, UNSET),
+    throttle_on_budget_exceeded: bool | None = cast(bool | None, UNSET),
+    enforced_params: list[str] | None = cast(list[str] | None, UNSET),
+    allowed_routes: list[Any] | None = cast(list[Any] | None, UNSET),
+    allowed_passthrough_routes: list[Any] | None = cast(list[Any] | None, UNSET),
+    allowed_vector_store_indexes: list[dict[str, Any]] | None = cast(list[dict[str, Any]] | None, UNSET),
+    rpm_limit_type: Literal['guaranteed_throughput', 'best_effort_throughput', 'dynamic'] | None = cast(Literal['guaranteed_throughput', 'best_effort_throughput', 'dynamic'] | None, UNSET),
+    tpm_limit_type: Literal['guaranteed_throughput', 'best_effort_throughput', 'dynamic'] | None = cast(Literal['guaranteed_throughput', 'best_effort_throughput', 'dynamic'] | None, UNSET),
+    router_settings: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    access_group_ids: list[str] | None = cast(list[str] | None, UNSET),
+    soft_budget: Annotated[float | None, Field(description='USD spend that raises an alert; does not block.')] = cast(float | None, UNSET),
+    send_invite_email: bool | None = cast(bool | None, UNSET),
+    key_type: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    auto_rotate: bool | None = cast(bool | None, UNSET),
+    rotation_interval: str | None = cast(str | None, UNSET),
+    organization_id: str | None = cast(str | None, UNSET),
+    project_id: str | None = cast(str | None, UNSET),
 ) -> Any:
     """Mint a new virtual API key.
 
     The generated secret is returned ONCE, in this response's `key` field - it is never retrievable again (list_keys/key_info show only the hashed token). Store it now.
     """
     body: dict[str, Any] = {}
-    if key_alias is not _UNSET:
+    if key_alias is not UNSET:
         body["key_alias"] = key_alias
-    if duration is not _UNSET:
+    if duration is not UNSET:
         body["duration"] = duration
-    if models is not _UNSET:
+    if models is not UNSET:
         body["models"] = models
-    if spend is not _UNSET:
+    if spend is not UNSET:
         body["spend"] = spend
-    if max_budget is not _UNSET:
+    if max_budget is not UNSET:
         body["max_budget"] = max_budget
-    if user_id is not _UNSET:
+    if user_id is not UNSET:
         body["user_id"] = user_id
-    if team_id is not _UNSET:
+    if team_id is not UNSET:
         body["team_id"] = team_id
-    if agent_id is not _UNSET:
+    if agent_id is not UNSET:
         body["agent_id"] = agent_id
-    if max_parallel_requests is not _UNSET:
+    if max_parallel_requests is not UNSET:
         body["max_parallel_requests"] = max_parallel_requests
-    if metadata is not _UNSET:
+    if metadata is not UNSET:
         body["metadata"] = metadata
-    if tpm_limit is not _UNSET:
+    if tpm_limit is not UNSET:
         body["tpm_limit"] = tpm_limit
-    if rpm_limit is not _UNSET:
+    if rpm_limit is not UNSET:
         body["rpm_limit"] = rpm_limit
-    if budget_duration is not _UNSET:
+    if budget_duration is not UNSET:
         body["budget_duration"] = budget_duration
-    if budget_limits is not _UNSET:
+    if budget_limits is not UNSET:
         body["budget_limits"] = budget_limits
-    if allowed_cache_controls is not _UNSET:
+    if allowed_cache_controls is not UNSET:
         body["allowed_cache_controls"] = allowed_cache_controls
-    if config is not _UNSET:
+    if config is not UNSET:
         body["config"] = config
-    if permissions is not _UNSET:
+    if permissions is not UNSET:
         body["permissions"] = permissions
-    if model_max_budget is not _UNSET:
+    if model_max_budget is not UNSET:
         body["model_max_budget"] = model_max_budget
-    if budget_fallbacks is not _UNSET:
+    if budget_fallbacks is not UNSET:
         body["budget_fallbacks"] = budget_fallbacks
-    if model_rpm_limit is not _UNSET:
+    if model_rpm_limit is not UNSET:
         body["model_rpm_limit"] = model_rpm_limit
-    if model_tpm_limit is not _UNSET:
+    if model_tpm_limit is not UNSET:
         body["model_tpm_limit"] = model_tpm_limit
-    if mcp_rpm_limit is not _UNSET:
+    if mcp_rpm_limit is not UNSET:
         body["mcp_rpm_limit"] = mcp_rpm_limit
-    if tag_rpm_limit is not _UNSET:
+    if tag_rpm_limit is not UNSET:
         body["tag_rpm_limit"] = tag_rpm_limit
-    if guardrails is not _UNSET:
+    if guardrails is not UNSET:
         body["guardrails"] = guardrails
-    if policies is not _UNSET:
+    if policies is not UNSET:
         body["policies"] = policies
-    if prompts is not _UNSET:
+    if prompts is not UNSET:
         body["prompts"] = prompts
-    if blocked is not _UNSET:
+    if blocked is not UNSET:
         body["blocked"] = blocked
-    if aliases is not _UNSET:
+    if aliases is not UNSET:
         body["aliases"] = aliases
-    if object_permission is not _UNSET:
+    if object_permission is not UNSET:
         body["object_permission"] = object_permission
-    if key is not _UNSET:
+    if key is not UNSET:
         body["key"] = key
-    if budget_id is not _UNSET:
+    if budget_id is not UNSET:
         body["budget_id"] = budget_id
-    if tags is not _UNSET:
+    if tags is not UNSET:
         body["tags"] = tags
-    if disable_global_guardrails is not _UNSET:
+    if disable_global_guardrails is not UNSET:
         body["disable_global_guardrails"] = disable_global_guardrails
-    if throttle_on_budget_exceeded is not _UNSET:
+    if throttle_on_budget_exceeded is not UNSET:
         body["throttle_on_budget_exceeded"] = throttle_on_budget_exceeded
-    if enforced_params is not _UNSET:
+    if enforced_params is not UNSET:
         body["enforced_params"] = enforced_params
-    if allowed_routes is not _UNSET:
+    if allowed_routes is not UNSET:
         body["allowed_routes"] = allowed_routes
-    if allowed_passthrough_routes is not _UNSET:
+    if allowed_passthrough_routes is not UNSET:
         body["allowed_passthrough_routes"] = allowed_passthrough_routes
-    if allowed_vector_store_indexes is not _UNSET:
+    if allowed_vector_store_indexes is not UNSET:
         body["allowed_vector_store_indexes"] = allowed_vector_store_indexes
-    if rpm_limit_type is not _UNSET:
+    if rpm_limit_type is not UNSET:
         body["rpm_limit_type"] = rpm_limit_type
-    if tpm_limit_type is not _UNSET:
+    if tpm_limit_type is not UNSET:
         body["tpm_limit_type"] = tpm_limit_type
-    if router_settings is not _UNSET:
+    if router_settings is not UNSET:
         body["router_settings"] = router_settings
-    if access_group_ids is not _UNSET:
+    if access_group_ids is not UNSET:
         body["access_group_ids"] = access_group_ids
-    if soft_budget is not _UNSET:
+    if soft_budget is not UNSET:
         body["soft_budget"] = soft_budget
-    if send_invite_email is not _UNSET:
+    if send_invite_email is not UNSET:
         body["send_invite_email"] = send_invite_email
-    if key_type is not _UNSET:
+    if key_type is not UNSET:
         body["key_type"] = key_type
-    if auto_rotate is not _UNSET:
+    if auto_rotate is not UNSET:
         body["auto_rotate"] = auto_rotate
-    if rotation_interval is not _UNSET:
+    if rotation_interval is not UNSET:
         body["rotation_interval"] = rotation_interval
-    if organization_id is not _UNSET:
+    if organization_id is not UNSET:
         body["organization_id"] = organization_id
-    if project_id is not _UNSET:
+    if project_id is not UNSET:
         body["project_id"] = project_id
-    result = _get_client().post("/key/generate", json=body)
-    _verify_response({k: body[k] for k in ('key_alias', 'user_id', 'team_id', 'max_budget', 'tpm_limit', 'rpm_limit',) if k in body}, result)
+    result = get_client().post("/key/generate", json=body)
+    verify_response({k: body[k] for k in ('key_alias', 'user_id', 'team_id', 'max_budget', 'tpm_limit', 'rpm_limit',) if k in body}, result)
     return result
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def new_budget(
-    budget_id: Annotated[str | None, Field(description='Provide a custom ID; omit to auto-generate.')] = cast(str | None, _UNSET),
-    max_budget: Annotated[float | None, Field(description='Hard USD budget cap; use blocks once exceeded.')] = cast(float | None, _UNSET),
-    soft_budget: Annotated[float | None, Field(description='USD spend that raises an alert; does not block.')] = cast(float | None, _UNSET),
-    max_parallel_requests: int | None = cast(int | None, _UNSET),
-    tpm_limit: Annotated[int | None, Field(description='Tokens-per-minute cap.')] = cast(int | None, _UNSET),
-    rpm_limit: Annotated[int | None, Field(description='Requests-per-minute cap.')] = cast(int | None, _UNSET),
-    budget_duration: Annotated[str | None, Field(description="Budget reset window, e.g. '30d', '1mo'.")] = cast(str | None, _UNSET),
-    model_max_budget: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    budget_reset_at: str | None = cast(str | None, _UNSET),
+    budget_id: Annotated[str | None, Field(description='Provide a custom ID; omit to auto-generate.')] = cast(str | None, UNSET),
+    max_budget: Annotated[float | None, Field(description='Hard USD budget cap; use blocks once exceeded.')] = cast(float | None, UNSET),
+    soft_budget: Annotated[float | None, Field(description='USD spend that raises an alert; does not block.')] = cast(float | None, UNSET),
+    max_parallel_requests: int | None = cast(int | None, UNSET),
+    tpm_limit: Annotated[int | None, Field(description='Tokens-per-minute cap.')] = cast(int | None, UNSET),
+    rpm_limit: Annotated[int | None, Field(description='Requests-per-minute cap.')] = cast(int | None, UNSET),
+    budget_duration: Annotated[str | None, Field(description="Budget reset window, e.g. '30d', '1mo'.")] = cast(str | None, UNSET),
+    model_max_budget: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    budget_reset_at: str | None = cast(str | None, UNSET),
 ) -> Any:
     """Create a reusable budget object."""
     body: dict[str, Any] = {}
-    if budget_id is not _UNSET:
+    if budget_id is not UNSET:
         body["budget_id"] = budget_id
-    if max_budget is not _UNSET:
+    if max_budget is not UNSET:
         body["max_budget"] = max_budget
-    if soft_budget is not _UNSET:
+    if soft_budget is not UNSET:
         body["soft_budget"] = soft_budget
-    if max_parallel_requests is not _UNSET:
+    if max_parallel_requests is not UNSET:
         body["max_parallel_requests"] = max_parallel_requests
-    if tpm_limit is not _UNSET:
+    if tpm_limit is not UNSET:
         body["tpm_limit"] = tpm_limit
-    if rpm_limit is not _UNSET:
+    if rpm_limit is not UNSET:
         body["rpm_limit"] = rpm_limit
-    if budget_duration is not _UNSET:
+    if budget_duration is not UNSET:
         body["budget_duration"] = budget_duration
-    if model_max_budget is not _UNSET:
+    if model_max_budget is not UNSET:
         body["model_max_budget"] = model_max_budget
-    if budget_reset_at is not _UNSET:
+    if budget_reset_at is not UNSET:
         body["budget_reset_at"] = budget_reset_at
-    result = _get_client().post("/budget/new", json=body)
-    _verify_response({k: body[k] for k in ('budget_id', 'max_budget', 'soft_budget', 'tpm_limit', 'rpm_limit',) if k in body}, result)
+    result = get_client().post("/budget/new", json=body)
+    verify_response({k: body[k] for k in ('budget_id', 'max_budget', 'soft_budget', 'tpm_limit', 'rpm_limit',) if k in body}, result)
     return result
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def new_customer(
     user_id: Annotated[str, Field(description='Customer identifier (your end-user ID).')],
-    budget_id: Annotated[str | None, Field(description='Attach an existing budget object instead of inline limits.')] = cast(str | None, _UNSET),
-    max_budget: Annotated[float | None, Field(description='Hard USD budget cap; use blocks once exceeded.')] = cast(float | None, _UNSET),
-    soft_budget: float | None = cast(float | None, _UNSET),
-    max_parallel_requests: int | None = cast(int | None, _UNSET),
-    tpm_limit: int | None = cast(int | None, _UNSET),
-    rpm_limit: int | None = cast(int | None, _UNSET),
-    budget_duration: str | None = cast(str | None, _UNSET),
-    model_max_budget: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    budget_reset_at: str | None = cast(str | None, _UNSET),
-    alias: Annotated[str | None, Field(description='Human-readable customer name.')] = cast(str | None, _UNSET),
-    blocked: Annotated[bool, Field(description='true blocks all use immediately.')] = cast(bool, _UNSET),
-    spend: float | None = cast(float | None, _UNSET),
-    allowed_model_region: Annotated[Literal['eu', 'us'] | None, Field(description='Restrict routing to a data region.')] = cast(Literal['eu', 'us'] | None, _UNSET),
-    default_model: Annotated[str | None, Field(description='Fallback model when the request names none.')] = cast(str | None, _UNSET),
-    object_permission: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
+    budget_id: Annotated[str | None, Field(description='Attach an existing budget object instead of inline limits.')] = cast(str | None, UNSET),
+    max_budget: Annotated[float | None, Field(description='Hard USD budget cap; use blocks once exceeded.')] = cast(float | None, UNSET),
+    soft_budget: float | None = cast(float | None, UNSET),
+    max_parallel_requests: int | None = cast(int | None, UNSET),
+    tpm_limit: int | None = cast(int | None, UNSET),
+    rpm_limit: int | None = cast(int | None, UNSET),
+    budget_duration: str | None = cast(str | None, UNSET),
+    model_max_budget: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    budget_reset_at: str | None = cast(str | None, UNSET),
+    alias: Annotated[str | None, Field(description='Human-readable customer name.')] = cast(str | None, UNSET),
+    blocked: Annotated[bool, Field(description='true blocks all use immediately.')] = cast(bool, UNSET),
+    spend: float | None = cast(float | None, UNSET),
+    allowed_model_region: Annotated[Literal['eu', 'us'] | None, Field(description='Restrict routing to a data region.')] = cast(Literal['eu', 'us'] | None, UNSET),
+    default_model: Annotated[str | None, Field(description='Fallback model when the request names none.')] = cast(str | None, UNSET),
+    object_permission: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
 ) -> Any:
     """Create an end-customer (end user) budget profile.
 
     Customers are end users tracked for spend/budget, distinct from internal users; user_id is the customer identifier you report spend for.
     """
     body: dict[str, Any] = {}
-    if budget_id is not _UNSET:
+    if budget_id is not UNSET:
         body["budget_id"] = budget_id
-    if max_budget is not _UNSET:
+    if max_budget is not UNSET:
         body["max_budget"] = max_budget
-    if soft_budget is not _UNSET:
+    if soft_budget is not UNSET:
         body["soft_budget"] = soft_budget
-    if max_parallel_requests is not _UNSET:
+    if max_parallel_requests is not UNSET:
         body["max_parallel_requests"] = max_parallel_requests
-    if tpm_limit is not _UNSET:
+    if tpm_limit is not UNSET:
         body["tpm_limit"] = tpm_limit
-    if rpm_limit is not _UNSET:
+    if rpm_limit is not UNSET:
         body["rpm_limit"] = rpm_limit
-    if budget_duration is not _UNSET:
+    if budget_duration is not UNSET:
         body["budget_duration"] = budget_duration
-    if model_max_budget is not _UNSET:
+    if model_max_budget is not UNSET:
         body["model_max_budget"] = model_max_budget
-    if budget_reset_at is not _UNSET:
+    if budget_reset_at is not UNSET:
         body["budget_reset_at"] = budget_reset_at
-    if user_id is not _UNSET:
+    if user_id is not UNSET:
         body["user_id"] = user_id
-    if alias is not _UNSET:
+    if alias is not UNSET:
         body["alias"] = alias
-    if blocked is not _UNSET:
+    if blocked is not UNSET:
         body["blocked"] = blocked
-    if spend is not _UNSET:
+    if spend is not UNSET:
         body["spend"] = spend
-    if allowed_model_region is not _UNSET:
+    if allowed_model_region is not UNSET:
         body["allowed_model_region"] = allowed_model_region
-    if default_model is not _UNSET:
+    if default_model is not UNSET:
         body["default_model"] = default_model
-    if object_permission is not _UNSET:
+    if object_permission is not UNSET:
         body["object_permission"] = object_permission
-    result = _get_client().post("/customer/new", json=body)
-    _verify_response({k: body[k] for k in ('user_id', 'alias', 'blocked', 'allowed_model_region', 'default_model', 'budget_id',) if k in body}, result)
+    result = get_client().post("/customer/new", json=body)
+    verify_response({k: body[k] for k in ('user_id', 'alias', 'blocked', 'allowed_model_region', 'default_model', 'budget_id',) if k in body}, result)
     return result
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def new_organization(
     organization_alias: Annotated[str, Field(description='Human-readable organization name.')],
-    budget_id: str | None = cast(str | None, _UNSET),
-    soft_budget: float | None = cast(float | None, _UNSET),
-    max_budget: Annotated[float | None, Field(description='Hard USD budget cap; use blocks once exceeded.')] = cast(float | None, _UNSET),
-    max_parallel_requests: int | None = cast(int | None, _UNSET),
-    tpm_limit: Annotated[int | None, Field(description='Tokens-per-minute cap.')] = cast(int | None, _UNSET),
-    rpm_limit: Annotated[int | None, Field(description='Requests-per-minute cap.')] = cast(int | None, _UNSET),
-    model_max_budget: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    budget_duration: Annotated[str | None, Field(description="Budget reset window, e.g. '30d', '1mo'.")] = cast(str | None, _UNSET),
-    allowed_models: list[str] | None = cast(list[str] | None, _UNSET),
-    organization_id: Annotated[str | None, Field(description='Provide a custom ID; omit to auto-generate.')] = cast(str | None, _UNSET),
-    models: Annotated[list[Any], Field(description='Model names this resource may access; empty means all.')] = cast(list[Any], _UNSET),
-    metadata: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    model_rpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    model_tpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    object_permission: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
+    budget_id: str | None = cast(str | None, UNSET),
+    soft_budget: float | None = cast(float | None, UNSET),
+    max_budget: Annotated[float | None, Field(description='Hard USD budget cap; use blocks once exceeded.')] = cast(float | None, UNSET),
+    max_parallel_requests: int | None = cast(int | None, UNSET),
+    tpm_limit: Annotated[int | None, Field(description='Tokens-per-minute cap.')] = cast(int | None, UNSET),
+    rpm_limit: Annotated[int | None, Field(description='Requests-per-minute cap.')] = cast(int | None, UNSET),
+    model_max_budget: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    budget_duration: Annotated[str | None, Field(description="Budget reset window, e.g. '30d', '1mo'.")] = cast(str | None, UNSET),
+    allowed_models: list[str] | None = cast(list[str] | None, UNSET),
+    organization_id: Annotated[str | None, Field(description='Provide a custom ID; omit to auto-generate.')] = cast(str | None, UNSET),
+    models: Annotated[list[Any], Field(description='Model names this resource may access; empty means all.')] = cast(list[Any], UNSET),
+    metadata: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    model_rpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    model_tpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    object_permission: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
 ) -> Any:
     """Create an organization."""
     body: dict[str, Any] = {}
-    if budget_id is not _UNSET:
+    if budget_id is not UNSET:
         body["budget_id"] = budget_id
-    if soft_budget is not _UNSET:
+    if soft_budget is not UNSET:
         body["soft_budget"] = soft_budget
-    if max_budget is not _UNSET:
+    if max_budget is not UNSET:
         body["max_budget"] = max_budget
-    if max_parallel_requests is not _UNSET:
+    if max_parallel_requests is not UNSET:
         body["max_parallel_requests"] = max_parallel_requests
-    if tpm_limit is not _UNSET:
+    if tpm_limit is not UNSET:
         body["tpm_limit"] = tpm_limit
-    if rpm_limit is not _UNSET:
+    if rpm_limit is not UNSET:
         body["rpm_limit"] = rpm_limit
-    if model_max_budget is not _UNSET:
+    if model_max_budget is not UNSET:
         body["model_max_budget"] = model_max_budget
-    if budget_duration is not _UNSET:
+    if budget_duration is not UNSET:
         body["budget_duration"] = budget_duration
-    if allowed_models is not _UNSET:
+    if allowed_models is not UNSET:
         body["allowed_models"] = allowed_models
-    if organization_id is not _UNSET:
+    if organization_id is not UNSET:
         body["organization_id"] = organization_id
-    if organization_alias is not _UNSET:
+    if organization_alias is not UNSET:
         body["organization_alias"] = organization_alias
-    if models is not _UNSET:
+    if models is not UNSET:
         body["models"] = models
-    if metadata is not _UNSET:
+    if metadata is not UNSET:
         body["metadata"] = metadata
-    if model_rpm_limit is not _UNSET:
+    if model_rpm_limit is not UNSET:
         body["model_rpm_limit"] = model_rpm_limit
-    if model_tpm_limit is not _UNSET:
+    if model_tpm_limit is not UNSET:
         body["model_tpm_limit"] = model_tpm_limit
-    if object_permission is not _UNSET:
+    if object_permission is not UNSET:
         body["object_permission"] = object_permission
-    result = _get_client().post("/organization/new", json=body)
-    _verify_response({k: body[k] for k in ('organization_alias', 'organization_id', 'budget_id', 'models',) if k in body}, result)
+    result = get_client().post("/organization/new", json=body)
+    verify_response({k: body[k] for k in ('organization_alias', 'organization_id', 'budget_id', 'models',) if k in body}, result)
     return result
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def new_tag(
     name: Annotated[str, Field(description='Unique tag name.')],
-    description: str | None = cast(str | None, _UNSET),
-    models: Annotated[list[str] | None, Field(description='Model names the tag scopes spend to.')] = cast(list[str] | None, _UNSET),
-    model_info: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    budget_id: str | None = cast(str | None, _UNSET),
-    max_budget: Annotated[float | None, Field(description='Hard USD budget cap; use blocks once exceeded.')] = cast(float | None, _UNSET),
-    soft_budget: float | None = cast(float | None, _UNSET),
-    max_parallel_requests: int | None = cast(int | None, _UNSET),
-    tpm_limit: int | None = cast(int | None, _UNSET),
-    rpm_limit: int | None = cast(int | None, _UNSET),
-    model_max_budget: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    budget_duration: Annotated[str | None, Field(description="Budget reset window, e.g. '30d', '1mo'.")] = cast(str | None, _UNSET),
+    description: str | None = cast(str | None, UNSET),
+    models: Annotated[list[str] | None, Field(description='Model names the tag scopes spend to.')] = cast(list[str] | None, UNSET),
+    model_info: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    budget_id: str | None = cast(str | None, UNSET),
+    max_budget: Annotated[float | None, Field(description='Hard USD budget cap; use blocks once exceeded.')] = cast(float | None, UNSET),
+    soft_budget: float | None = cast(float | None, UNSET),
+    max_parallel_requests: int | None = cast(int | None, UNSET),
+    tpm_limit: int | None = cast(int | None, UNSET),
+    rpm_limit: int | None = cast(int | None, UNSET),
+    model_max_budget: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    budget_duration: Annotated[str | None, Field(description="Budget reset window, e.g. '30d', '1mo'.")] = cast(str | None, UNSET),
 ) -> Any:
     """Create a spend-tracking tag."""
     body: dict[str, Any] = {}
-    if name is not _UNSET:
+    if name is not UNSET:
         body["name"] = name
-    if description is not _UNSET:
+    if description is not UNSET:
         body["description"] = description
-    if models is not _UNSET:
+    if models is not UNSET:
         body["models"] = models
-    if model_info is not _UNSET:
+    if model_info is not UNSET:
         body["model_info"] = model_info
-    if budget_id is not _UNSET:
+    if budget_id is not UNSET:
         body["budget_id"] = budget_id
-    if max_budget is not _UNSET:
+    if max_budget is not UNSET:
         body["max_budget"] = max_budget
-    if soft_budget is not _UNSET:
+    if soft_budget is not UNSET:
         body["soft_budget"] = soft_budget
-    if max_parallel_requests is not _UNSET:
+    if max_parallel_requests is not UNSET:
         body["max_parallel_requests"] = max_parallel_requests
-    if tpm_limit is not _UNSET:
+    if tpm_limit is not UNSET:
         body["tpm_limit"] = tpm_limit
-    if rpm_limit is not _UNSET:
+    if rpm_limit is not UNSET:
         body["rpm_limit"] = rpm_limit
-    if model_max_budget is not _UNSET:
+    if model_max_budget is not UNSET:
         body["model_max_budget"] = model_max_budget
-    if budget_duration is not _UNSET:
+    if budget_duration is not UNSET:
         body["budget_duration"] = budget_duration
-    result = _get_client().post("/tag/new", json=body)
-    _verify_response({k: None for k in ('tag',)}, result)
+    result = get_client().post("/tag/new", json=body)
+    verify_response({k: None for k in ('tag',)}, result)
     return result
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def new_team(
-    team_alias: Annotated[str | None, Field(description='Human-readable team name.')] = cast(str | None, _UNSET),
-    team_id: Annotated[str | None, Field(description='Provide a custom ID; omit to auto-generate.')] = cast(str | None, _UNSET),
-    organization_id: Annotated[str | None, Field(description='Parent organization, if any.')] = cast(str | None, _UNSET),
-    admins: list[Any] = cast(list[Any], _UNSET),
-    members: list[Any] = cast(list[Any], _UNSET),
-    members_with_roles: Annotated[list[dict[str, Any]], Field(description="Initial members as {'user_id'|'user_email', 'role'} dicts.")] = cast(list[dict[str, Any]], _UNSET),
-    team_member_permissions: list[str] | None = cast(list[str] | None, _UNSET),
-    metadata: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    tpm_limit: Annotated[int | None, Field(description='Tokens-per-minute cap.')] = cast(int | None, _UNSET),
-    rpm_limit: Annotated[int | None, Field(description='Requests-per-minute cap.')] = cast(int | None, _UNSET),
-    max_budget: Annotated[float | None, Field(description='Hard USD budget cap; use blocks once exceeded.')] = cast(float | None, _UNSET),
-    soft_budget: float | None = cast(float | None, _UNSET),
-    budget_duration: Annotated[str | None, Field(description="Budget reset window, e.g. '30d', '1mo'.")] = cast(str | None, _UNSET),
-    budget_limits: list[dict[str, Any]] | None = cast(list[dict[str, Any]] | None, _UNSET),
-    models: Annotated[list[Any], Field(description='Model names this resource may access; empty means all.')] = cast(list[Any], _UNSET),
-    blocked: Annotated[bool, Field(description='true blocks all use immediately.')] = cast(bool, _UNSET),
-    router_settings: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    access_group_ids: list[str] | None = cast(list[str] | None, _UNSET),
-    default_team_member_models: list[str] | None = cast(list[str] | None, _UNSET),
-    model_aliases: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    tags: list[Any] | None = cast(list[Any] | None, _UNSET),
-    guardrails: list[str] | None = cast(list[str] | None, _UNSET),
-    policies: list[str] | None = cast(list[str] | None, _UNSET),
-    prompts: list[str] | None = cast(list[str] | None, _UNSET),
-    object_permission: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    allowed_passthrough_routes: list[Any] | None = cast(list[Any] | None, _UNSET),
-    disable_global_guardrails: bool | None = cast(bool | None, _UNSET),
-    secret_manager_settings: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    model_rpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    rpm_limit_type: Literal['guaranteed_throughput', 'best_effort_throughput'] | None = cast(Literal['guaranteed_throughput', 'best_effort_throughput'] | None, _UNSET),
-    tpm_limit_type: Literal['guaranteed_throughput', 'best_effort_throughput'] | None = cast(Literal['guaranteed_throughput', 'best_effort_throughput'] | None, _UNSET),
-    model_tpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    mcp_rpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    team_member_budget: float | None = cast(float | None, _UNSET),
-    team_member_rpm_limit: int | None = cast(int | None, _UNSET),
-    team_member_tpm_limit: int | None = cast(int | None, _UNSET),
-    team_member_key_duration: str | None = cast(str | None, _UNSET),
-    team_member_budget_duration: str | None = cast(str | None, _UNSET),
-    allowed_vector_store_indexes: list[dict[str, Any]] | None = cast(list[dict[str, Any]] | None, _UNSET),
-    enforced_batch_output_expires_after: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    enforced_file_expires_after: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
+    team_alias: Annotated[str | None, Field(description='Human-readable team name.')] = cast(str | None, UNSET),
+    team_id: Annotated[str | None, Field(description='Provide a custom ID; omit to auto-generate.')] = cast(str | None, UNSET),
+    organization_id: Annotated[str | None, Field(description='Parent organization, if any.')] = cast(str | None, UNSET),
+    admins: list[Any] = cast(list[Any], UNSET),
+    members: list[Any] = cast(list[Any], UNSET),
+    members_with_roles: Annotated[list[dict[str, Any]], Field(description="Initial members as {'user_id'|'user_email', 'role'} dicts.")] = cast(list[dict[str, Any]], UNSET),
+    team_member_permissions: list[str] | None = cast(list[str] | None, UNSET),
+    metadata: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    tpm_limit: Annotated[int | None, Field(description='Tokens-per-minute cap.')] = cast(int | None, UNSET),
+    rpm_limit: Annotated[int | None, Field(description='Requests-per-minute cap.')] = cast(int | None, UNSET),
+    max_budget: Annotated[float | None, Field(description='Hard USD budget cap; use blocks once exceeded.')] = cast(float | None, UNSET),
+    soft_budget: float | None = cast(float | None, UNSET),
+    budget_duration: Annotated[str | None, Field(description="Budget reset window, e.g. '30d', '1mo'.")] = cast(str | None, UNSET),
+    budget_limits: list[dict[str, Any]] | None = cast(list[dict[str, Any]] | None, UNSET),
+    models: Annotated[list[Any], Field(description='Model names this resource may access; empty means all.')] = cast(list[Any], UNSET),
+    blocked: Annotated[bool, Field(description='true blocks all use immediately.')] = cast(bool, UNSET),
+    router_settings: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    access_group_ids: list[str] | None = cast(list[str] | None, UNSET),
+    default_team_member_models: list[str] | None = cast(list[str] | None, UNSET),
+    model_aliases: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    tags: list[Any] | None = cast(list[Any] | None, UNSET),
+    guardrails: list[str] | None = cast(list[str] | None, UNSET),
+    policies: list[str] | None = cast(list[str] | None, UNSET),
+    prompts: list[str] | None = cast(list[str] | None, UNSET),
+    object_permission: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    allowed_passthrough_routes: list[Any] | None = cast(list[Any] | None, UNSET),
+    disable_global_guardrails: bool | None = cast(bool | None, UNSET),
+    secret_manager_settings: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    model_rpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    rpm_limit_type: Literal['guaranteed_throughput', 'best_effort_throughput'] | None = cast(Literal['guaranteed_throughput', 'best_effort_throughput'] | None, UNSET),
+    tpm_limit_type: Literal['guaranteed_throughput', 'best_effort_throughput'] | None = cast(Literal['guaranteed_throughput', 'best_effort_throughput'] | None, UNSET),
+    model_tpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    mcp_rpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    team_member_budget: float | None = cast(float | None, UNSET),
+    team_member_rpm_limit: int | None = cast(int | None, UNSET),
+    team_member_tpm_limit: int | None = cast(int | None, UNSET),
+    team_member_key_duration: str | None = cast(str | None, UNSET),
+    team_member_budget_duration: str | None = cast(str | None, UNSET),
+    allowed_vector_store_indexes: list[dict[str, Any]] | None = cast(list[dict[str, Any]] | None, UNSET),
+    enforced_batch_output_expires_after: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    enforced_file_expires_after: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
 ) -> Any:
     """Create a team."""
     body: dict[str, Any] = {}
-    if team_alias is not _UNSET:
+    if team_alias is not UNSET:
         body["team_alias"] = team_alias
-    if team_id is not _UNSET:
+    if team_id is not UNSET:
         body["team_id"] = team_id
-    if organization_id is not _UNSET:
+    if organization_id is not UNSET:
         body["organization_id"] = organization_id
-    if admins is not _UNSET:
+    if admins is not UNSET:
         body["admins"] = admins
-    if members is not _UNSET:
+    if members is not UNSET:
         body["members"] = members
-    if members_with_roles is not _UNSET:
+    if members_with_roles is not UNSET:
         body["members_with_roles"] = members_with_roles
-    if team_member_permissions is not _UNSET:
+    if team_member_permissions is not UNSET:
         body["team_member_permissions"] = team_member_permissions
-    if metadata is not _UNSET:
+    if metadata is not UNSET:
         body["metadata"] = metadata
-    if tpm_limit is not _UNSET:
+    if tpm_limit is not UNSET:
         body["tpm_limit"] = tpm_limit
-    if rpm_limit is not _UNSET:
+    if rpm_limit is not UNSET:
         body["rpm_limit"] = rpm_limit
-    if max_budget is not _UNSET:
+    if max_budget is not UNSET:
         body["max_budget"] = max_budget
-    if soft_budget is not _UNSET:
+    if soft_budget is not UNSET:
         body["soft_budget"] = soft_budget
-    if budget_duration is not _UNSET:
+    if budget_duration is not UNSET:
         body["budget_duration"] = budget_duration
-    if budget_limits is not _UNSET:
+    if budget_limits is not UNSET:
         body["budget_limits"] = budget_limits
-    if models is not _UNSET:
+    if models is not UNSET:
         body["models"] = models
-    if blocked is not _UNSET:
+    if blocked is not UNSET:
         body["blocked"] = blocked
-    if router_settings is not _UNSET:
+    if router_settings is not UNSET:
         body["router_settings"] = router_settings
-    if access_group_ids is not _UNSET:
+    if access_group_ids is not UNSET:
         body["access_group_ids"] = access_group_ids
-    if default_team_member_models is not _UNSET:
+    if default_team_member_models is not UNSET:
         body["default_team_member_models"] = default_team_member_models
-    if model_aliases is not _UNSET:
+    if model_aliases is not UNSET:
         body["model_aliases"] = model_aliases
-    if tags is not _UNSET:
+    if tags is not UNSET:
         body["tags"] = tags
-    if guardrails is not _UNSET:
+    if guardrails is not UNSET:
         body["guardrails"] = guardrails
-    if policies is not _UNSET:
+    if policies is not UNSET:
         body["policies"] = policies
-    if prompts is not _UNSET:
+    if prompts is not UNSET:
         body["prompts"] = prompts
-    if object_permission is not _UNSET:
+    if object_permission is not UNSET:
         body["object_permission"] = object_permission
-    if allowed_passthrough_routes is not _UNSET:
+    if allowed_passthrough_routes is not UNSET:
         body["allowed_passthrough_routes"] = allowed_passthrough_routes
-    if disable_global_guardrails is not _UNSET:
+    if disable_global_guardrails is not UNSET:
         body["disable_global_guardrails"] = disable_global_guardrails
-    if secret_manager_settings is not _UNSET:
+    if secret_manager_settings is not UNSET:
         body["secret_manager_settings"] = secret_manager_settings
-    if model_rpm_limit is not _UNSET:
+    if model_rpm_limit is not UNSET:
         body["model_rpm_limit"] = model_rpm_limit
-    if rpm_limit_type is not _UNSET:
+    if rpm_limit_type is not UNSET:
         body["rpm_limit_type"] = rpm_limit_type
-    if tpm_limit_type is not _UNSET:
+    if tpm_limit_type is not UNSET:
         body["tpm_limit_type"] = tpm_limit_type
-    if model_tpm_limit is not _UNSET:
+    if model_tpm_limit is not UNSET:
         body["model_tpm_limit"] = model_tpm_limit
-    if mcp_rpm_limit is not _UNSET:
+    if mcp_rpm_limit is not UNSET:
         body["mcp_rpm_limit"] = mcp_rpm_limit
-    if team_member_budget is not _UNSET:
+    if team_member_budget is not UNSET:
         body["team_member_budget"] = team_member_budget
-    if team_member_rpm_limit is not _UNSET:
+    if team_member_rpm_limit is not UNSET:
         body["team_member_rpm_limit"] = team_member_rpm_limit
-    if team_member_tpm_limit is not _UNSET:
+    if team_member_tpm_limit is not UNSET:
         body["team_member_tpm_limit"] = team_member_tpm_limit
-    if team_member_key_duration is not _UNSET:
+    if team_member_key_duration is not UNSET:
         body["team_member_key_duration"] = team_member_key_duration
-    if team_member_budget_duration is not _UNSET:
+    if team_member_budget_duration is not UNSET:
         body["team_member_budget_duration"] = team_member_budget_duration
-    if allowed_vector_store_indexes is not _UNSET:
+    if allowed_vector_store_indexes is not UNSET:
         body["allowed_vector_store_indexes"] = allowed_vector_store_indexes
-    if enforced_batch_output_expires_after is not _UNSET:
+    if enforced_batch_output_expires_after is not UNSET:
         body["enforced_batch_output_expires_after"] = enforced_batch_output_expires_after
-    if enforced_file_expires_after is not _UNSET:
+    if enforced_file_expires_after is not UNSET:
         body["enforced_file_expires_after"] = enforced_file_expires_after
-    result = _get_client().post("/team/new", json=body)
-    _verify_response({k: body[k] for k in ('team_alias', 'team_id', 'organization_id', 'max_budget', 'tpm_limit', 'rpm_limit', 'blocked',) if k in body}, result)
+    result = get_client().post("/team/new", json=body)
+    verify_response({k: body[k] for k in ('team_alias', 'team_id', 'organization_id', 'max_budget', 'tpm_limit', 'rpm_limit', 'blocked',) if k in body}, result)
     return result
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def new_user(
-    key_alias: str | None = cast(str | None, _UNSET),
-    duration: Annotated[str | None, Field(description="Key lifetime, e.g. '30d', '24h'; stored as an expiry timestamp.")] = cast(str | None, _UNSET),
-    models: Annotated[list[Any] | None, Field(description='Model names this resource may access; empty means all.')] = cast(list[Any] | None, _UNSET),
-    spend: float | None = cast(float | None, _UNSET),
-    max_budget: Annotated[float | None, Field(description='Hard USD budget cap; use blocks once exceeded.')] = cast(float | None, _UNSET),
-    user_id: Annotated[str | None, Field(description='Provide a custom ID; omit to auto-generate.')] = cast(str | None, _UNSET),
-    team_id: str | None = cast(str | None, _UNSET),
-    agent_id: str | None = cast(str | None, _UNSET),
-    max_parallel_requests: int | None = cast(int | None, _UNSET),
-    metadata: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    tpm_limit: Annotated[int | None, Field(description='Tokens-per-minute cap.')] = cast(int | None, _UNSET),
-    rpm_limit: Annotated[int | None, Field(description='Requests-per-minute cap.')] = cast(int | None, _UNSET),
-    budget_duration: str | None = cast(str | None, _UNSET),
-    budget_limits: list[dict[str, Any]] | None = cast(list[dict[str, Any]] | None, _UNSET),
-    allowed_cache_controls: list[Any] | None = cast(list[Any] | None, _UNSET),
-    config: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    permissions: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    model_max_budget: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    budget_fallbacks: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    model_rpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    model_tpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    mcp_rpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    tag_rpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    guardrails: list[str] | None = cast(list[str] | None, _UNSET),
-    policies: list[str] | None = cast(list[str] | None, _UNSET),
-    prompts: list[str] | None = cast(list[str] | None, _UNSET),
-    blocked: bool | None = cast(bool | None, _UNSET),
-    aliases: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    object_permission: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    user_email: Annotated[str | None, Field(description='User email (login identity).')] = cast(str | None, _UNSET),
-    user_alias: str | None = cast(str | None, _UNSET),
-    user_role: Annotated[Literal['proxy_admin', 'proxy_admin_viewer', 'internal_user', 'internal_user_viewer'] | None, Field(description='Proxy-level role.')] = cast(Literal['proxy_admin', 'proxy_admin_viewer', 'internal_user', 'internal_user_viewer'] | None, _UNSET),
-    teams: Annotated[list[str] | list[dict[str, Any]] | None, Field(description='Team IDs to add the user to.')] = cast(list[str] | list[dict[str, Any]] | None, _UNSET),
-    auto_create_key: bool = cast(bool, _UNSET),
-    send_invite_email: bool | None = cast(bool | None, _UNSET),
-    sso_user_id: str | None = cast(str | None, _UNSET),
-    organizations: list[str] | None = cast(list[str] | None, _UNSET),
+    key_alias: str | None = cast(str | None, UNSET),
+    duration: Annotated[str | None, Field(description="Key lifetime, e.g. '30d', '24h'; stored as an expiry timestamp.")] = cast(str | None, UNSET),
+    models: Annotated[list[Any] | None, Field(description='Model names this resource may access; empty means all.')] = cast(list[Any] | None, UNSET),
+    spend: float | None = cast(float | None, UNSET),
+    max_budget: Annotated[float | None, Field(description='Hard USD budget cap; use blocks once exceeded.')] = cast(float | None, UNSET),
+    user_id: Annotated[str | None, Field(description='Provide a custom ID; omit to auto-generate.')] = cast(str | None, UNSET),
+    team_id: str | None = cast(str | None, UNSET),
+    agent_id: str | None = cast(str | None, UNSET),
+    max_parallel_requests: int | None = cast(int | None, UNSET),
+    metadata: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    tpm_limit: Annotated[int | None, Field(description='Tokens-per-minute cap.')] = cast(int | None, UNSET),
+    rpm_limit: Annotated[int | None, Field(description='Requests-per-minute cap.')] = cast(int | None, UNSET),
+    budget_duration: str | None = cast(str | None, UNSET),
+    budget_limits: list[dict[str, Any]] | None = cast(list[dict[str, Any]] | None, UNSET),
+    allowed_cache_controls: list[Any] | None = cast(list[Any] | None, UNSET),
+    config: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    permissions: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    model_max_budget: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    budget_fallbacks: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    model_rpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    model_tpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    mcp_rpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    tag_rpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    guardrails: list[str] | None = cast(list[str] | None, UNSET),
+    policies: list[str] | None = cast(list[str] | None, UNSET),
+    prompts: list[str] | None = cast(list[str] | None, UNSET),
+    blocked: bool | None = cast(bool | None, UNSET),
+    aliases: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    object_permission: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    user_email: Annotated[str | None, Field(description='User email (login identity).')] = cast(str | None, UNSET),
+    user_alias: str | None = cast(str | None, UNSET),
+    user_role: Annotated[Literal['proxy_admin', 'proxy_admin_viewer', 'internal_user', 'internal_user_viewer'] | None, Field(description='Proxy-level role.')] = cast(Literal['proxy_admin', 'proxy_admin_viewer', 'internal_user', 'internal_user_viewer'] | None, UNSET),
+    teams: Annotated[list[str] | list[dict[str, Any]] | None, Field(description='Team IDs to add the user to.')] = cast(list[str] | list[dict[str, Any]] | None, UNSET),
+    auto_create_key: bool = cast(bool, UNSET),
+    send_invite_email: bool | None = cast(bool | None, UNSET),
+    sso_user_id: str | None = cast(str | None, UNSET),
+    organizations: list[str] | None = cast(list[str] | None, UNSET),
 ) -> Any:
     """Create an internal user.
 
     If auto_create_key is left on, a default key is minted and its secret is returned ONCE in this response.
     """
     body: dict[str, Any] = {}
-    if key_alias is not _UNSET:
+    if key_alias is not UNSET:
         body["key_alias"] = key_alias
-    if duration is not _UNSET:
+    if duration is not UNSET:
         body["duration"] = duration
-    if models is not _UNSET:
+    if models is not UNSET:
         body["models"] = models
-    if spend is not _UNSET:
+    if spend is not UNSET:
         body["spend"] = spend
-    if max_budget is not _UNSET:
+    if max_budget is not UNSET:
         body["max_budget"] = max_budget
-    if user_id is not _UNSET:
+    if user_id is not UNSET:
         body["user_id"] = user_id
-    if team_id is not _UNSET:
+    if team_id is not UNSET:
         body["team_id"] = team_id
-    if agent_id is not _UNSET:
+    if agent_id is not UNSET:
         body["agent_id"] = agent_id
-    if max_parallel_requests is not _UNSET:
+    if max_parallel_requests is not UNSET:
         body["max_parallel_requests"] = max_parallel_requests
-    if metadata is not _UNSET:
+    if metadata is not UNSET:
         body["metadata"] = metadata
-    if tpm_limit is not _UNSET:
+    if tpm_limit is not UNSET:
         body["tpm_limit"] = tpm_limit
-    if rpm_limit is not _UNSET:
+    if rpm_limit is not UNSET:
         body["rpm_limit"] = rpm_limit
-    if budget_duration is not _UNSET:
+    if budget_duration is not UNSET:
         body["budget_duration"] = budget_duration
-    if budget_limits is not _UNSET:
+    if budget_limits is not UNSET:
         body["budget_limits"] = budget_limits
-    if allowed_cache_controls is not _UNSET:
+    if allowed_cache_controls is not UNSET:
         body["allowed_cache_controls"] = allowed_cache_controls
-    if config is not _UNSET:
+    if config is not UNSET:
         body["config"] = config
-    if permissions is not _UNSET:
+    if permissions is not UNSET:
         body["permissions"] = permissions
-    if model_max_budget is not _UNSET:
+    if model_max_budget is not UNSET:
         body["model_max_budget"] = model_max_budget
-    if budget_fallbacks is not _UNSET:
+    if budget_fallbacks is not UNSET:
         body["budget_fallbacks"] = budget_fallbacks
-    if model_rpm_limit is not _UNSET:
+    if model_rpm_limit is not UNSET:
         body["model_rpm_limit"] = model_rpm_limit
-    if model_tpm_limit is not _UNSET:
+    if model_tpm_limit is not UNSET:
         body["model_tpm_limit"] = model_tpm_limit
-    if mcp_rpm_limit is not _UNSET:
+    if mcp_rpm_limit is not UNSET:
         body["mcp_rpm_limit"] = mcp_rpm_limit
-    if tag_rpm_limit is not _UNSET:
+    if tag_rpm_limit is not UNSET:
         body["tag_rpm_limit"] = tag_rpm_limit
-    if guardrails is not _UNSET:
+    if guardrails is not UNSET:
         body["guardrails"] = guardrails
-    if policies is not _UNSET:
+    if policies is not UNSET:
         body["policies"] = policies
-    if prompts is not _UNSET:
+    if prompts is not UNSET:
         body["prompts"] = prompts
-    if blocked is not _UNSET:
+    if blocked is not UNSET:
         body["blocked"] = blocked
-    if aliases is not _UNSET:
+    if aliases is not UNSET:
         body["aliases"] = aliases
-    if object_permission is not _UNSET:
+    if object_permission is not UNSET:
         body["object_permission"] = object_permission
-    if user_email is not _UNSET:
+    if user_email is not UNSET:
         body["user_email"] = user_email
-    if user_alias is not _UNSET:
+    if user_alias is not UNSET:
         body["user_alias"] = user_alias
-    if user_role is not _UNSET:
+    if user_role is not UNSET:
         body["user_role"] = user_role
-    if teams is not _UNSET:
+    if teams is not UNSET:
         body["teams"] = teams
-    if auto_create_key is not _UNSET:
+    if auto_create_key is not UNSET:
         body["auto_create_key"] = auto_create_key
-    if send_invite_email is not _UNSET:
+    if send_invite_email is not UNSET:
         body["send_invite_email"] = send_invite_email
-    if sso_user_id is not _UNSET:
+    if sso_user_id is not UNSET:
         body["sso_user_id"] = sso_user_id
-    if organizations is not _UNSET:
+    if organizations is not UNSET:
         body["organizations"] = organizations
-    result = _get_client().post("/user/new", json=body)
-    _verify_response({k: body[k] for k in ('user_id', 'user_email', 'user_role', 'max_budget', 'tpm_limit', 'rpm_limit',) if k in body}, result)
+    result = get_client().post("/user/new", json=body)
+    verify_response({k: body[k] for k in ('user_id', 'user_email', 'user_role', 'max_budget', 'tpm_limit', 'rpm_limit',) if k in body}, result)
     return result
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def organization_member_add(
     member: Annotated[list[dict[str, Any]] | dict[str, Any], Field(description="A member or list of members: {'user_id'|'user_email', 'role'}.")],
     organization_id: Annotated[str, Field(description='Organization to add members to.')],
-    max_budget_in_organization: Annotated[float | None, Field(description='Per-member USD budget scoped to this org.')] = cast(float | None, _UNSET),
+    max_budget_in_organization: Annotated[float | None, Field(description='Per-member USD budget scoped to this org.')] = cast(float | None, UNSET),
 ) -> Any:
     """Add one or more members to an organization."""
     body: dict[str, Any] = {}
-    if member is not _UNSET:
+    if member is not UNSET:
         body["member"] = member
-    if organization_id is not _UNSET:
+    if organization_id is not UNSET:
         body["organization_id"] = organization_id
-    if max_budget_in_organization is not _UNSET:
+    if max_budget_in_organization is not UNSET:
         body["max_budget_in_organization"] = max_budget_in_organization
-    return _get_client().post("/organization/member_add", json=body)
+    return get_client().post("/organization/member_add", json=body)
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def organization_member_update(
     organization_id: Annotated[str, Field(description='Organization the member belongs to.')],
-    user_id: str | None = cast(str | None, _UNSET),
-    user_email: str | None = cast(str | None, _UNSET),
-    max_budget_in_organization: Annotated[float | None, Field(description='Per-member USD budget scoped to this org.')] = cast(float | None, _UNSET),
-    role: Annotated[dict[str, Any] | None, Field(description='Member role within the organization.')] = cast(dict[str, Any] | None, _UNSET),
+    user_id: str | None = cast(str | None, UNSET),
+    user_email: str | None = cast(str | None, UNSET),
+    max_budget_in_organization: Annotated[float | None, Field(description='Per-member USD budget scoped to this org.')] = cast(float | None, UNSET),
+    role: Annotated[dict[str, Any] | None, Field(description='Member role within the organization.')] = cast(dict[str, Any] | None, UNSET),
 ) -> Any:
     """Update an organization member's role or budget."""
     body: dict[str, Any] = {}
-    if user_id is not _UNSET:
+    if user_id is not UNSET:
         body["user_id"] = user_id
-    if user_email is not _UNSET:
+    if user_email is not UNSET:
         body["user_email"] = user_email
-    if organization_id is not _UNSET:
+    if organization_id is not UNSET:
         body["organization_id"] = organization_id
-    if max_budget_in_organization is not _UNSET:
+    if max_budget_in_organization is not UNSET:
         body["max_budget_in_organization"] = max_budget_in_organization
-    if role is not _UNSET:
+    if role is not UNSET:
         body["role"] = role
-    result = _get_client().patch("/organization/member_update", json=body)
-    _verify_response({k: body[k] for k in ('organization_id', 'user_id',) if k in body}, result)
+    result = get_client().patch("/organization/member_update", json=body)
+    verify_response({k: body[k] for k in ('organization_id', 'user_id',) if k in body}, result)
     return result
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def patch_model(
     model_id: Annotated[str, Field(description='Deployment ID to patch (in the path).')],
-    model_name: str | None = cast(str | None, _UNSET),
-    litellm_params: Annotated[dict[str, Any] | None, Field(description="Provider call config as a dict, e.g. {'model': 'openai/gpt-4o', 'api_key': 'os.environ/OPENAI_API_KEY'}. Keys are provider-specific (genuinely dynamic), so this stays an opaque dict - see LiteLLM docs.")] = cast(dict[str, Any] | None, _UNSET),
-    model_info: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    blocked: Annotated[bool | None, Field(description='true blocks all use immediately.')] = cast(bool | None, _UNSET),
+    model_name: str | None = cast(str | None, UNSET),
+    litellm_params: Annotated[dict[str, Any] | None, Field(description="Provider call config as a dict, e.g. {'model': 'openai/gpt-4o', 'api_key': 'os.environ/OPENAI_API_KEY'}. Keys are provider-specific (genuinely dynamic), so this stays an opaque dict - see LiteLLM docs.")] = cast(dict[str, Any] | None, UNSET),
+    model_info: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    blocked: Annotated[bool | None, Field(description='true blocks all use immediately.')] = cast(bool | None, UNSET),
 ) -> Any:
     """Partially update a model deployment."""
     body: dict[str, Any] = {}
-    if model_name is not _UNSET:
+    if model_name is not UNSET:
         body["model_name"] = model_name
-    if litellm_params is not _UNSET:
+    if litellm_params is not UNSET:
         body["litellm_params"] = litellm_params
-    if model_info is not _UNSET:
+    if model_info is not UNSET:
         body["model_info"] = model_info
-    if blocked is not _UNSET:
+    if blocked is not UNSET:
         body["blocked"] = blocked
-    return _get_client().patch(f"/model/{model_id}/update", json=body)
+    return get_client().patch(f"/model/{model_id}/update", json=body)
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def team_member_add(
     member: Annotated[list[dict[str, Any]] | dict[str, Any], Field(description="A member or list of members: {'user_id'|'user_email', 'role'}.")],
     team_id: Annotated[str, Field(description='Team to add members to.')],
-    max_budget_in_team: Annotated[float | None, Field(description='Per-member USD budget scoped to this team.')] = cast(float | None, _UNSET),
-    budget_duration: str | None = cast(str | None, _UNSET),
-    allowed_models: list[str] | None = cast(list[str] | None, _UNSET),
+    max_budget_in_team: Annotated[float | None, Field(description='Per-member USD budget scoped to this team.')] = cast(float | None, UNSET),
+    budget_duration: str | None = cast(str | None, UNSET),
+    allowed_models: list[str] | None = cast(list[str] | None, UNSET),
 ) -> Any:
     """Add one or more members to a team."""
     body: dict[str, Any] = {}
-    if member is not _UNSET:
+    if member is not UNSET:
         body["member"] = member
-    if team_id is not _UNSET:
+    if team_id is not UNSET:
         body["team_id"] = team_id
-    if max_budget_in_team is not _UNSET:
+    if max_budget_in_team is not UNSET:
         body["max_budget_in_team"] = max_budget_in_team
-    if budget_duration is not _UNSET:
+    if budget_duration is not UNSET:
         body["budget_duration"] = budget_duration
-    if allowed_models is not _UNSET:
+    if allowed_models is not UNSET:
         body["allowed_models"] = allowed_models
-    return _get_client().post("/team/member_add", json=body)
+    return get_client().post("/team/member_add", json=body)
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def team_member_update(
     team_id: Annotated[str, Field(description='Team the member belongs to.')],
-    user_id: str | None = cast(str | None, _UNSET),
-    user_email: str | None = cast(str | None, _UNSET),
-    max_budget_in_team: Annotated[float | None, Field(description='Per-member USD budget scoped to this team.')] = cast(float | None, _UNSET),
-    role: Annotated[Literal['admin', 'user'] | None, Field(description='Member role within the team.')] = cast(Literal['admin', 'user'] | None, _UNSET),
-    tpm_limit: Annotated[int | None, Field(description='Tokens-per-minute cap.')] = cast(int | None, _UNSET),
-    rpm_limit: Annotated[int | None, Field(description='Requests-per-minute cap.')] = cast(int | None, _UNSET),
-    budget_duration: str | None = cast(str | None, _UNSET),
-    allowed_models: list[str] | None = cast(list[str] | None, _UNSET),
+    user_id: str | None = cast(str | None, UNSET),
+    user_email: str | None = cast(str | None, UNSET),
+    max_budget_in_team: Annotated[float | None, Field(description='Per-member USD budget scoped to this team.')] = cast(float | None, UNSET),
+    role: Annotated[Literal['admin', 'user'] | None, Field(description='Member role within the team.')] = cast(Literal['admin', 'user'] | None, UNSET),
+    tpm_limit: Annotated[int | None, Field(description='Tokens-per-minute cap.')] = cast(int | None, UNSET),
+    rpm_limit: Annotated[int | None, Field(description='Requests-per-minute cap.')] = cast(int | None, UNSET),
+    budget_duration: str | None = cast(str | None, UNSET),
+    allowed_models: list[str] | None = cast(list[str] | None, UNSET),
 ) -> Any:
     """Update a team member's role or limits."""
     body: dict[str, Any] = {}
-    if user_id is not _UNSET:
+    if user_id is not UNSET:
         body["user_id"] = user_id
-    if user_email is not _UNSET:
+    if user_email is not UNSET:
         body["user_email"] = user_email
-    if team_id is not _UNSET:
+    if team_id is not UNSET:
         body["team_id"] = team_id
-    if max_budget_in_team is not _UNSET:
+    if max_budget_in_team is not UNSET:
         body["max_budget_in_team"] = max_budget_in_team
-    if role is not _UNSET:
+    if role is not UNSET:
         body["role"] = role
-    if tpm_limit is not _UNSET:
+    if tpm_limit is not UNSET:
         body["tpm_limit"] = tpm_limit
-    if rpm_limit is not _UNSET:
+    if rpm_limit is not UNSET:
         body["rpm_limit"] = rpm_limit
-    if budget_duration is not _UNSET:
+    if budget_duration is not UNSET:
         body["budget_duration"] = budget_duration
-    if allowed_models is not _UNSET:
+    if allowed_models is not UNSET:
         body["allowed_models"] = allowed_models
-    result = _get_client().post("/team/member_update", json=body)
-    _verify_response({k: body[k] for k in ('team_id', 'user_id', 'max_budget_in_team', 'tpm_limit', 'rpm_limit',) if k in body}, result)
+    result = get_client().post("/team/member_update", json=body)
+    verify_response({k: body[k] for k in ('team_id', 'user_id', 'max_budget_in_team', 'tpm_limit', 'rpm_limit',) if k in body}, result)
     return result
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def team_model_add(
     team_id: Annotated[str, Field(description='Team to grant access to.')],
     models: Annotated[list[str], Field(description="Model names to add to the team's allow-list.")],
 ) -> Any:
     """Grant a team access to additional models."""
     body: dict[str, Any] = {}
-    if team_id is not _UNSET:
+    if team_id is not UNSET:
         body["team_id"] = team_id
-    if models is not _UNSET:
+    if models is not UNSET:
         body["models"] = models
-    return _get_client().post("/team/model/add", json=body)
+    return get_client().post("/team/model/add", json=body)
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def team_permissions_update(
     team_id: Annotated[str, Field(description='Team whose permissions to set.')],
     team_member_permissions: Annotated[list[str], Field(description='Full permission list (replaces, not merges).')],
 ) -> Any:
     """Replace a team's member-permission list."""
     body: dict[str, Any] = {}
-    if team_id is not _UNSET:
+    if team_id is not UNSET:
         body["team_id"] = team_id
-    if team_member_permissions is not _UNSET:
+    if team_member_permissions is not UNSET:
         body["team_member_permissions"] = team_member_permissions
-    result = _get_client().post("/team/permissions_update", json=body)
-    _verify_response({k: body[k] for k in ('team_id', 'team_member_permissions',) if k in body}, result)
+    result = get_client().post("/team/permissions_update", json=body)
+    verify_response({k: body[k] for k in ('team_id', 'team_member_permissions',) if k in body}, result)
     return result
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def update_access_group(
     access_group_id: Annotated[str, Field(description='ID of the access group to update (in the path).')],
-    access_agent_ids: list[str] | None = cast(list[str] | None, _UNSET),
-    access_group_name: Annotated[str | None, Field(description='New name for the access group.')] = cast(str | None, _UNSET),
-    access_mcp_server_ids: list[str] | None = cast(list[str] | None, _UNSET),
-    access_model_names: Annotated[list[str] | None, Field(description='Model names the group grants (replaces).')] = cast(list[str] | None, _UNSET),
-    assigned_key_ids: list[str] | None = cast(list[str] | None, _UNSET),
-    assigned_team_ids: list[str] | None = cast(list[str] | None, _UNSET),
-    description: str | None = cast(str | None, _UNSET),
+    access_agent_ids: list[str] | None = cast(list[str] | None, UNSET),
+    access_group_name: Annotated[str | None, Field(description='New name for the access group.')] = cast(str | None, UNSET),
+    access_mcp_server_ids: list[str] | None = cast(list[str] | None, UNSET),
+    access_model_names: Annotated[list[str] | None, Field(description='Model names the group grants (replaces).')] = cast(list[str] | None, UNSET),
+    assigned_key_ids: list[str] | None = cast(list[str] | None, UNSET),
+    assigned_team_ids: list[str] | None = cast(list[str] | None, UNSET),
+    description: str | None = cast(str | None, UNSET),
 ) -> Any:
     """Update a unified access group."""
     body: dict[str, Any] = {}
-    if access_agent_ids is not _UNSET:
+    if access_agent_ids is not UNSET:
         body["access_agent_ids"] = access_agent_ids
-    if access_group_name is not _UNSET:
+    if access_group_name is not UNSET:
         body["access_group_name"] = access_group_name
-    if access_mcp_server_ids is not _UNSET:
+    if access_mcp_server_ids is not UNSET:
         body["access_mcp_server_ids"] = access_mcp_server_ids
-    if access_model_names is not _UNSET:
+    if access_model_names is not UNSET:
         body["access_model_names"] = access_model_names
-    if assigned_key_ids is not _UNSET:
+    if assigned_key_ids is not UNSET:
         body["assigned_key_ids"] = assigned_key_ids
-    if assigned_team_ids is not _UNSET:
+    if assigned_team_ids is not UNSET:
         body["assigned_team_ids"] = assigned_team_ids
-    if description is not _UNSET:
+    if description is not UNSET:
         body["description"] = description
-    result = _get_client().put(f"/v1/access_group/{access_group_id}", json=body)
-    _verify_response(body, result, frozenset({'auto_create_key', 'budget_duration', 'duration', 'key', 'send_invite_email'}))
+    result = get_client().put(f"/v1/access_group/{access_group_id}", json=body)
+    verify_response(body, result, frozenset({'auto_create_key', 'budget_duration', 'duration', 'key', 'send_invite_email'}))
     return result
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def update_budget(
-    budget_id: Annotated[str | None, Field(description='ID of the budget to update.')] = cast(str | None, _UNSET),
-    max_budget: Annotated[float | None, Field(description='Hard USD budget cap; use blocks once exceeded.')] = cast(float | None, _UNSET),
-    soft_budget: Annotated[float | None, Field(description='USD spend that raises an alert; does not block.')] = cast(float | None, _UNSET),
-    max_parallel_requests: int | None = cast(int | None, _UNSET),
-    tpm_limit: int | None = cast(int | None, _UNSET),
-    rpm_limit: int | None = cast(int | None, _UNSET),
-    budget_duration: Annotated[str | None, Field(description="Budget reset window, e.g. '30d', '1mo'.")] = cast(str | None, _UNSET),
-    model_max_budget: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    budget_reset_at: str | None = cast(str | None, _UNSET),
+    budget_id: Annotated[str | None, Field(description='ID of the budget to update.')] = cast(str | None, UNSET),
+    max_budget: Annotated[float | None, Field(description='Hard USD budget cap; use blocks once exceeded.')] = cast(float | None, UNSET),
+    soft_budget: Annotated[float | None, Field(description='USD spend that raises an alert; does not block.')] = cast(float | None, UNSET),
+    max_parallel_requests: int | None = cast(int | None, UNSET),
+    tpm_limit: int | None = cast(int | None, UNSET),
+    rpm_limit: int | None = cast(int | None, UNSET),
+    budget_duration: Annotated[str | None, Field(description="Budget reset window, e.g. '30d', '1mo'.")] = cast(str | None, UNSET),
+    model_max_budget: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    budget_reset_at: str | None = cast(str | None, UNSET),
 ) -> Any:
     """Update a budget object."""
     body: dict[str, Any] = {}
-    if budget_id is not _UNSET:
+    if budget_id is not UNSET:
         body["budget_id"] = budget_id
-    if max_budget is not _UNSET:
+    if max_budget is not UNSET:
         body["max_budget"] = max_budget
-    if soft_budget is not _UNSET:
+    if soft_budget is not UNSET:
         body["soft_budget"] = soft_budget
-    if max_parallel_requests is not _UNSET:
+    if max_parallel_requests is not UNSET:
         body["max_parallel_requests"] = max_parallel_requests
-    if tpm_limit is not _UNSET:
+    if tpm_limit is not UNSET:
         body["tpm_limit"] = tpm_limit
-    if rpm_limit is not _UNSET:
+    if rpm_limit is not UNSET:
         body["rpm_limit"] = rpm_limit
-    if budget_duration is not _UNSET:
+    if budget_duration is not UNSET:
         body["budget_duration"] = budget_duration
-    if model_max_budget is not _UNSET:
+    if model_max_budget is not UNSET:
         body["model_max_budget"] = model_max_budget
-    if budget_reset_at is not _UNSET:
+    if budget_reset_at is not UNSET:
         body["budget_reset_at"] = budget_reset_at
-    result = _get_client().post("/budget/update", json=body)
-    _verify_response({k: body[k] for k in ('budget_id', 'max_budget', 'soft_budget', 'tpm_limit', 'rpm_limit',) if k in body}, result)
+    result = get_client().post("/budget/update", json=body)
+    verify_response({k: body[k] for k in ('budget_id', 'max_budget', 'soft_budget', 'tpm_limit', 'rpm_limit',) if k in body}, result)
     return result
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def update_credential(
     credential_name: Annotated[str, Field(description='Name of the credential to update (in the path).')],
     credential_info: Annotated[dict[str, Any], Field(description='Non-secret descriptive metadata as a dict.')],
@@ -1140,655 +1140,655 @@ def update_credential(
 ) -> Any:
     """Update a stored credential."""
     body: dict[str, Any] = {}
-    if credential_name is not _UNSET:
+    if credential_name is not UNSET:
         body["credential_name"] = credential_name
-    if credential_info is not _UNSET:
+    if credential_info is not UNSET:
         body["credential_info"] = credential_info
-    if credential_values is not _UNSET:
+    if credential_values is not UNSET:
         body["credential_values"] = credential_values
-    return _get_client().patch(f"/credentials/{credential_name}", json=body)
+    return get_client().patch(f"/credentials/{credential_name}", json=body)
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def update_customer(
     user_id: Annotated[str, Field(description='Customer identifier to update.')],
-    alias: Annotated[str | None, Field(description='Human-readable customer name.')] = cast(str | None, _UNSET),
-    blocked: Annotated[bool, Field(description='true blocks all use immediately.')] = cast(bool, _UNSET),
-    max_budget: Annotated[float | None, Field(description='Hard USD budget cap; use blocks once exceeded.')] = cast(float | None, _UNSET),
-    budget_id: str | None = cast(str | None, _UNSET),
-    allowed_model_region: Annotated[Literal['eu', 'us'] | None, Field(description='Restrict routing to a data region.')] = cast(Literal['eu', 'us'] | None, _UNSET),
-    default_model: Annotated[str | None, Field(description='Fallback model when the request names none.')] = cast(str | None, _UNSET),
-    object_permission: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
+    alias: Annotated[str | None, Field(description='Human-readable customer name.')] = cast(str | None, UNSET),
+    blocked: Annotated[bool, Field(description='true blocks all use immediately.')] = cast(bool, UNSET),
+    max_budget: Annotated[float | None, Field(description='Hard USD budget cap; use blocks once exceeded.')] = cast(float | None, UNSET),
+    budget_id: str | None = cast(str | None, UNSET),
+    allowed_model_region: Annotated[Literal['eu', 'us'] | None, Field(description='Restrict routing to a data region.')] = cast(Literal['eu', 'us'] | None, UNSET),
+    default_model: Annotated[str | None, Field(description='Fallback model when the request names none.')] = cast(str | None, UNSET),
+    object_permission: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
 ) -> Any:
     """Update an end-customer's budget profile."""
     body: dict[str, Any] = {}
-    if user_id is not _UNSET:
+    if user_id is not UNSET:
         body["user_id"] = user_id
-    if alias is not _UNSET:
+    if alias is not UNSET:
         body["alias"] = alias
-    if blocked is not _UNSET:
+    if blocked is not UNSET:
         body["blocked"] = blocked
-    if max_budget is not _UNSET:
+    if max_budget is not UNSET:
         body["max_budget"] = max_budget
-    if budget_id is not _UNSET:
+    if budget_id is not UNSET:
         body["budget_id"] = budget_id
-    if allowed_model_region is not _UNSET:
+    if allowed_model_region is not UNSET:
         body["allowed_model_region"] = allowed_model_region
-    if default_model is not _UNSET:
+    if default_model is not UNSET:
         body["default_model"] = default_model
-    if object_permission is not _UNSET:
+    if object_permission is not UNSET:
         body["object_permission"] = object_permission
-    result = _get_client().post("/customer/update", json=body)
-    _verify_response({k: body[k] for k in ('user_id', 'alias', 'blocked', 'allowed_model_region', 'default_model', 'budget_id',) if k in body}, result)
+    result = get_client().post("/customer/update", json=body)
+    verify_response({k: body[k] for k in ('user_id', 'alias', 'blocked', 'allowed_model_region', 'default_model', 'budget_id',) if k in body}, result)
     return result
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def update_guardrail(
     guardrail_id: Annotated[str, Field(description='ID of the guardrail to update (in the path).')],
     guardrail: Annotated[dict[str, Any], Field(description='Full guardrail spec as a dict (replaces).')],
 ) -> Any:
     """Update a guardrail."""
     body: dict[str, Any] = {}
-    if guardrail is not _UNSET:
+    if guardrail is not UNSET:
         body["guardrail"] = guardrail
-    result = _get_client().put(f"/guardrails/{guardrail_id}", json=body)
-    _verify_response({k: None for k in ('guardrail_id', 'guardrail_name',)}, result)
+    result = get_client().put(f"/guardrails/{guardrail_id}", json=body)
+    verify_response({k: None for k in ('guardrail_id', 'guardrail_name',)}, result)
     return result
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def update_key(
     key: Annotated[str, Field(description='Token of the key to update (hashed token accepted).')],
-    key_alias: str | None = cast(str | None, _UNSET),
-    duration: str | None = cast(str | None, _UNSET),
-    models: Annotated[list[Any] | None, Field(description='Model names this resource may access; empty means all.')] = cast(list[Any] | None, _UNSET),
-    spend: float | None = cast(float | None, _UNSET),
-    max_budget: Annotated[float | None, Field(description='Hard USD budget cap; use blocks once exceeded.')] = cast(float | None, _UNSET),
-    user_id: str | None = cast(str | None, _UNSET),
-    team_id: str | None = cast(str | None, _UNSET),
-    agent_id: str | None = cast(str | None, _UNSET),
-    max_parallel_requests: int | None = cast(int | None, _UNSET),
-    metadata: Annotated[dict[str, Any] | None, Field(description='Free-form JSON metadata stored on the row.')] = cast(dict[str, Any] | None, _UNSET),
-    tpm_limit: Annotated[int | None, Field(description='Tokens-per-minute cap.')] = cast(int | None, _UNSET),
-    rpm_limit: Annotated[int | None, Field(description='Requests-per-minute cap.')] = cast(int | None, _UNSET),
-    budget_duration: Annotated[str | None, Field(description="Budget reset window, e.g. '30d', '1mo'.")] = cast(str | None, _UNSET),
-    budget_limits: list[dict[str, Any]] | None = cast(list[dict[str, Any]] | None, _UNSET),
-    allowed_cache_controls: list[Any] | None = cast(list[Any] | None, _UNSET),
-    config: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    permissions: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    model_max_budget: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    budget_fallbacks: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    model_rpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    model_tpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    mcp_rpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    tag_rpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    guardrails: list[str] | None = cast(list[str] | None, _UNSET),
-    policies: list[str] | None = cast(list[str] | None, _UNSET),
-    prompts: list[str] | None = cast(list[str] | None, _UNSET),
-    blocked: Annotated[bool | None, Field(description='true blocks all use immediately.')] = cast(bool | None, _UNSET),
-    aliases: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    object_permission: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    budget_id: str | None = cast(str | None, _UNSET),
-    tags: list[str] | None = cast(list[str] | None, _UNSET),
-    disable_global_guardrails: bool | None = cast(bool | None, _UNSET),
-    throttle_on_budget_exceeded: bool | None = cast(bool | None, _UNSET),
-    enforced_params: list[str] | None = cast(list[str] | None, _UNSET),
-    allowed_routes: list[Any] | None = cast(list[Any] | None, _UNSET),
-    allowed_passthrough_routes: list[Any] | None = cast(list[Any] | None, _UNSET),
-    allowed_vector_store_indexes: list[dict[str, Any]] | None = cast(list[dict[str, Any]] | None, _UNSET),
-    rpm_limit_type: Literal['guaranteed_throughput', 'best_effort_throughput', 'dynamic'] | None = cast(Literal['guaranteed_throughput', 'best_effort_throughput', 'dynamic'] | None, _UNSET),
-    tpm_limit_type: Literal['guaranteed_throughput', 'best_effort_throughput', 'dynamic'] | None = cast(Literal['guaranteed_throughput', 'best_effort_throughput', 'dynamic'] | None, _UNSET),
-    router_settings: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    access_group_ids: list[str] | None = cast(list[str] | None, _UNSET),
-    temp_budget_increase: float | None = cast(float | None, _UNSET),
-    temp_budget_expiry: str | None = cast(str | None, _UNSET),
-    auto_rotate: bool | None = cast(bool | None, _UNSET),
-    rotation_interval: str | None = cast(str | None, _UNSET),
-    organization_id: str | None = cast(str | None, _UNSET),
+    key_alias: str | None = cast(str | None, UNSET),
+    duration: str | None = cast(str | None, UNSET),
+    models: Annotated[list[Any] | None, Field(description='Model names this resource may access; empty means all.')] = cast(list[Any] | None, UNSET),
+    spend: float | None = cast(float | None, UNSET),
+    max_budget: Annotated[float | None, Field(description='Hard USD budget cap; use blocks once exceeded.')] = cast(float | None, UNSET),
+    user_id: str | None = cast(str | None, UNSET),
+    team_id: str | None = cast(str | None, UNSET),
+    agent_id: str | None = cast(str | None, UNSET),
+    max_parallel_requests: int | None = cast(int | None, UNSET),
+    metadata: Annotated[dict[str, Any] | None, Field(description='Free-form JSON metadata stored on the row.')] = cast(dict[str, Any] | None, UNSET),
+    tpm_limit: Annotated[int | None, Field(description='Tokens-per-minute cap.')] = cast(int | None, UNSET),
+    rpm_limit: Annotated[int | None, Field(description='Requests-per-minute cap.')] = cast(int | None, UNSET),
+    budget_duration: Annotated[str | None, Field(description="Budget reset window, e.g. '30d', '1mo'.")] = cast(str | None, UNSET),
+    budget_limits: list[dict[str, Any]] | None = cast(list[dict[str, Any]] | None, UNSET),
+    allowed_cache_controls: list[Any] | None = cast(list[Any] | None, UNSET),
+    config: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    permissions: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    model_max_budget: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    budget_fallbacks: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    model_rpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    model_tpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    mcp_rpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    tag_rpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    guardrails: list[str] | None = cast(list[str] | None, UNSET),
+    policies: list[str] | None = cast(list[str] | None, UNSET),
+    prompts: list[str] | None = cast(list[str] | None, UNSET),
+    blocked: Annotated[bool | None, Field(description='true blocks all use immediately.')] = cast(bool | None, UNSET),
+    aliases: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    object_permission: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    budget_id: str | None = cast(str | None, UNSET),
+    tags: list[str] | None = cast(list[str] | None, UNSET),
+    disable_global_guardrails: bool | None = cast(bool | None, UNSET),
+    throttle_on_budget_exceeded: bool | None = cast(bool | None, UNSET),
+    enforced_params: list[str] | None = cast(list[str] | None, UNSET),
+    allowed_routes: list[Any] | None = cast(list[Any] | None, UNSET),
+    allowed_passthrough_routes: list[Any] | None = cast(list[Any] | None, UNSET),
+    allowed_vector_store_indexes: list[dict[str, Any]] | None = cast(list[dict[str, Any]] | None, UNSET),
+    rpm_limit_type: Literal['guaranteed_throughput', 'best_effort_throughput', 'dynamic'] | None = cast(Literal['guaranteed_throughput', 'best_effort_throughput', 'dynamic'] | None, UNSET),
+    tpm_limit_type: Literal['guaranteed_throughput', 'best_effort_throughput', 'dynamic'] | None = cast(Literal['guaranteed_throughput', 'best_effort_throughput', 'dynamic'] | None, UNSET),
+    router_settings: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    access_group_ids: list[str] | None = cast(list[str] | None, UNSET),
+    temp_budget_increase: float | None = cast(float | None, UNSET),
+    temp_budget_expiry: str | None = cast(str | None, UNSET),
+    auto_rotate: bool | None = cast(bool | None, UNSET),
+    rotation_interval: str | None = cast(str | None, UNSET),
+    organization_id: str | None = cast(str | None, UNSET),
 ) -> Any:
     """Update an existing virtual key's settings.
 
     Addresses the key by its `key` token; only the fields you pass are changed.
     """
     body: dict[str, Any] = {}
-    if key_alias is not _UNSET:
+    if key_alias is not UNSET:
         body["key_alias"] = key_alias
-    if duration is not _UNSET:
+    if duration is not UNSET:
         body["duration"] = duration
-    if models is not _UNSET:
+    if models is not UNSET:
         body["models"] = models
-    if spend is not _UNSET:
+    if spend is not UNSET:
         body["spend"] = spend
-    if max_budget is not _UNSET:
+    if max_budget is not UNSET:
         body["max_budget"] = max_budget
-    if user_id is not _UNSET:
+    if user_id is not UNSET:
         body["user_id"] = user_id
-    if team_id is not _UNSET:
+    if team_id is not UNSET:
         body["team_id"] = team_id
-    if agent_id is not _UNSET:
+    if agent_id is not UNSET:
         body["agent_id"] = agent_id
-    if max_parallel_requests is not _UNSET:
+    if max_parallel_requests is not UNSET:
         body["max_parallel_requests"] = max_parallel_requests
-    if metadata is not _UNSET:
+    if metadata is not UNSET:
         body["metadata"] = metadata
-    if tpm_limit is not _UNSET:
+    if tpm_limit is not UNSET:
         body["tpm_limit"] = tpm_limit
-    if rpm_limit is not _UNSET:
+    if rpm_limit is not UNSET:
         body["rpm_limit"] = rpm_limit
-    if budget_duration is not _UNSET:
+    if budget_duration is not UNSET:
         body["budget_duration"] = budget_duration
-    if budget_limits is not _UNSET:
+    if budget_limits is not UNSET:
         body["budget_limits"] = budget_limits
-    if allowed_cache_controls is not _UNSET:
+    if allowed_cache_controls is not UNSET:
         body["allowed_cache_controls"] = allowed_cache_controls
-    if config is not _UNSET:
+    if config is not UNSET:
         body["config"] = config
-    if permissions is not _UNSET:
+    if permissions is not UNSET:
         body["permissions"] = permissions
-    if model_max_budget is not _UNSET:
+    if model_max_budget is not UNSET:
         body["model_max_budget"] = model_max_budget
-    if budget_fallbacks is not _UNSET:
+    if budget_fallbacks is not UNSET:
         body["budget_fallbacks"] = budget_fallbacks
-    if model_rpm_limit is not _UNSET:
+    if model_rpm_limit is not UNSET:
         body["model_rpm_limit"] = model_rpm_limit
-    if model_tpm_limit is not _UNSET:
+    if model_tpm_limit is not UNSET:
         body["model_tpm_limit"] = model_tpm_limit
-    if mcp_rpm_limit is not _UNSET:
+    if mcp_rpm_limit is not UNSET:
         body["mcp_rpm_limit"] = mcp_rpm_limit
-    if tag_rpm_limit is not _UNSET:
+    if tag_rpm_limit is not UNSET:
         body["tag_rpm_limit"] = tag_rpm_limit
-    if guardrails is not _UNSET:
+    if guardrails is not UNSET:
         body["guardrails"] = guardrails
-    if policies is not _UNSET:
+    if policies is not UNSET:
         body["policies"] = policies
-    if prompts is not _UNSET:
+    if prompts is not UNSET:
         body["prompts"] = prompts
-    if blocked is not _UNSET:
+    if blocked is not UNSET:
         body["blocked"] = blocked
-    if aliases is not _UNSET:
+    if aliases is not UNSET:
         body["aliases"] = aliases
-    if object_permission is not _UNSET:
+    if object_permission is not UNSET:
         body["object_permission"] = object_permission
-    if key is not _UNSET:
+    if key is not UNSET:
         body["key"] = key
-    if budget_id is not _UNSET:
+    if budget_id is not UNSET:
         body["budget_id"] = budget_id
-    if tags is not _UNSET:
+    if tags is not UNSET:
         body["tags"] = tags
-    if disable_global_guardrails is not _UNSET:
+    if disable_global_guardrails is not UNSET:
         body["disable_global_guardrails"] = disable_global_guardrails
-    if throttle_on_budget_exceeded is not _UNSET:
+    if throttle_on_budget_exceeded is not UNSET:
         body["throttle_on_budget_exceeded"] = throttle_on_budget_exceeded
-    if enforced_params is not _UNSET:
+    if enforced_params is not UNSET:
         body["enforced_params"] = enforced_params
-    if allowed_routes is not _UNSET:
+    if allowed_routes is not UNSET:
         body["allowed_routes"] = allowed_routes
-    if allowed_passthrough_routes is not _UNSET:
+    if allowed_passthrough_routes is not UNSET:
         body["allowed_passthrough_routes"] = allowed_passthrough_routes
-    if allowed_vector_store_indexes is not _UNSET:
+    if allowed_vector_store_indexes is not UNSET:
         body["allowed_vector_store_indexes"] = allowed_vector_store_indexes
-    if rpm_limit_type is not _UNSET:
+    if rpm_limit_type is not UNSET:
         body["rpm_limit_type"] = rpm_limit_type
-    if tpm_limit_type is not _UNSET:
+    if tpm_limit_type is not UNSET:
         body["tpm_limit_type"] = tpm_limit_type
-    if router_settings is not _UNSET:
+    if router_settings is not UNSET:
         body["router_settings"] = router_settings
-    if access_group_ids is not _UNSET:
+    if access_group_ids is not UNSET:
         body["access_group_ids"] = access_group_ids
-    if temp_budget_increase is not _UNSET:
+    if temp_budget_increase is not UNSET:
         body["temp_budget_increase"] = temp_budget_increase
-    if temp_budget_expiry is not _UNSET:
+    if temp_budget_expiry is not UNSET:
         body["temp_budget_expiry"] = temp_budget_expiry
-    if auto_rotate is not _UNSET:
+    if auto_rotate is not UNSET:
         body["auto_rotate"] = auto_rotate
-    if rotation_interval is not _UNSET:
+    if rotation_interval is not UNSET:
         body["rotation_interval"] = rotation_interval
-    if organization_id is not _UNSET:
+    if organization_id is not UNSET:
         body["organization_id"] = organization_id
-    result = _get_client().post("/key/update", json=body)
-    _verify_response({k: body[k] for k in ('tpm_limit', 'rpm_limit', 'max_budget', 'metadata', 'models',) if k in body}, result)
+    result = get_client().post("/key/update", json=body)
+    verify_response({k: body[k] for k in ('tpm_limit', 'rpm_limit', 'max_budget', 'metadata', 'models',) if k in body}, result)
     return result
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def update_mcp_server(
     server_id: Annotated[str, Field(description='ID of the MCP server to update.')],
-    server_name: str | None = cast(str | None, _UNSET),
-    alias: str | None = cast(str | None, _UNSET),
-    description: str | None = cast(str | None, _UNSET),
-    transport: Annotated[Literal['sse', 'http', 'stdio'], Field(description='Transport protocol the server speaks.')] = cast(Literal['sse', 'http', 'stdio'], _UNSET),
-    auth_type: Literal['none', 'api_key', 'bearer_token', 'basic', 'authorization', 'oauth2', 'aws_sigv4', 'token', 'oauth2_token_exchange', 'true_passthrough', 'oauth_delegate'] | None = cast(Literal['none', 'api_key', 'bearer_token', 'basic', 'authorization', 'oauth2', 'aws_sigv4', 'token', 'oauth2_token_exchange', 'true_passthrough', 'oauth_delegate'] | None, _UNSET),
-    credentials: Annotated[dict[str, Any] | None, Field(description='Write-only auth material as a dict.')] = cast(dict[str, Any] | None, _UNSET),
-    url: Annotated[str | None, Field(description='Server URL (for http/sse transports).')] = cast(str | None, _UNSET),
-    spec_path: str | None = cast(str | None, _UNSET),
-    mcp_info: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    mcp_access_groups: list[str] = cast(list[str], _UNSET),
-    allowed_tools: list[str] | None = cast(list[str] | None, _UNSET),
-    tool_name_to_display_name: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    tool_name_to_description: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    extra_headers: list[str] | None = cast(list[str] | None, _UNSET),
-    static_headers: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    env_vars: list[dict[str, Any]] | None = cast(list[dict[str, Any]] | None, _UNSET),
-    instructions: str | None = cast(str | None, _UNSET),
-    command: str | None = cast(str | None, _UNSET),
-    args: list[str] = cast(list[str], _UNSET),
-    env: dict[str, Any] = cast(dict[str, Any], _UNSET),
-    authorization_url: str | None = cast(str | None, _UNSET),
-    token_url: str | None = cast(str | None, _UNSET),
-    registration_url: str | None = cast(str | None, _UNSET),
-    oauth2_flow: Literal['client_credentials', 'authorization_code'] | None = cast(Literal['client_credentials', 'authorization_code'] | None, _UNSET),
-    token_exchange_endpoint: str | None = cast(str | None, _UNSET),
-    audience: str | None = cast(str | None, _UNSET),
-    subject_token_type: str | None = cast(str | None, _UNSET),
-    token_exchange_profile: str | None = cast(str | None, _UNSET),
-    allow_all_keys: bool = cast(bool, _UNSET),
-    available_on_public_internet: bool = cast(bool, _UNSET),
-    delegate_auth_to_upstream: bool = cast(bool, _UNSET),
-    oauth_passthrough: bool = cast(bool, _UNSET),
-    dcr_bridge: bool | None = cast(bool | None, _UNSET),
-    is_byok: bool = cast(bool, _UNSET),
-    byok_description: list[str] = cast(list[str], _UNSET),
-    byok_api_key_help_url: str | None = cast(str | None, _UNSET),
-    source_url: str | None = cast(str | None, _UNSET),
-    timeout: float | None = cast(float | None, _UNSET),
-    max_concurrent_requests: int | None = cast(int | None, _UNSET),
+    server_name: str | None = cast(str | None, UNSET),
+    alias: str | None = cast(str | None, UNSET),
+    description: str | None = cast(str | None, UNSET),
+    transport: Annotated[Literal['sse', 'http', 'stdio'], Field(description='Transport protocol the server speaks.')] = cast(Literal['sse', 'http', 'stdio'], UNSET),
+    auth_type: Literal['none', 'api_key', 'bearer_token', 'basic', 'authorization', 'oauth2', 'aws_sigv4', 'token', 'oauth2_token_exchange', 'true_passthrough', 'oauth_delegate'] | None = cast(Literal['none', 'api_key', 'bearer_token', 'basic', 'authorization', 'oauth2', 'aws_sigv4', 'token', 'oauth2_token_exchange', 'true_passthrough', 'oauth_delegate'] | None, UNSET),
+    credentials: Annotated[dict[str, Any] | None, Field(description='Write-only auth material as a dict.')] = cast(dict[str, Any] | None, UNSET),
+    url: Annotated[str | None, Field(description='Server URL (for http/sse transports).')] = cast(str | None, UNSET),
+    spec_path: str | None = cast(str | None, UNSET),
+    mcp_info: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    mcp_access_groups: list[str] = cast(list[str], UNSET),
+    allowed_tools: list[str] | None = cast(list[str] | None, UNSET),
+    tool_name_to_display_name: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    tool_name_to_description: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    extra_headers: list[str] | None = cast(list[str] | None, UNSET),
+    static_headers: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    env_vars: list[dict[str, Any]] | None = cast(list[dict[str, Any]] | None, UNSET),
+    instructions: str | None = cast(str | None, UNSET),
+    command: str | None = cast(str | None, UNSET),
+    args: list[str] = cast(list[str], UNSET),
+    env: dict[str, Any] = cast(dict[str, Any], UNSET),
+    authorization_url: str | None = cast(str | None, UNSET),
+    token_url: str | None = cast(str | None, UNSET),
+    registration_url: str | None = cast(str | None, UNSET),
+    oauth2_flow: Literal['client_credentials', 'authorization_code'] | None = cast(Literal['client_credentials', 'authorization_code'] | None, UNSET),
+    token_exchange_endpoint: str | None = cast(str | None, UNSET),
+    audience: str | None = cast(str | None, UNSET),
+    subject_token_type: str | None = cast(str | None, UNSET),
+    token_exchange_profile: str | None = cast(str | None, UNSET),
+    allow_all_keys: bool = cast(bool, UNSET),
+    available_on_public_internet: bool = cast(bool, UNSET),
+    delegate_auth_to_upstream: bool = cast(bool, UNSET),
+    oauth_passthrough: bool = cast(bool, UNSET),
+    dcr_bridge: bool | None = cast(bool | None, UNSET),
+    is_byok: bool = cast(bool, UNSET),
+    byok_description: list[str] = cast(list[str], UNSET),
+    byok_api_key_help_url: str | None = cast(str | None, UNSET),
+    source_url: str | None = cast(str | None, UNSET),
+    timeout: float | None = cast(float | None, UNSET),
+    max_concurrent_requests: int | None = cast(int | None, UNSET),
 ) -> Any:
     """Update a registered MCP server (id in the body).
 
     Credential fields are write-only, as for create_mcp_server.
     """
     body: dict[str, Any] = {}
-    if server_id is not _UNSET:
+    if server_id is not UNSET:
         body["server_id"] = server_id
-    if server_name is not _UNSET:
+    if server_name is not UNSET:
         body["server_name"] = server_name
-    if alias is not _UNSET:
+    if alias is not UNSET:
         body["alias"] = alias
-    if description is not _UNSET:
+    if description is not UNSET:
         body["description"] = description
-    if transport is not _UNSET:
+    if transport is not UNSET:
         body["transport"] = transport
-    if auth_type is not _UNSET:
+    if auth_type is not UNSET:
         body["auth_type"] = auth_type
-    if credentials is not _UNSET:
+    if credentials is not UNSET:
         body["credentials"] = credentials
-    if url is not _UNSET:
+    if url is not UNSET:
         body["url"] = url
-    if spec_path is not _UNSET:
+    if spec_path is not UNSET:
         body["spec_path"] = spec_path
-    if mcp_info is not _UNSET:
+    if mcp_info is not UNSET:
         body["mcp_info"] = mcp_info
-    if mcp_access_groups is not _UNSET:
+    if mcp_access_groups is not UNSET:
         body["mcp_access_groups"] = mcp_access_groups
-    if allowed_tools is not _UNSET:
+    if allowed_tools is not UNSET:
         body["allowed_tools"] = allowed_tools
-    if tool_name_to_display_name is not _UNSET:
+    if tool_name_to_display_name is not UNSET:
         body["tool_name_to_display_name"] = tool_name_to_display_name
-    if tool_name_to_description is not _UNSET:
+    if tool_name_to_description is not UNSET:
         body["tool_name_to_description"] = tool_name_to_description
-    if extra_headers is not _UNSET:
+    if extra_headers is not UNSET:
         body["extra_headers"] = extra_headers
-    if static_headers is not _UNSET:
+    if static_headers is not UNSET:
         body["static_headers"] = static_headers
-    if env_vars is not _UNSET:
+    if env_vars is not UNSET:
         body["env_vars"] = env_vars
-    if instructions is not _UNSET:
+    if instructions is not UNSET:
         body["instructions"] = instructions
-    if command is not _UNSET:
+    if command is not UNSET:
         body["command"] = command
-    if args is not _UNSET:
+    if args is not UNSET:
         body["args"] = args
-    if env is not _UNSET:
+    if env is not UNSET:
         body["env"] = env
-    if authorization_url is not _UNSET:
+    if authorization_url is not UNSET:
         body["authorization_url"] = authorization_url
-    if token_url is not _UNSET:
+    if token_url is not UNSET:
         body["token_url"] = token_url
-    if registration_url is not _UNSET:
+    if registration_url is not UNSET:
         body["registration_url"] = registration_url
-    if oauth2_flow is not _UNSET:
+    if oauth2_flow is not UNSET:
         body["oauth2_flow"] = oauth2_flow
-    if token_exchange_endpoint is not _UNSET:
+    if token_exchange_endpoint is not UNSET:
         body["token_exchange_endpoint"] = token_exchange_endpoint
-    if audience is not _UNSET:
+    if audience is not UNSET:
         body["audience"] = audience
-    if subject_token_type is not _UNSET:
+    if subject_token_type is not UNSET:
         body["subject_token_type"] = subject_token_type
-    if token_exchange_profile is not _UNSET:
+    if token_exchange_profile is not UNSET:
         body["token_exchange_profile"] = token_exchange_profile
-    if allow_all_keys is not _UNSET:
+    if allow_all_keys is not UNSET:
         body["allow_all_keys"] = allow_all_keys
-    if available_on_public_internet is not _UNSET:
+    if available_on_public_internet is not UNSET:
         body["available_on_public_internet"] = available_on_public_internet
-    if delegate_auth_to_upstream is not _UNSET:
+    if delegate_auth_to_upstream is not UNSET:
         body["delegate_auth_to_upstream"] = delegate_auth_to_upstream
-    if oauth_passthrough is not _UNSET:
+    if oauth_passthrough is not UNSET:
         body["oauth_passthrough"] = oauth_passthrough
-    if dcr_bridge is not _UNSET:
+    if dcr_bridge is not UNSET:
         body["dcr_bridge"] = dcr_bridge
-    if is_byok is not _UNSET:
+    if is_byok is not UNSET:
         body["is_byok"] = is_byok
-    if byok_description is not _UNSET:
+    if byok_description is not UNSET:
         body["byok_description"] = byok_description
-    if byok_api_key_help_url is not _UNSET:
+    if byok_api_key_help_url is not UNSET:
         body["byok_api_key_help_url"] = byok_api_key_help_url
-    if source_url is not _UNSET:
+    if source_url is not UNSET:
         body["source_url"] = source_url
-    if timeout is not _UNSET:
+    if timeout is not UNSET:
         body["timeout"] = timeout
-    if max_concurrent_requests is not _UNSET:
+    if max_concurrent_requests is not UNSET:
         body["max_concurrent_requests"] = max_concurrent_requests
-    result = _get_client().put("/v1/mcp/server", json=body)
-    _verify_response({k: body[k] for k in ('server_id', 'url', 'transport', 'description',) if k in body}, result)
+    result = get_client().put("/v1/mcp/server", json=body)
+    verify_response({k: body[k] for k in ('server_id', 'url', 'transport', 'description',) if k in body}, result)
     return result
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def update_model(
-    model_name: Annotated[str | None, Field(description='Public model name for the deployment.')] = cast(str | None, _UNSET),
-    litellm_params: Annotated[dict[str, Any] | None, Field(description="Provider call config as a dict, e.g. {'model': 'openai/gpt-4o', 'api_key': 'os.environ/OPENAI_API_KEY'}. Keys are provider-specific (genuinely dynamic), so this stays an opaque dict - see LiteLLM docs.")] = cast(dict[str, Any] | None, _UNSET),
-    model_info: Annotated[dict[str, Any] | None, Field(description='Metadata dict; must carry the target model_info.id.')] = cast(dict[str, Any] | None, _UNSET),
-    blocked: Annotated[bool | None, Field(description='true blocks all use immediately.')] = cast(bool | None, _UNSET),
+    model_name: Annotated[str | None, Field(description='Public model name for the deployment.')] = cast(str | None, UNSET),
+    litellm_params: Annotated[dict[str, Any] | None, Field(description="Provider call config as a dict, e.g. {'model': 'openai/gpt-4o', 'api_key': 'os.environ/OPENAI_API_KEY'}. Keys are provider-specific (genuinely dynamic), so this stays an opaque dict - see LiteLLM docs.")] = cast(dict[str, Any] | None, UNSET),
+    model_info: Annotated[dict[str, Any] | None, Field(description='Metadata dict; must carry the target model_info.id.')] = cast(dict[str, Any] | None, UNSET),
+    blocked: Annotated[bool | None, Field(description='true blocks all use immediately.')] = cast(bool | None, UNSET),
 ) -> Any:
     """Replace a model deployment's config (full update)."""
     body: dict[str, Any] = {}
-    if model_name is not _UNSET:
+    if model_name is not UNSET:
         body["model_name"] = model_name
-    if litellm_params is not _UNSET:
+    if litellm_params is not UNSET:
         body["litellm_params"] = litellm_params
-    if model_info is not _UNSET:
+    if model_info is not UNSET:
         body["model_info"] = model_info
-    if blocked is not _UNSET:
+    if blocked is not UNSET:
         body["blocked"] = blocked
-    return _get_client().post("/model/update", json=body)
+    return get_client().post("/model/update", json=body)
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def update_tag(
     name: Annotated[str, Field(description='Name of the tag to update.')],
-    description: str | None = cast(str | None, _UNSET),
-    models: Annotated[list[str] | None, Field(description='Model names the tag scopes spend to (replaces).')] = cast(list[str] | None, _UNSET),
-    model_info: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    budget_id: str | None = cast(str | None, _UNSET),
-    max_budget: Annotated[float | None, Field(description='Hard USD budget cap; use blocks once exceeded.')] = cast(float | None, _UNSET),
-    soft_budget: float | None = cast(float | None, _UNSET),
-    max_parallel_requests: int | None = cast(int | None, _UNSET),
-    tpm_limit: int | None = cast(int | None, _UNSET),
-    rpm_limit: int | None = cast(int | None, _UNSET),
-    model_max_budget: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    budget_duration: str | None = cast(str | None, _UNSET),
+    description: str | None = cast(str | None, UNSET),
+    models: Annotated[list[str] | None, Field(description='Model names the tag scopes spend to (replaces).')] = cast(list[str] | None, UNSET),
+    model_info: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    budget_id: str | None = cast(str | None, UNSET),
+    max_budget: Annotated[float | None, Field(description='Hard USD budget cap; use blocks once exceeded.')] = cast(float | None, UNSET),
+    soft_budget: float | None = cast(float | None, UNSET),
+    max_parallel_requests: int | None = cast(int | None, UNSET),
+    tpm_limit: int | None = cast(int | None, UNSET),
+    rpm_limit: int | None = cast(int | None, UNSET),
+    model_max_budget: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    budget_duration: str | None = cast(str | None, UNSET),
 ) -> Any:
     """Update a spend-tracking tag."""
     body: dict[str, Any] = {}
-    if name is not _UNSET:
+    if name is not UNSET:
         body["name"] = name
-    if description is not _UNSET:
+    if description is not UNSET:
         body["description"] = description
-    if models is not _UNSET:
+    if models is not UNSET:
         body["models"] = models
-    if model_info is not _UNSET:
+    if model_info is not UNSET:
         body["model_info"] = model_info
-    if budget_id is not _UNSET:
+    if budget_id is not UNSET:
         body["budget_id"] = budget_id
-    if max_budget is not _UNSET:
+    if max_budget is not UNSET:
         body["max_budget"] = max_budget
-    if soft_budget is not _UNSET:
+    if soft_budget is not UNSET:
         body["soft_budget"] = soft_budget
-    if max_parallel_requests is not _UNSET:
+    if max_parallel_requests is not UNSET:
         body["max_parallel_requests"] = max_parallel_requests
-    if tpm_limit is not _UNSET:
+    if tpm_limit is not UNSET:
         body["tpm_limit"] = tpm_limit
-    if rpm_limit is not _UNSET:
+    if rpm_limit is not UNSET:
         body["rpm_limit"] = rpm_limit
-    if model_max_budget is not _UNSET:
+    if model_max_budget is not UNSET:
         body["model_max_budget"] = model_max_budget
-    if budget_duration is not _UNSET:
+    if budget_duration is not UNSET:
         body["budget_duration"] = budget_duration
-    result = _get_client().post("/tag/update", json=body)
-    _verify_response({k: None for k in ('tag',)}, result)
+    result = get_client().post("/tag/update", json=body)
+    verify_response({k: None for k in ('tag',)}, result)
     return result
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def update_team(
     team_id: Annotated[str, Field(description='ID of the team to update.')],
-    team_alias: str | None = cast(str | None, _UNSET),
-    organization_id: str | None = cast(str | None, _UNSET),
-    metadata: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    tpm_limit: Annotated[int | None, Field(description='Tokens-per-minute cap.')] = cast(int | None, _UNSET),
-    rpm_limit: Annotated[int | None, Field(description='Requests-per-minute cap.')] = cast(int | None, _UNSET),
-    max_budget: Annotated[float | None, Field(description='Hard USD budget cap; use blocks once exceeded.')] = cast(float | None, _UNSET),
-    soft_budget: float | None = cast(float | None, _UNSET),
-    models: Annotated[list[Any] | None, Field(description='Model names this resource may access; empty means all.')] = cast(list[Any] | None, _UNSET),
-    blocked: Annotated[bool | None, Field(description='true blocks all use immediately.')] = cast(bool | None, _UNSET),
-    budget_duration: Annotated[str | None, Field(description="Budget reset window, e.g. '30d', '1mo'.")] = cast(str | None, _UNSET),
-    tags: list[Any] | None = cast(list[Any] | None, _UNSET),
-    model_aliases: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    guardrails: list[str] | None = cast(list[str] | None, _UNSET),
-    policies: list[str] | None = cast(list[str] | None, _UNSET),
-    object_permission: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    disable_global_guardrails: bool | None = cast(bool | None, _UNSET),
-    team_member_budget: float | None = cast(float | None, _UNSET),
-    team_member_budget_duration: str | None = cast(str | None, _UNSET),
-    team_member_rpm_limit: int | None = cast(int | None, _UNSET),
-    team_member_tpm_limit: int | None = cast(int | None, _UNSET),
-    team_member_key_duration: str | None = cast(str | None, _UNSET),
-    allowed_passthrough_routes: list[Any] | None = cast(list[Any] | None, _UNSET),
-    secret_manager_settings: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    prompts: list[str] | None = cast(list[str] | None, _UNSET),
-    model_rpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    model_tpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    mcp_rpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    allowed_vector_store_indexes: list[dict[str, Any]] | None = cast(list[dict[str, Any]] | None, _UNSET),
-    enforced_batch_output_expires_after: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    enforced_file_expires_after: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    router_settings: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    access_group_ids: list[str] | None = cast(list[str] | None, _UNSET),
-    budget_limits: list[dict[str, Any]] | None = cast(list[dict[str, Any]] | None, _UNSET),
-    default_team_member_models: list[str] | None = cast(list[str] | None, _UNSET),
+    team_alias: str | None = cast(str | None, UNSET),
+    organization_id: str | None = cast(str | None, UNSET),
+    metadata: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    tpm_limit: Annotated[int | None, Field(description='Tokens-per-minute cap.')] = cast(int | None, UNSET),
+    rpm_limit: Annotated[int | None, Field(description='Requests-per-minute cap.')] = cast(int | None, UNSET),
+    max_budget: Annotated[float | None, Field(description='Hard USD budget cap; use blocks once exceeded.')] = cast(float | None, UNSET),
+    soft_budget: float | None = cast(float | None, UNSET),
+    models: Annotated[list[Any] | None, Field(description='Model names this resource may access; empty means all.')] = cast(list[Any] | None, UNSET),
+    blocked: Annotated[bool | None, Field(description='true blocks all use immediately.')] = cast(bool | None, UNSET),
+    budget_duration: Annotated[str | None, Field(description="Budget reset window, e.g. '30d', '1mo'.")] = cast(str | None, UNSET),
+    tags: list[Any] | None = cast(list[Any] | None, UNSET),
+    model_aliases: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    guardrails: list[str] | None = cast(list[str] | None, UNSET),
+    policies: list[str] | None = cast(list[str] | None, UNSET),
+    object_permission: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    disable_global_guardrails: bool | None = cast(bool | None, UNSET),
+    team_member_budget: float | None = cast(float | None, UNSET),
+    team_member_budget_duration: str | None = cast(str | None, UNSET),
+    team_member_rpm_limit: int | None = cast(int | None, UNSET),
+    team_member_tpm_limit: int | None = cast(int | None, UNSET),
+    team_member_key_duration: str | None = cast(str | None, UNSET),
+    allowed_passthrough_routes: list[Any] | None = cast(list[Any] | None, UNSET),
+    secret_manager_settings: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    prompts: list[str] | None = cast(list[str] | None, UNSET),
+    model_rpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    model_tpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    mcp_rpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    allowed_vector_store_indexes: list[dict[str, Any]] | None = cast(list[dict[str, Any]] | None, UNSET),
+    enforced_batch_output_expires_after: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    enforced_file_expires_after: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    router_settings: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    access_group_ids: list[str] | None = cast(list[str] | None, UNSET),
+    budget_limits: list[dict[str, Any]] | None = cast(list[dict[str, Any]] | None, UNSET),
+    default_team_member_models: list[str] | None = cast(list[str] | None, UNSET),
 ) -> Any:
     """Update a team's settings."""
     body: dict[str, Any] = {}
-    if team_id is not _UNSET:
+    if team_id is not UNSET:
         body["team_id"] = team_id
-    if team_alias is not _UNSET:
+    if team_alias is not UNSET:
         body["team_alias"] = team_alias
-    if organization_id is not _UNSET:
+    if organization_id is not UNSET:
         body["organization_id"] = organization_id
-    if metadata is not _UNSET:
+    if metadata is not UNSET:
         body["metadata"] = metadata
-    if tpm_limit is not _UNSET:
+    if tpm_limit is not UNSET:
         body["tpm_limit"] = tpm_limit
-    if rpm_limit is not _UNSET:
+    if rpm_limit is not UNSET:
         body["rpm_limit"] = rpm_limit
-    if max_budget is not _UNSET:
+    if max_budget is not UNSET:
         body["max_budget"] = max_budget
-    if soft_budget is not _UNSET:
+    if soft_budget is not UNSET:
         body["soft_budget"] = soft_budget
-    if models is not _UNSET:
+    if models is not UNSET:
         body["models"] = models
-    if blocked is not _UNSET:
+    if blocked is not UNSET:
         body["blocked"] = blocked
-    if budget_duration is not _UNSET:
+    if budget_duration is not UNSET:
         body["budget_duration"] = budget_duration
-    if tags is not _UNSET:
+    if tags is not UNSET:
         body["tags"] = tags
-    if model_aliases is not _UNSET:
+    if model_aliases is not UNSET:
         body["model_aliases"] = model_aliases
-    if guardrails is not _UNSET:
+    if guardrails is not UNSET:
         body["guardrails"] = guardrails
-    if policies is not _UNSET:
+    if policies is not UNSET:
         body["policies"] = policies
-    if object_permission is not _UNSET:
+    if object_permission is not UNSET:
         body["object_permission"] = object_permission
-    if disable_global_guardrails is not _UNSET:
+    if disable_global_guardrails is not UNSET:
         body["disable_global_guardrails"] = disable_global_guardrails
-    if team_member_budget is not _UNSET:
+    if team_member_budget is not UNSET:
         body["team_member_budget"] = team_member_budget
-    if team_member_budget_duration is not _UNSET:
+    if team_member_budget_duration is not UNSET:
         body["team_member_budget_duration"] = team_member_budget_duration
-    if team_member_rpm_limit is not _UNSET:
+    if team_member_rpm_limit is not UNSET:
         body["team_member_rpm_limit"] = team_member_rpm_limit
-    if team_member_tpm_limit is not _UNSET:
+    if team_member_tpm_limit is not UNSET:
         body["team_member_tpm_limit"] = team_member_tpm_limit
-    if team_member_key_duration is not _UNSET:
+    if team_member_key_duration is not UNSET:
         body["team_member_key_duration"] = team_member_key_duration
-    if allowed_passthrough_routes is not _UNSET:
+    if allowed_passthrough_routes is not UNSET:
         body["allowed_passthrough_routes"] = allowed_passthrough_routes
-    if secret_manager_settings is not _UNSET:
+    if secret_manager_settings is not UNSET:
         body["secret_manager_settings"] = secret_manager_settings
-    if prompts is not _UNSET:
+    if prompts is not UNSET:
         body["prompts"] = prompts
-    if model_rpm_limit is not _UNSET:
+    if model_rpm_limit is not UNSET:
         body["model_rpm_limit"] = model_rpm_limit
-    if model_tpm_limit is not _UNSET:
+    if model_tpm_limit is not UNSET:
         body["model_tpm_limit"] = model_tpm_limit
-    if mcp_rpm_limit is not _UNSET:
+    if mcp_rpm_limit is not UNSET:
         body["mcp_rpm_limit"] = mcp_rpm_limit
-    if allowed_vector_store_indexes is not _UNSET:
+    if allowed_vector_store_indexes is not UNSET:
         body["allowed_vector_store_indexes"] = allowed_vector_store_indexes
-    if enforced_batch_output_expires_after is not _UNSET:
+    if enforced_batch_output_expires_after is not UNSET:
         body["enforced_batch_output_expires_after"] = enforced_batch_output_expires_after
-    if enforced_file_expires_after is not _UNSET:
+    if enforced_file_expires_after is not UNSET:
         body["enforced_file_expires_after"] = enforced_file_expires_after
-    if router_settings is not _UNSET:
+    if router_settings is not UNSET:
         body["router_settings"] = router_settings
-    if access_group_ids is not _UNSET:
+    if access_group_ids is not UNSET:
         body["access_group_ids"] = access_group_ids
-    if budget_limits is not _UNSET:
+    if budget_limits is not UNSET:
         body["budget_limits"] = budget_limits
-    if default_team_member_models is not _UNSET:
+    if default_team_member_models is not UNSET:
         body["default_team_member_models"] = default_team_member_models
-    result = _get_client().post("/team/update", json=body)
-    _verify_response({k: body[k] for k in ('team_id',) if k in body}, result)
+    result = get_client().post("/team/update", json=body)
+    verify_response({k: body[k] for k in ('team_id',) if k in body}, result)
     return result
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def update_toolset(
     toolset_id: Annotated[str, Field(description='ID of the toolset to update.')],
-    toolset_name: str | None = cast(str | None, _UNSET),
-    description: str | None = cast(str | None, _UNSET),
-    tools: Annotated[list[dict[str, Any]] | None, Field(description='Tool descriptors as a list of dicts (replaces).')] = cast(list[dict[str, Any]] | None, _UNSET),
+    toolset_name: str | None = cast(str | None, UNSET),
+    description: str | None = cast(str | None, UNSET),
+    tools: Annotated[list[dict[str, Any]] | None, Field(description='Tool descriptors as a list of dicts (replaces).')] = cast(list[dict[str, Any]] | None, UNSET),
 ) -> Any:
     """Update an MCP toolset (id in the body)."""
     body: dict[str, Any] = {}
-    if toolset_id is not _UNSET:
+    if toolset_id is not UNSET:
         body["toolset_id"] = toolset_id
-    if toolset_name is not _UNSET:
+    if toolset_name is not UNSET:
         body["toolset_name"] = toolset_name
-    if description is not _UNSET:
+    if description is not UNSET:
         body["description"] = description
-    if tools is not _UNSET:
+    if tools is not UNSET:
         body["tools"] = tools
-    return _get_client().put("/v1/mcp/toolset", json=body)
+    return get_client().put("/v1/mcp/toolset", json=body)
 
 
-@_op(litellm_write)
+@op(litellm_write)
 def update_user(
-    key_alias: str | None = cast(str | None, _UNSET),
-    duration: str | None = cast(str | None, _UNSET),
-    models: Annotated[list[Any] | None, Field(description='Model names this resource may access; empty means all.')] = cast(list[Any] | None, _UNSET),
-    spend: float | None = cast(float | None, _UNSET),
-    max_budget: Annotated[float | None, Field(description='Hard USD budget cap; use blocks once exceeded.')] = cast(float | None, _UNSET),
-    user_id: Annotated[str | None, Field(description='ID of the user to update.')] = cast(str | None, _UNSET),
-    team_id: str | None = cast(str | None, _UNSET),
-    agent_id: str | None = cast(str | None, _UNSET),
-    max_parallel_requests: int | None = cast(int | None, _UNSET),
-    metadata: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    tpm_limit: Annotated[int | None, Field(description='Tokens-per-minute cap.')] = cast(int | None, _UNSET),
-    rpm_limit: Annotated[int | None, Field(description='Requests-per-minute cap.')] = cast(int | None, _UNSET),
-    budget_duration: str | None = cast(str | None, _UNSET),
-    budget_limits: list[dict[str, Any]] | None = cast(list[dict[str, Any]] | None, _UNSET),
-    allowed_cache_controls: list[Any] | None = cast(list[Any] | None, _UNSET),
-    config: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    permissions: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    model_max_budget: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    budget_fallbacks: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    model_rpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    model_tpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    mcp_rpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    tag_rpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    guardrails: list[str] | None = cast(list[str] | None, _UNSET),
-    policies: list[str] | None = cast(list[str] | None, _UNSET),
-    prompts: list[str] | None = cast(list[str] | None, _UNSET),
-    blocked: bool | None = cast(bool | None, _UNSET),
-    aliases: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    object_permission: dict[str, Any] | None = cast(dict[str, Any] | None, _UNSET),
-    password: Annotated[str | None, Field(description='New UI login password.')] = cast(str | None, _UNSET),
-    user_alias: str | None = cast(str | None, _UNSET),
-    user_role: Annotated[Literal['proxy_admin', 'proxy_admin_viewer', 'internal_user', 'internal_user_viewer'] | None, Field(description='Proxy-level role.')] = cast(Literal['proxy_admin', 'proxy_admin_viewer', 'internal_user', 'internal_user_viewer'] | None, _UNSET),
-    user_email: str | None = cast(str | None, _UNSET),
+    key_alias: str | None = cast(str | None, UNSET),
+    duration: str | None = cast(str | None, UNSET),
+    models: Annotated[list[Any] | None, Field(description='Model names this resource may access; empty means all.')] = cast(list[Any] | None, UNSET),
+    spend: float | None = cast(float | None, UNSET),
+    max_budget: Annotated[float | None, Field(description='Hard USD budget cap; use blocks once exceeded.')] = cast(float | None, UNSET),
+    user_id: Annotated[str | None, Field(description='ID of the user to update.')] = cast(str | None, UNSET),
+    team_id: str | None = cast(str | None, UNSET),
+    agent_id: str | None = cast(str | None, UNSET),
+    max_parallel_requests: int | None = cast(int | None, UNSET),
+    metadata: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    tpm_limit: Annotated[int | None, Field(description='Tokens-per-minute cap.')] = cast(int | None, UNSET),
+    rpm_limit: Annotated[int | None, Field(description='Requests-per-minute cap.')] = cast(int | None, UNSET),
+    budget_duration: str | None = cast(str | None, UNSET),
+    budget_limits: list[dict[str, Any]] | None = cast(list[dict[str, Any]] | None, UNSET),
+    allowed_cache_controls: list[Any] | None = cast(list[Any] | None, UNSET),
+    config: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    permissions: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    model_max_budget: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    budget_fallbacks: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    model_rpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    model_tpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    mcp_rpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    tag_rpm_limit: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    guardrails: list[str] | None = cast(list[str] | None, UNSET),
+    policies: list[str] | None = cast(list[str] | None, UNSET),
+    prompts: list[str] | None = cast(list[str] | None, UNSET),
+    blocked: bool | None = cast(bool | None, UNSET),
+    aliases: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    object_permission: dict[str, Any] | None = cast(dict[str, Any] | None, UNSET),
+    password: Annotated[str | None, Field(description='New UI login password.')] = cast(str | None, UNSET),
+    user_alias: str | None = cast(str | None, UNSET),
+    user_role: Annotated[Literal['proxy_admin', 'proxy_admin_viewer', 'internal_user', 'internal_user_viewer'] | None, Field(description='Proxy-level role.')] = cast(Literal['proxy_admin', 'proxy_admin_viewer', 'internal_user', 'internal_user_viewer'] | None, UNSET),
+    user_email: str | None = cast(str | None, UNSET),
 ) -> Any:
     """Update an internal user's settings."""
     body: dict[str, Any] = {}
-    if key_alias is not _UNSET:
+    if key_alias is not UNSET:
         body["key_alias"] = key_alias
-    if duration is not _UNSET:
+    if duration is not UNSET:
         body["duration"] = duration
-    if models is not _UNSET:
+    if models is not UNSET:
         body["models"] = models
-    if spend is not _UNSET:
+    if spend is not UNSET:
         body["spend"] = spend
-    if max_budget is not _UNSET:
+    if max_budget is not UNSET:
         body["max_budget"] = max_budget
-    if user_id is not _UNSET:
+    if user_id is not UNSET:
         body["user_id"] = user_id
-    if team_id is not _UNSET:
+    if team_id is not UNSET:
         body["team_id"] = team_id
-    if agent_id is not _UNSET:
+    if agent_id is not UNSET:
         body["agent_id"] = agent_id
-    if max_parallel_requests is not _UNSET:
+    if max_parallel_requests is not UNSET:
         body["max_parallel_requests"] = max_parallel_requests
-    if metadata is not _UNSET:
+    if metadata is not UNSET:
         body["metadata"] = metadata
-    if tpm_limit is not _UNSET:
+    if tpm_limit is not UNSET:
         body["tpm_limit"] = tpm_limit
-    if rpm_limit is not _UNSET:
+    if rpm_limit is not UNSET:
         body["rpm_limit"] = rpm_limit
-    if budget_duration is not _UNSET:
+    if budget_duration is not UNSET:
         body["budget_duration"] = budget_duration
-    if budget_limits is not _UNSET:
+    if budget_limits is not UNSET:
         body["budget_limits"] = budget_limits
-    if allowed_cache_controls is not _UNSET:
+    if allowed_cache_controls is not UNSET:
         body["allowed_cache_controls"] = allowed_cache_controls
-    if config is not _UNSET:
+    if config is not UNSET:
         body["config"] = config
-    if permissions is not _UNSET:
+    if permissions is not UNSET:
         body["permissions"] = permissions
-    if model_max_budget is not _UNSET:
+    if model_max_budget is not UNSET:
         body["model_max_budget"] = model_max_budget
-    if budget_fallbacks is not _UNSET:
+    if budget_fallbacks is not UNSET:
         body["budget_fallbacks"] = budget_fallbacks
-    if model_rpm_limit is not _UNSET:
+    if model_rpm_limit is not UNSET:
         body["model_rpm_limit"] = model_rpm_limit
-    if model_tpm_limit is not _UNSET:
+    if model_tpm_limit is not UNSET:
         body["model_tpm_limit"] = model_tpm_limit
-    if mcp_rpm_limit is not _UNSET:
+    if mcp_rpm_limit is not UNSET:
         body["mcp_rpm_limit"] = mcp_rpm_limit
-    if tag_rpm_limit is not _UNSET:
+    if tag_rpm_limit is not UNSET:
         body["tag_rpm_limit"] = tag_rpm_limit
-    if guardrails is not _UNSET:
+    if guardrails is not UNSET:
         body["guardrails"] = guardrails
-    if policies is not _UNSET:
+    if policies is not UNSET:
         body["policies"] = policies
-    if prompts is not _UNSET:
+    if prompts is not UNSET:
         body["prompts"] = prompts
-    if blocked is not _UNSET:
+    if blocked is not UNSET:
         body["blocked"] = blocked
-    if aliases is not _UNSET:
+    if aliases is not UNSET:
         body["aliases"] = aliases
-    if object_permission is not _UNSET:
+    if object_permission is not UNSET:
         body["object_permission"] = object_permission
-    if password is not _UNSET:
+    if password is not UNSET:
         body["password"] = password
-    if user_alias is not _UNSET:
+    if user_alias is not UNSET:
         body["user_alias"] = user_alias
-    if user_role is not _UNSET:
+    if user_role is not UNSET:
         body["user_role"] = user_role
-    if user_email is not _UNSET:
+    if user_email is not UNSET:
         body["user_email"] = user_email
-    result = _get_client().post("/user/update", json=body)
-    _verify_response({k: body[k] for k in ('user_id',) if k in body}, result)
+    result = get_client().post("/user/update", json=body)
+    verify_response({k: body[k] for k in ('user_id',) if k in body}, result)
     return result

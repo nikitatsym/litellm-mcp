@@ -66,10 +66,3 @@ def test_search_matches_prompt_ops():
     h = _help("litellm_write", search="prompt")
     assert "CreatePrompt(" in h
     assert "GenerateKey(" not in h
-
-
-def test_unset_never_leaks_into_prompt_help():
-    for group in ("litellm_read", "litellm_write", "litellm_delete"):
-        h = _help(group)
-        assert "_Unset" not in h
-        assert "_UNSET" not in h

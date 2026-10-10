@@ -7,141 +7,141 @@ from typing import Annotated, Any, Literal, cast
 
 from pydantic import Field
 
-from ..registry import _UNSET, _op
+from ..registry import UNSET, op
 from .groups import litellm_read
-from .helpers import _get_client, _qp, _slim_list
+from .helpers import get_client, query_params, slim_list
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def access_group_info(
     access_group_id: Annotated[str, Field(description='Access group ID to look up.')],
 ) -> Any:
     """Get one access group's members and gated resources."""
-    return _get_client().get(f"/v1/access_group/{access_group_id}")
+    return get_client().get(f"/v1/access_group/{access_group_id}")
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def active_callbacks() -> Any:
     """Active Callbacks"""
-    return _get_client().get("/active/callbacks")
+    return get_client().get("/active/callbacks")
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def audit_log_info(
     id: Annotated[str, Field(description='Audit-log entry ID.')],
 ) -> Any:
     """Get one audit-log entry by ID."""
-    return _get_client().get(f"/audit/{id}")
+    return get_client().get(f"/audit/{id}")
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def cache_ping() -> Any:
     """Cache Ping"""
-    return _get_client().get("/cache/ping")
+    return get_client().get("/cache/ping")
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def cache_redis_info() -> Any:
     """Cache Redis Info"""
-    return _get_client().get("/cache/redis/info")
+    return get_client().get("/cache/redis/info")
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def cache_settings() -> Any:
     """Get Cache Settings"""
-    return _get_client().get("/cache/settings")
+    return get_client().get("/cache/settings")
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def calculate_spend(
-    model: Annotated[str | None, Field(description='Model name used for pricing.')] = cast(str | None, _UNSET),
-    messages: Annotated[list[Any] | None, Field(description='Chat messages to price a request from.')] = cast(list[Any] | None, _UNSET),
-    completion_response: Annotated[dict[str, Any] | None, Field(description='A completion response object to price instead.')] = cast(dict[str, Any] | None, _UNSET),
+    model: Annotated[str | None, Field(description='Model name used for pricing.')] = cast(str | None, UNSET),
+    messages: Annotated[list[Any] | None, Field(description='Chat messages to price a request from.')] = cast(list[Any] | None, UNSET),
+    completion_response: Annotated[dict[str, Any] | None, Field(description='A completion response object to price instead.')] = cast(dict[str, Any] | None, UNSET),
 ) -> Any:
     """Compute the cost of a completion (POST-but-read; nothing stored)."""
     body: dict[str, Any] = {}
-    if model is not _UNSET:
+    if model is not UNSET:
         body["model"] = model
-    if messages is not _UNSET:
+    if messages is not UNSET:
         body["messages"] = messages
-    if completion_response is not _UNSET:
+    if completion_response is not UNSET:
         body["completion_response"] = completion_response
-    return _get_client().post("/spend/calculate", json=body)
+    return get_client().post("/spend/calculate", json=body)
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def cost_discount_config() -> Any:
     """Get Cost Discount Config"""
-    return _get_client().get("/config/cost_discount_config")
+    return get_client().get("/config/cost_discount_config")
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def cost_estimate(
     model: Annotated[str, Field(description='Model name to price.')],
     input_tokens: Annotated[int, Field(description='Prompt tokens per request.')],
     output_tokens: Annotated[int, Field(description='Completion tokens per request.')],
-    num_requests_per_day: Annotated[int | None, Field(description='Requests per day for a daily estimate.')] = cast(int | None, _UNSET),
-    num_requests_per_month: Annotated[int | None, Field(description='Requests per month for a monthly estimate.')] = cast(int | None, _UNSET),
+    num_requests_per_day: Annotated[int | None, Field(description='Requests per day for a daily estimate.')] = cast(int | None, UNSET),
+    num_requests_per_month: Annotated[int | None, Field(description='Requests per month for a monthly estimate.')] = cast(int | None, UNSET),
 ) -> Any:
     """Estimate cost for a model at a given token volume."""
     body: dict[str, Any] = {}
-    if model is not _UNSET:
+    if model is not UNSET:
         body["model"] = model
-    if input_tokens is not _UNSET:
+    if input_tokens is not UNSET:
         body["input_tokens"] = input_tokens
-    if output_tokens is not _UNSET:
+    if output_tokens is not UNSET:
         body["output_tokens"] = output_tokens
-    if num_requests_per_day is not _UNSET:
+    if num_requests_per_day is not UNSET:
         body["num_requests_per_day"] = num_requests_per_day
-    if num_requests_per_month is not _UNSET:
+    if num_requests_per_month is not UNSET:
         body["num_requests_per_month"] = num_requests_per_month
-    return _get_client().post("/cost/estimate", json=body)
+    return get_client().post("/cost/estimate", json=body)
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def cost_margin_config() -> Any:
     """Get Cost Margin Config"""
-    return _get_client().get("/config/cost_margin_config")
+    return get_client().get("/config/cost_margin_config")
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def credential_by_model(
     model_id: Annotated[str, Field(description='Deployment ID whose credential to return.')],
 ) -> Any:
     """Get the credential bound to a model deployment."""
-    return _get_client().get(f"/credentials/by_model/{model_id}")
+    return get_client().get(f"/credentials/by_model/{model_id}")
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def default_team_settings() -> Any:
     """Get Default Team Settings"""
-    return _get_client().get("/get/default_team_settings")
+    return get_client().get("/get/default_team_settings")
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def email_event_settings() -> Any:
     """Get Email Event Settings"""
-    return _get_client().get("/email/event_settings")
+    return get_client().get("/email/event_settings")
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def get_credential(
     credential_name: Annotated[str, Field(description='Credential name to look up.')],
 ) -> Any:
     """Get one credential by name (secret values masked upstream)."""
-    return _get_client().get(f"/credentials/by_name/{credential_name}")
+    return get_client().get(f"/credentials/by_name/{credential_name}")
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def get_fallback(
     model: Annotated[str, Field(description='Model name whose fallbacks to return.')],
-    fallback_type: Annotated[Literal['general', 'context_window', 'content_policy'], Field(description='Which fallback list to return.')] = cast(Literal['general', 'context_window', 'content_policy'], _UNSET),
+    fallback_type: Annotated[Literal['general', 'context_window', 'content_policy'], Field(description='Which fallback list to return.')] = cast(Literal['general', 'context_window', 'content_policy'], UNSET),
 ) -> Any:
     """Get the configured fallback models for a model."""
-    return _get_client().get(f"/fallback/{model}", params=_qp(fallback_type=fallback_type))
+    return get_client().get(f"/fallback/{model}", params=query_params(fallback_type=fallback_type))
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def get_mcp_server(
     server_id: Annotated[str, Field(description='MCP server ID to look up.')],
 ) -> Any:
@@ -149,321 +149,321 @@ def get_mcp_server(
 
     Unlike the list op this returns whatever upstream stores; credentials, static_headers, and env_vars are secret-bearing.
     """
-    return _get_client().get(f"/v1/mcp/server/{server_id}")
+    return get_client().get(f"/v1/mcp/server/{server_id}")
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def get_model(
     model_id: Annotated[str, Field(description='Deployment ID to look up.')],
-    team_id: str | None = cast(str | None, _UNSET),
-    healthy_only: Annotated[bool | None, Field(description='Only return it if its last health check passed.')] = cast(bool | None, _UNSET),
+    team_id: str | None = cast(str | None, UNSET),
+    healthy_only: Annotated[bool | None, Field(description='Only return it if its last health check passed.')] = cast(bool | None, UNSET),
 ) -> Any:
     """Get one model deployment's details by deployment ID."""
-    return _get_client().get(f"/v1/models/{model_id}", params=_qp(team_id=team_id, healthy_only=healthy_only))
+    return get_client().get(f"/v1/models/{model_id}", params=query_params(team_id=team_id, healthy_only=healthy_only))
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def get_toolset(
     toolset_id: Annotated[str, Field(description='Toolset ID to look up.')],
 ) -> Any:
     """Get one MCP toolset's configuration."""
-    return _get_client().get(f"/v1/mcp/toolset/{toolset_id}")
+    return get_client().get(f"/v1/mcp/toolset/{toolset_id}")
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def global_spend_report(
-    start_date: Annotated[str | None, Field(description='Start of the window, YYYY-MM-DD.')] = cast(str | None, _UNSET),
-    end_date: Annotated[str | None, Field(description='End of the window, YYYY-MM-DD.')] = cast(str | None, _UNSET),
-    group_by: Annotated[Literal['team', 'customer', 'api_key'] | None, Field(description='Dimension to group spend by.')] = cast(Literal['team', 'customer', 'api_key'] | None, _UNSET),
-    api_key: str | None = cast(str | None, _UNSET),
-    internal_user_id: str | None = cast(str | None, _UNSET),
-    team_id: str | None = cast(str | None, _UNSET),
-    customer_id: str | None = cast(str | None, _UNSET),
+    start_date: Annotated[str | None, Field(description='Start of the window, YYYY-MM-DD.')] = cast(str | None, UNSET),
+    end_date: Annotated[str | None, Field(description='End of the window, YYYY-MM-DD.')] = cast(str | None, UNSET),
+    group_by: Annotated[Literal['team', 'customer', 'api_key'] | None, Field(description='Dimension to group spend by.')] = cast(Literal['team', 'customer', 'api_key'] | None, UNSET),
+    api_key: str | None = cast(str | None, UNSET),
+    internal_user_id: str | None = cast(str | None, UNSET),
+    team_id: str | None = cast(str | None, UNSET),
+    customer_id: str | None = cast(str | None, UNSET),
 ) -> Any:
     """Global spend report grouped by team, customer, or api_key."""
-    return _get_client().get("/global/spend/report", params=_qp(start_date=start_date, end_date=end_date, group_by=group_by, api_key=api_key, internal_user_id=internal_user_id, team_id=team_id, customer_id=customer_id))
+    return get_client().get("/global/spend/report", params=query_params(start_date=start_date, end_date=end_date, group_by=group_by, api_key=api_key, internal_user_id=internal_user_id, team_id=team_id, customer_id=customer_id))
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def guardrail_info(
     guardrail_id: Annotated[str, Field(description='Guardrail ID to look up.')],
 ) -> Any:
     """Get one guardrail's configuration."""
-    return _get_client().get(f"/guardrails/{guardrail_id}/info")
+    return get_client().get(f"/guardrails/{guardrail_id}/info")
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def health_readiness() -> Any:
     """Health Readiness"""
-    return _get_client().get("/health/readiness")
+    return get_client().get("/health/readiness")
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def health_services(
     service: Annotated[Literal['slack_budget_alerts', 'langfuse', 'langfuse_otel', 'slack', 'openmeter', 'webhook', 'email', 'braintrust', 'datadog', 'datadog_llm_observability', 'generic_api', 'arize', 'galileo', 'newrelic', 'sqs'] | str, Field(description='The integration to probe (known values listed) or any custom name.')],
 ) -> Any:
     """Probe connectivity of a configured logging/alerting service."""
-    return _get_client().get("/health/services", params=_qp(service=service))
+    return get_client().get("/health/services", params=query_params(service=service))
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def internal_user_settings() -> Any:
     """Get Internal User Settings"""
-    return _get_client().get("/get/internal_user_settings")
+    return get_client().get("/get/internal_user_settings")
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def list_access_groups() -> Any:
     """List unified access groups (gate both models and MCP servers)."""
-    return _get_client().get("/v1/access_group")
+    return get_client().get("/v1/access_group")
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def list_audit_logs(
-    page: Annotated[int, Field(description='1-based page number.')] = cast(int, _UNSET),
-    page_size: Annotated[int, Field(description='Rows per page.')] = cast(int, _UNSET),
-    changed_by: str | None = cast(str | None, _UNSET),
-    changed_by_api_key: str | None = cast(str | None, _UNSET),
-    action: Annotated[str | None, Field(description="Filter by action, e.g. 'created', 'updated', 'deleted'.")] = cast(str | None, _UNSET),
-    table_name: Annotated[str | None, Field(description='Filter by the changed table.')] = cast(str | None, _UNSET),
-    object_id: Annotated[str | None, Field(description="Filter by the changed object's ID.")] = cast(str | None, _UNSET),
-    start_date: Annotated[str | None, Field(description='Start of the window, YYYY-MM-DD.')] = cast(str | None, _UNSET),
-    end_date: Annotated[str | None, Field(description='End of the window, YYYY-MM-DD.')] = cast(str | None, _UNSET),
-    object_team_id: str | None = cast(str | None, _UNSET),
-    object_key_hash: str | None = cast(str | None, _UNSET),
-    sort_by: str | None = cast(str | None, _UNSET),
-    sort_order: Annotated[str, Field(description="Sort direction: 'asc' or 'desc'.")] = cast(str, _UNSET),
+    page: Annotated[int, Field(description='1-based page number.')] = cast(int, UNSET),
+    page_size: Annotated[int, Field(description='Rows per page.')] = cast(int, UNSET),
+    changed_by: str | None = cast(str | None, UNSET),
+    changed_by_api_key: str | None = cast(str | None, UNSET),
+    action: Annotated[str | None, Field(description="Filter by action, e.g. 'created', 'updated', 'deleted'.")] = cast(str | None, UNSET),
+    table_name: Annotated[str | None, Field(description='Filter by the changed table.')] = cast(str | None, UNSET),
+    object_id: Annotated[str | None, Field(description="Filter by the changed object's ID.")] = cast(str | None, UNSET),
+    start_date: Annotated[str | None, Field(description='Start of the window, YYYY-MM-DD.')] = cast(str | None, UNSET),
+    end_date: Annotated[str | None, Field(description='End of the window, YYYY-MM-DD.')] = cast(str | None, UNSET),
+    object_team_id: str | None = cast(str | None, UNSET),
+    object_key_hash: str | None = cast(str | None, UNSET),
+    sort_by: str | None = cast(str | None, UNSET),
+    sort_order: Annotated[str, Field(description="Sort direction: 'asc' or 'desc'.")] = cast(str, UNSET),
 ) -> Any:
     """List audit-log entries (paginated)."""
-    return _get_client().get("/audit", params=_qp(page=page, page_size=page_size, changed_by=changed_by, changed_by_api_key=changed_by_api_key, action=action, table_name=table_name, object_id=object_id, start_date=start_date, end_date=end_date, object_team_id=object_team_id, object_key_hash=object_key_hash, sort_by=sort_by, sort_order=sort_order))
+    return get_client().get("/audit", params=query_params(page=page, page_size=page_size, changed_by=changed_by, changed_by_api_key=changed_by_api_key, action=action, table_name=table_name, object_id=object_id, start_date=start_date, end_date=end_date, object_team_id=object_team_id, object_key_hash=object_key_hash, sort_by=sort_by, sort_order=sort_order))
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def list_credentials() -> Any:
     """List stored provider credentials (secret values masked upstream)."""
-    return _get_client().get("/credentials")
+    return get_client().get("/credentials")
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def list_guardrails() -> Any:
     """List configured guardrails (v2)."""
-    return _get_client().get("/v2/guardrails/list")
+    return get_client().get("/v2/guardrails/list")
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def list_mcp_servers(
-    team_id: Annotated[str | None, Field(description="Scope the listing to a team's servers.")] = cast(str | None, _UNSET),
+    team_id: Annotated[str | None, Field(description="Scope the listing to a team's servers.")] = cast(str | None, UNSET),
     limit: Annotated[int, Field(description='Max rows kept after client-side slimming of the returned page (0 = no cap).')] = 20,
 ) -> Any:
     """List registered MCP gateway servers (secret fields omitted from rows).
 
     Rows never carry credentials, static_headers, or env_vars.
     """
-    result = _get_client().get("/v1/mcp/server", params=_qp(team_id=team_id))
-    return _slim_list(result, {'server_id', 'server_name', 'alias', 'url', 'transport', 'auth_type', 'mcp_access_groups', 'status'}, limit)
+    result = get_client().get("/v1/mcp/server", params=query_params(team_id=team_id))
+    return slim_list(result, {'server_id', 'server_name', 'alias', 'url', 'transport', 'auth_type', 'mcp_access_groups', 'status'}, limit)
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def list_mcp_tools() -> Any:
     """List tools exposed through the MCP gateway."""
-    return _get_client().get("/v1/mcp/tools")
+    return get_client().get("/v1/mcp/tools")
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def list_models(
-    return_wildcard_routes: Annotated[bool | None, Field(description='Append wildcard (provider/*) routes (upstream is additive: they appear even when false).')] = cast(bool | None, _UNSET),
-    team_id: Annotated[str | None, Field(description="Scope the listing to a team's models.")] = cast(str | None, _UNSET),
-    include_model_access_groups: bool | None = cast(bool | None, _UNSET),
-    only_model_access_groups: bool | None = cast(bool | None, _UNSET),
-    include_metadata: bool | None = cast(bool | None, _UNSET),
-    fallback_type: str | None = cast(str | None, _UNSET),
-    scope: str | None = cast(str | None, _UNSET),
-    healthy_only: Annotated[bool | None, Field(description='Only models that passed their last health check.')] = cast(bool | None, _UNSET),
+    return_wildcard_routes: Annotated[bool | None, Field(description='Append wildcard (provider/*) routes (upstream is additive: they appear even when false).')] = cast(bool | None, UNSET),
+    team_id: Annotated[str | None, Field(description="Scope the listing to a team's models.")] = cast(str | None, UNSET),
+    include_model_access_groups: bool | None = cast(bool | None, UNSET),
+    only_model_access_groups: bool | None = cast(bool | None, UNSET),
+    include_metadata: bool | None = cast(bool | None, UNSET),
+    fallback_type: str | None = cast(str | None, UNSET),
+    scope: str | None = cast(str | None, UNSET),
+    healthy_only: Annotated[bool | None, Field(description='Only models that passed their last health check.')] = cast(bool | None, UNSET),
     limit: Annotated[int, Field(description='Max rows kept after client-side slimming of the returned page (0 = no cap).')] = 100,
 ) -> Any:
     """List model IDs available to the caller.
 
     Rows are slimmed to id and token limits; the constant OpenAI envelope fields (object/created/owned_by) are dropped.
     """
-    result = _get_client().get("/v1/models", params=_qp(return_wildcard_routes=return_wildcard_routes, team_id=team_id, include_model_access_groups=include_model_access_groups, only_model_access_groups=only_model_access_groups, include_metadata=include_metadata, fallback_type=fallback_type, scope=scope, healthy_only=healthy_only))
-    return _slim_list(result, {'id', 'max_input_tokens', 'max_output_tokens'}, limit, 'data')
+    result = get_client().get("/v1/models", params=query_params(return_wildcard_routes=return_wildcard_routes, team_id=team_id, include_model_access_groups=include_model_access_groups, only_model_access_groups=only_model_access_groups, include_metadata=include_metadata, fallback_type=fallback_type, scope=scope, healthy_only=healthy_only))
+    return slim_list(result, {'id', 'max_input_tokens', 'max_output_tokens'}, limit, 'data')
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def list_providers() -> Any:
     """List supported LLM providers."""
-    return _get_client().get("/public/providers")
+    return get_client().get("/public/providers")
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def list_tags(
-    start_date: Annotated[str | None, Field(description='Start of the window, YYYY-MM-DD.')] = cast(str | None, _UNSET),
-    end_date: Annotated[str | None, Field(description='End of the window, YYYY-MM-DD.')] = cast(str | None, _UNSET),
+    start_date: Annotated[str | None, Field(description='Start of the window, YYYY-MM-DD.')] = cast(str | None, UNSET),
+    end_date: Annotated[str | None, Field(description='End of the window, YYYY-MM-DD.')] = cast(str | None, UNSET),
 ) -> Any:
     """List tags with usage."""
-    return _get_client().get("/tag/list", params=_qp(start_date=start_date, end_date=end_date))
+    return get_client().get("/tag/list", params=query_params(start_date=start_date, end_date=end_date))
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def list_toolsets() -> Any:
     """List registered MCP toolsets."""
-    return _get_client().get("/v1/mcp/toolset")
+    return get_client().get("/v1/mcp/toolset")
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def mcp_access_groups() -> Any:
     """List access-group names known to the MCP surface."""
-    return _get_client().get("/v1/mcp/access_groups")
+    return get_client().get("/v1/mcp/access_groups")
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def mcp_server_health(
-    server_ids: Annotated[list[str] | None, Field(description='MCP server IDs to probe; omit for all.')] = cast(list[str] | None, _UNSET),
+    server_ids: Annotated[list[str] | None, Field(description='MCP server IDs to probe; omit for all.')] = cast(list[str] | None, UNSET),
 ) -> Any:
     """Probe health of registered MCP servers."""
-    return _get_client().get("/v1/mcp/server/health", params=_qp(server_ids=server_ids))
+    return get_client().get("/v1/mcp/server/health", params=query_params(server_ids=server_ids))
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def model_group_info(
-    model_group: Annotated[str | None, Field(description='Public model name; omit for all groups.')] = cast(str | None, _UNSET),
+    model_group: Annotated[str | None, Field(description='Public model name; omit for all groups.')] = cast(str | None, UNSET),
 ) -> Any:
     """Aggregate info for a model group (all deployments of a public name)."""
-    return _get_client().get("/model_group/info", params=_qp(model_group=model_group))
+    return get_client().get("/model_group/info", params=query_params(model_group=model_group))
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def model_info(
-    model: Annotated[str | None, Field(description='Filter by public model name.')] = cast(str | None, _UNSET),
-    user_models_only: bool | None = cast(bool | None, _UNSET),
-    include_team_models: bool | None = cast(bool | None, _UNSET),
-    debug: bool | None = cast(bool | None, _UNSET),
-    page: Annotated[int, Field(description='1-based page number.')] = cast(int, _UNSET),
-    size: Annotated[int, Field(description='Rows per page.')] = cast(int, _UNSET),
-    search: Annotated[str | None, Field(description='Free-text match across deployments.')] = cast(str | None, _UNSET),
-    modelId: Annotated[str | None, Field(description='Filter by deployment ID (upstream camelCase).')] = cast(str | None, _UNSET),
-    teamId: Annotated[str | None, Field(description='Filter by team ID (upstream camelCase).')] = cast(str | None, _UNSET),
-    sortBy: Annotated[str | None, Field(description='Field to sort by (upstream camelCase).')] = cast(str | None, _UNSET),
-    sortOrder: Annotated[str | None, Field(description="Sort direction, 'asc' or 'desc' (upstream camelCase).")] = cast(str | None, _UNSET),
+    model: Annotated[str | None, Field(description='Filter by public model name.')] = cast(str | None, UNSET),
+    user_models_only: bool | None = cast(bool | None, UNSET),
+    include_team_models: bool | None = cast(bool | None, UNSET),
+    debug: bool | None = cast(bool | None, UNSET),
+    page: Annotated[int, Field(description='1-based page number.')] = cast(int, UNSET),
+    size: Annotated[int, Field(description='Rows per page.')] = cast(int, UNSET),
+    search: Annotated[str | None, Field(description='Free-text match across deployments.')] = cast(str | None, UNSET),
+    modelId: Annotated[str | None, Field(description='Filter by deployment ID (upstream camelCase).')] = cast(str | None, UNSET),
+    teamId: Annotated[str | None, Field(description='Filter by team ID (upstream camelCase).')] = cast(str | None, UNSET),
+    sortBy: Annotated[str | None, Field(description='Field to sort by (upstream camelCase).')] = cast(str | None, UNSET),
+    sortOrder: Annotated[str | None, Field(description="Sort direction, 'asc' or 'desc' (upstream camelCase).")] = cast(str | None, UNSET),
     limit: Annotated[int, Field(description='Max rows kept after client-side slimming of the returned page (0 = no cap).')] = 20,
 ) -> Any:
     """List configured model deployments with pricing and provider (v2).
 
     Rows are slimmed to essential fields; provider credentials are masked upstream.
     """
-    result = _get_client().get("/v2/model/info", params=_qp(model=model, user_models_only=user_models_only, include_team_models=include_team_models, debug=debug, page=page, size=size, search=search, modelId=modelId, teamId=teamId, sortBy=sortBy, sortOrder=sortOrder))
-    return _slim_list(result, {'model_name', 'model_info'}, limit, 'data')
+    result = get_client().get("/v2/model/info", params=query_params(model=model, user_models_only=user_models_only, include_team_models=include_team_models, debug=debug, page=page, size=size, search=search, modelId=modelId, teamId=teamId, sortBy=sortBy, sortOrder=sortOrder))
+    return slim_list(result, {'model_name', 'model_info'}, limit, 'data')
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def router_settings() -> Any:
     """Get Router Settings"""
-    return _get_client().get("/router/settings")
+    return get_client().get("/router/settings")
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def spend_logs(
-    api_key: str | None = cast(str | None, _UNSET),
-    user_id: str | None = cast(str | None, _UNSET),
-    request_id: str | None = cast(str | None, _UNSET),
-    session_id: str | None = cast(str | None, _UNSET),
-    team_id: str | None = cast(str | None, _UNSET),
-    min_spend: Annotated[float | None, Field(description='Only rows with spend >= this (USD).')] = cast(float | None, _UNSET),
-    max_spend: Annotated[float | None, Field(description='Only rows with spend <= this (USD).')] = cast(float | None, _UNSET),
-    start_date: Annotated[str | None, Field(description='Start of the window, YYYY-MM-DD.')] = cast(str | None, _UNSET),
-    end_date: Annotated[str | None, Field(description='End of the window, YYYY-MM-DD.')] = cast(str | None, _UNSET),
-    page: Annotated[int, Field(description='1-based page number.')] = cast(int, _UNSET),
-    page_size: Annotated[int, Field(description='Rows per page.')] = cast(int, _UNSET),
-    status_filter: Annotated[str | None, Field(description="Filter by request status, e.g. 'success' or 'failure'.")] = cast(str | None, _UNSET),
-    model: str | None = cast(str | None, _UNSET),
-    model_id: str | None = cast(str | None, _UNSET),
-    model_group: str | None = cast(str | None, _UNSET),
-    key_alias: str | None = cast(str | None, _UNSET),
-    end_user: str | None = cast(str | None, _UNSET),
-    error_code: str | None = cast(str | None, _UNSET),
-    error_message: str | None = cast(str | None, _UNSET),
-    sort_by: str = cast(str, _UNSET),
-    sort_order: Annotated[str | None, Field(description="Sort direction: 'asc' or 'desc'.")] = cast(str | None, _UNSET),
+    api_key: str | None = cast(str | None, UNSET),
+    user_id: str | None = cast(str | None, UNSET),
+    request_id: str | None = cast(str | None, UNSET),
+    session_id: str | None = cast(str | None, UNSET),
+    team_id: str | None = cast(str | None, UNSET),
+    min_spend: Annotated[float | None, Field(description='Only rows with spend >= this (USD).')] = cast(float | None, UNSET),
+    max_spend: Annotated[float | None, Field(description='Only rows with spend <= this (USD).')] = cast(float | None, UNSET),
+    start_date: Annotated[str | None, Field(description='Start of the window, YYYY-MM-DD.')] = cast(str | None, UNSET),
+    end_date: Annotated[str | None, Field(description='End of the window, YYYY-MM-DD.')] = cast(str | None, UNSET),
+    page: Annotated[int, Field(description='1-based page number.')] = cast(int, UNSET),
+    page_size: Annotated[int, Field(description='Rows per page.')] = cast(int, UNSET),
+    status_filter: Annotated[str | None, Field(description="Filter by request status, e.g. 'success' or 'failure'.")] = cast(str | None, UNSET),
+    model: str | None = cast(str | None, UNSET),
+    model_id: str | None = cast(str | None, UNSET),
+    model_group: str | None = cast(str | None, UNSET),
+    key_alias: str | None = cast(str | None, UNSET),
+    end_user: str | None = cast(str | None, UNSET),
+    error_code: str | None = cast(str | None, UNSET),
+    error_message: str | None = cast(str | None, UNSET),
+    sort_by: str = cast(str, UNSET),
+    sort_order: Annotated[str | None, Field(description="Sort direction: 'asc' or 'desc'.")] = cast(str | None, UNSET),
     limit: Annotated[int, Field(description='Max rows kept after client-side slimming of the returned page (0 = no cap).')] = 20,
 ) -> Any:
     """Query per-request spend logs with rich filters (paginated).
 
     Rows are slimmed to essential fields.
     """
-    result = _get_client().get("/spend/logs/v2", params=_qp(api_key=api_key, user_id=user_id, request_id=request_id, session_id=session_id, team_id=team_id, min_spend=min_spend, max_spend=max_spend, start_date=start_date, end_date=end_date, page=page, page_size=page_size, status_filter=status_filter, model=model, model_id=model_id, model_group=model_group, key_alias=key_alias, end_user=end_user, error_code=error_code, error_message=error_message, sort_by=sort_by, sort_order=sort_order))
-    return _slim_list(result, {'request_id', 'api_key_alias', 'model', 'spend', 'total_tokens', 'startTime', 'user', 'team_id', 'status'}, limit, 'data')
+    result = get_client().get("/spend/logs/v2", params=query_params(api_key=api_key, user_id=user_id, request_id=request_id, session_id=session_id, team_id=team_id, min_spend=min_spend, max_spend=max_spend, start_date=start_date, end_date=end_date, page=page, page_size=page_size, status_filter=status_filter, model=model, model_id=model_id, model_group=model_group, key_alias=key_alias, end_user=end_user, error_code=error_code, error_message=error_message, sort_by=sort_by, sort_order=sort_order))
+    return slim_list(result, {'request_id', 'api_key_alias', 'model', 'spend', 'total_tokens', 'startTime', 'user', 'team_id', 'status'}, limit, 'data')
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def spend_tags(
-    start_date: Annotated[str | None, Field(description='Start of the window, YYYY-MM-DD.')] = cast(str | None, _UNSET),
-    end_date: Annotated[str | None, Field(description='End of the window, YYYY-MM-DD.')] = cast(str | None, _UNSET),
+    start_date: Annotated[str | None, Field(description='Start of the window, YYYY-MM-DD.')] = cast(str | None, UNSET),
+    end_date: Annotated[str | None, Field(description='End of the window, YYYY-MM-DD.')] = cast(str | None, UNSET),
 ) -> Any:
     """Spend totals grouped by tag."""
-    return _get_client().get("/spend/tags", params=_qp(start_date=start_date, end_date=end_date))
+    return get_client().get("/spend/tags", params=query_params(start_date=start_date, end_date=end_date))
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def sso_settings() -> Any:
     """Get Sso Settings"""
-    return _get_client().get("/get/sso_settings")
+    return get_client().get("/get/sso_settings")
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def supported_openai_params(
     model: Annotated[str, Field(description='Model name to inspect.')],
 ) -> Any:
     """List the OpenAI request params supported for a model."""
-    return _get_client().get("/utils/supported_openai_params", params=_qp(model=model))
+    return get_client().get("/utils/supported_openai_params", params=query_params(model=model))
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def tag_daily_activity(
-    tags: Annotated[str | None, Field(description='Comma-separated tag names.')] = cast(str | None, _UNSET),
-    start_date: Annotated[str | None, Field(description='Start of the window, YYYY-MM-DD.')] = cast(str | None, _UNSET),
-    end_date: Annotated[str | None, Field(description='End of the window, YYYY-MM-DD.')] = cast(str | None, _UNSET),
-    model: str | None = cast(str | None, _UNSET),
-    api_key: str | None = cast(str | None, _UNSET),
-    page: Annotated[int, Field(description='1-based page number.')] = cast(int, _UNSET),
-    page_size: Annotated[int, Field(description='Rows per page.')] = cast(int, _UNSET),
+    tags: Annotated[str | None, Field(description='Comma-separated tag names.')] = cast(str | None, UNSET),
+    start_date: Annotated[str | None, Field(description='Start of the window, YYYY-MM-DD.')] = cast(str | None, UNSET),
+    end_date: Annotated[str | None, Field(description='End of the window, YYYY-MM-DD.')] = cast(str | None, UNSET),
+    model: str | None = cast(str | None, UNSET),
+    api_key: str | None = cast(str | None, UNSET),
+    page: Annotated[int, Field(description='1-based page number.')] = cast(int, UNSET),
+    page_size: Annotated[int, Field(description='Rows per page.')] = cast(int, UNSET),
 ) -> Any:
     """Per-day usage and spend grouped by tag."""
-    return _get_client().get("/tag/daily/activity", params=_qp(tags=tags, start_date=start_date, end_date=end_date, model=model, api_key=api_key, page=page, page_size=page_size))
+    return get_client().get("/tag/daily/activity", params=query_params(tags=tags, start_date=start_date, end_date=end_date, model=model, api_key=api_key, page=page, page_size=page_size))
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def tag_info(
     names: Annotated[list[str], Field(description='Tag names to look up.')],
 ) -> Any:
     """Get details for one or more tags."""
     body: dict[str, Any] = {}
-    if names is not _UNSET:
+    if names is not UNSET:
         body["names"] = names
-    return _get_client().post("/tag/info", json=body)
+    return get_client().post("/tag/info", json=body)
 
 
-@_op(litellm_read)
+@op(litellm_read)
 def token_counter(
     model: Annotated[str, Field(description='Model whose tokenizer to use.')],
-    prompt: Annotated[str | None, Field(description='Raw prompt string to tokenize.')] = cast(str | None, _UNSET),
-    messages: Annotated[list[dict[str, Any]] | None, Field(description='Chat messages to tokenize instead of a prompt.')] = cast(list[dict[str, Any]] | None, _UNSET),
-    contents: list[dict[str, Any]] | None = cast(list[dict[str, Any]] | None, _UNSET),
-    tools: list[dict[str, Any]] | None = cast(list[dict[str, Any]] | None, _UNSET),
-    system: Any = cast(Any, _UNSET),
-    call_endpoint: Annotated[bool, Field(description='Ask the provider endpoint for the count instead of local counting.')] = cast(bool, _UNSET),
+    prompt: Annotated[str | None, Field(description='Raw prompt string to tokenize.')] = cast(str | None, UNSET),
+    messages: Annotated[list[dict[str, Any]] | None, Field(description='Chat messages to tokenize instead of a prompt.')] = cast(list[dict[str, Any]] | None, UNSET),
+    contents: list[dict[str, Any]] | None = cast(list[dict[str, Any]] | None, UNSET),
+    tools: list[dict[str, Any]] | None = cast(list[dict[str, Any]] | None, UNSET),
+    system: Any = cast(Any, UNSET),
+    call_endpoint: Annotated[bool, Field(description='Ask the provider endpoint for the count instead of local counting.')] = cast(bool, UNSET),
 ) -> Any:
     """Count tokens for a model (POST-but-read)."""
     body: dict[str, Any] = {}
-    if model is not _UNSET:
+    if model is not UNSET:
         body["model"] = model
-    if prompt is not _UNSET:
+    if prompt is not UNSET:
         body["prompt"] = prompt
-    if messages is not _UNSET:
+    if messages is not UNSET:
         body["messages"] = messages
-    if contents is not _UNSET:
+    if contents is not UNSET:
         body["contents"] = contents
-    if tools is not _UNSET:
+    if tools is not UNSET:
         body["tools"] = tools
-    if system is not _UNSET:
+    if system is not UNSET:
         body["system"] = system
-    return _get_client().post("/utils/token_counter", params=_qp(call_endpoint=call_endpoint), json=body)
+    return get_client().post("/utils/token_counter", params=query_params(call_endpoint=call_endpoint), json=body)
