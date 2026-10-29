@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import argparse
+import asyncio
+import functools
 import inspect
 import pkgutil
 import re
@@ -273,7 +275,7 @@ def _coerce_call(fn: OpFn, params: dict[str, Any]) -> Any:
     Field-level type mismatches, missing required fields, and unknown keys
     all raise ValueError pointing at the offending field. Omitted
     `UNSET`-defaulted keys never reach fn (`exclude_unset=True`). Async
-    functions return their coroutine as-is - `_dispatch` awaits it.
+    functions return their coroutine as-is - `_run_op` awaits it.
     """
     model: type[BaseModel] = fn._mcp_params_model
     try:
@@ -439,14 +441,25 @@ def _build_schema(
     return schema
 
 
+async def _run_op(fn: Callable[..., Any], call: Callable[[], Any]) -> Any:
+    """Invoke an op: a sync op in a worker thread, an async op on the event loop.
+
+    Sync ops block on HTTP; on the loop they would stall every request the
+    process serves. `asyncio.to_thread` copies the context, so the bound
+    `client_var` follows the call into the thread.
+    """
+    if inspect.iscoroutinefunction(fn):
+        return await call()
+    return await asyncio.to_thread(call)
+
+
 async def _dispatch(
     operation: str, group_name: str, params: dict[str, Any]
 ) -> Any:
     """Route help / schema / op-name; fail loud on anything wrong.
 
     Errors propagate as ValueError / APIError - no `{"error": ...}`
-    wrapping. Async ops are awaited here; sync ops keep the direct-call
-    path.
+    wrapping.
     """
     if operation == "help":
         return _build_help(group_name, search=params.get("search"))
@@ -465,9 +478,7 @@ async def _dispatch(
             f"Unknown operation {operation!r} in {group_name}. "
             f"Available: {', '.join(sorted(ops))}"
         )
-    result = _coerce_call(fn, params)
-    if inspect.iscoroutine(result):
-        result = await cast("Awaitable[Any]", result)
+    result = await _run_op(fn, functools.partial(_coerce_call, fn, params))
     return result
 
 
